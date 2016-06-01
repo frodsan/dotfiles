@@ -1,0 +1,18 @@
+[user]
+  name = Francesco Rodriguez
+  email = frodsan@protonmail.com
+[push]
+  default = current
+[github]
+  user = frodsan
+[alias]
+  st  = status
+  ci  = commit
+  co  = checkout
+  df  = diff
+  aa  = add -A .
+  p   = push
+  pom = pull origin master
+  pum = pull upstream master
+[core]
+  excludesfile = ~/.gitignore

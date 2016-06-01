@@ -1,0 +1,16 @@
+# OS generated files.
+*.DS_Store
+*.netrwhist
+*.swp
+
+# Ignore gs directory.
+.gs
+
+# Ignore node dependencies directory.
+node_modules/
+
+# Ignore Bundler cache.
+.bundle/cache/
+
+# Ignore python bytecode.
+*.pyc
