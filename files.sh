@@ -5,7 +5,7 @@ BLACKLIST=".
 .git
 "
 
-for file in .* .atom/*; do
+for file in .*; do
   if ! [[ $BLACKLIST =~ $file ]]; then
     rm -rf $HOME/$file
     ln -s $PWD/$file $HOME/$file
