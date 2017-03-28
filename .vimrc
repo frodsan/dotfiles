@@ -2,24 +2,18 @@
 " Plugins
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-set nocompatible                          " be iMproved
+call plug#begin('~/.vim/bundle')
 
-filetype off
+Plug 'ctrlpvim/ctrlp.vim'               " Fuzzy file, buffer, mru, tag, etc finder
+Plug 'ervandew/supertab'                " Perform vim insert mode completions with <Tab>
+Plug 'janko-m/vim-test'                 " Run your tests at the speed of thought
+Plug 'mileszs/ack.vim'                  " Vim plugin for the Perl module / CLI script 'ack'
+Plug 'ntpeters/vim-better-whitespace'   " Better whitespace highlighting for Vim
+Plug 'skalnik/vim-vroom'                " A vim plugin for running your Ruby tests
+Plug 'tomasr/molokai'                   " Molokai color scheme for Vim
+Plug 'tpope/vim-dispatch'               " Asynchronous build and test dispatcher
 
-set rtp+=~/.vim/bundle/Vundle.vim
-
-call vundle#begin()
-
-Plugin 'VundleVim/Vundle.vim'             " Vundle, the plug-in manager for Vim
-
-Plugin 'ctrlpvim/ctrlp.vim'               " Fuzzy file, buffer, mru, tag, etc finder
-Plugin 'mileszs/ack.vim'                  " Vim plugin for the Perl module / CLI script 'ack'
-Plugin 'ntpeters/vim-better-whitespace'   " Better whitespace highlighting for Vim
-Plugin 'tomasr/molokai'                   " Molokai color scheme for Vim
-
-call vundle#end()
-
-filetype plugin indent on
+call plug#end()
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " Settings
@@ -59,6 +53,7 @@ set visualbell                            " no beeping
 set wildmenu                              " visual autocomplete for command menu
 set wildmode=list:longest                 " complete files like a shell
 
+
 " turn on syntax highlighting
 syntax enable
 
@@ -71,6 +66,9 @@ autocmd VimEnter * DisableWhitespace
 " strip all trailing whitespace on save
 autocmd BufEnter * EnableStripWhitespaceOnSave
 
+" set leader key
+let mapleader = ','
+
 " use the silver searcher instead of grep
 if executable('ag')
   let g:ackprg = 'ag --vimgrep'
@@ -81,3 +79,10 @@ let g:ctrlp_match_window = "bottom,order:ttb"
 let g:ctrlp_switch_buffer = 0
 let g:ctrlp_user_command = 'ag %s -l --nocolor --hidden -g ""'
 let g:ctrlp_working_path_mode = 0
+
+" set testing mappings
+nmap <silent> <leader>t :TestNearest<CR>
+nmap <silent> <leader>T :TestFile<CR>
+nmap <silent> <leader>r :TestLast<CR>
+nmap <silent> <leader>R :TestSuite<CR>
+nmap <silent> <leader>g :TestVisit<CR>
