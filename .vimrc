@@ -13,6 +13,7 @@ call vundle#begin()
 Plugin 'VundleVim/Vundle.vim'             " Vundle, the plug-in manager for Vim
 
 Plugin 'ctrlpvim/ctrlp.vim'               " Fuzzy file, buffer, mru, tag, etc finder
+Plugin 'mileszs/ack.vim'                  " Vim plugin for the Perl module / CLI script 'ack'
 Plugin 'ntpeters/vim-better-whitespace'   " Better whitespace highlighting for Vim
 Plugin 'tomasr/molokai'                   " Molokai color scheme for Vim
 
@@ -69,3 +70,8 @@ autocmd VimEnter * DisableWhitespace
 
 " strip all trailing whitespace on save
 autocmd BufEnter * EnableStripWhitespaceOnSave
+
+" use the silver searcher instead of grep
+if executable('ag')
+  let g:ackprg = 'ag --vimgrep'
+endif
