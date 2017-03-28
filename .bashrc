@@ -1,9 +1,6 @@
 export ARCHFLAGS="-arch x86_64"
-
 export BIN=/usr/local/bin
-
 export EDITOR=vim
-
 export PATH=/bin
 export PATH=/sbin:$PATH
 export PATH=/usr/bin:$PATH
@@ -12,11 +9,10 @@ export PATH=$BIN:$PATH
 export PATH=/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH
 export PATH=./node_modules/.bin:$PATH
 export PATH=./bin:$PATH
-
-export GOPATH=$HOME/Code/go
-export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
-
 export PS1='\W $ '
+
+export CLICOLOR=1
+export TERM=xterm-256color
 
 # Prevent file overwrite on stdout redirection
 # Use `>|` to force redirection to an existing file.
