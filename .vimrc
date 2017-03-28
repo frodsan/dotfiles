@@ -9,14 +9,22 @@ Plug 'ervandew/supertab'                      " Perform vim insert mode completi
 Plug 'janko-m/vim-test'                       " Run your tests at the speed of thought
 Plug 'mileszs/ack.vim'                        " Vim plugin for the Perl module / CLI script 'ack'
 Plug 'ntpeters/vim-better-whitespace'         " Better whitespace highlighting for Vim
+Plug 'scrooloose/nerdcommenter'               " NERDCommenter allows you to wrangle your code comments
 Plug 'skywind3000/asyncrun.vim'               " Run Async Shell Commands in Vim
 Plug 'tomasr/molokai'                         " Molokai color scheme for Vim
 
 call plug#end()
 
+
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " Settings
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" turn on syntax highlighting
+syntax enable
+
+" set leader key
+let mapleader = ','
 
 set autoindent                                " auto indent
 set backspace=indent,eol,start                " intuitive backspacing
@@ -53,38 +61,22 @@ set wildmenu                                  " visual autocomplete for command 
 set wildmode=list:longest                     " complete files like a shell
 
 
-" turn on syntax highlighting
-syntax enable
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" ctrlpvim/ctrlp.vim
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-" set colorscheme
-colorscheme molokai
-
-" disable trailiging whitespace highlighting
-autocmd VimEnter * DisableWhitespace
-
-" strip all trailing whitespace on save
-autocmd BufEnter * EnableStripWhitespaceOnSave
-
-" configure quickfix window for async commands
-augroup vimrc
-  autocmd QuickFixCmdPost * botright copen 20
-augroup END
-
-nmap <F1> :call asyncrun#quickfix_toggle(20)<CR>
-
-" set leader key
-let mapleader = ','
-
-" use the silver searcher instead of grep
-if executable('ag')
-  let g:ackprg = 'ag --vimgrep'
-endif
-
-" custom ctrlp settings
 let g:ctrlp_match_window = "bottom,order:ttb"
 let g:ctrlp_switch_buffer = 0
 let g:ctrlp_user_command = 'ag %s -l --nocolor --hidden -g ""'
 let g:ctrlp_working_path_mode = 0
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" janko-m/vim-test
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" run tests asynchronously
+let test#strategy = 'asyncrun'
 
 " set vim-test mappings
 nmap <silent> <leader>t :TestNearest<CR>
@@ -93,5 +85,52 @@ nmap <silent> <leader>r :TestLast<CR>
 nmap <silent> <leader>R :TestSuite<CR>
 nmap <silent> <leader>g :TestVisit<CR>
 
-" run tests asynchronously
-let test#strategy = 'asyncrun'
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" mileszs/ack.vim
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" use the silver searcher instead of grep
+if executable('ag')
+  let g:ackprg = 'ag --vimgrep'
+endif
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" ntpeters/vim-better-whitespace
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" disable trailiging whitespace highlighting
+autocmd VimEnter * DisableWhitespace
+
+" strip all trailing whitespace on save
+autocmd BufEnter * EnableStripWhitespaceOnSave
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" scrooloose/nerdcommenter
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" Add spaces after comment delimiters by default
+let g:NERDSpaceDelims = 1
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" skywind3000/asyncrun.vim
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" configure quickfix window for async commands
+augroup vimrc
+  autocmd QuickFixCmdPost * botright copen 20
+augroup END
+
+" map F1 to toggle quickfix window
+nmap <F1> :call asyncrun#quickfix_toggle(20)<CR>
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" tomasr/molokai
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" set colorscheme
+colorscheme molokai
