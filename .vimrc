@@ -11,10 +11,14 @@ Plug 'janko-m/vim-test'                       " Run your tests at the speed of t
 Plug 'mileszs/ack.vim'                        " Vim plugin for the Perl module / CLI script 'ack'
 Plug 'ntpeters/vim-better-whitespace'         " Better whitespace highlighting for Vim
 Plug 'scrooloose/nerdcommenter'               " NERDCommenter allows you to wrangle your code comments
+Plug 'scrooloose/nerdtree'                    " A tree explorer plugin for Vim
 Plug 'skywind3000/asyncrun.vim'               " Run Async Shell Commands in Vim
 Plug 'tpope/vim-fugitive'                     " A Git wrapper for Vim
 Plug 'vim-airline/vim-airline'                " Lean & mean status/tabline for vim that's light as air
 Plug 'vim-airline/vim-airline-themes'         " A collection of themes for vim-airline
+Plug 'Xuyuanp/nerdtree-git-plugin'            " A plugin of NERDTree showing git status
+
+Plug 'ryanoasis/vim-devicons'                 " Add icons to Vim plugins
 
 call plug#end()
 
@@ -32,7 +36,7 @@ let mapleader = ','
 set autoindent                                " auto indent
 set backspace=indent,eol,start                " intuitive backspacing
 set cursorline                                " highlight current line
-set encoding=utf-8                            " default encoding
+set encoding=utf8                            " default encoding
 set expandtab                                 " tabs are spaces
 set fileencoding=utf-8                        " default file encoding
 set foldenable                                " enable folding
@@ -122,11 +126,29 @@ autocmd BufEnter * EnableStripWhitespaceOnSave
 
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" ryanoasis/vim-devicons
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" set Vim font to a Nerd Font
+set guifont=Droid\ Sans\ Mono\ for\ Powerline\ Nerd\ Font\ Complete\ Mono:h13
+
+" set devicons for airline
+let g:airline_powerline_fonts = 1
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " scrooloose/nerdcommenter
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 " Add spaces after comment delimiters by default
 let g:NERDSpaceDelims = 1
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" scrooloose/nerdtree
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+nmap <leader>\ :NERDTreeToggle<CR>
 
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
