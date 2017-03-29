@@ -12,6 +12,9 @@ Plug 'mileszs/ack.vim'                        " Vim plugin for the Perl module /
 Plug 'ntpeters/vim-better-whitespace'         " Better whitespace highlighting for Vim
 Plug 'scrooloose/nerdcommenter'               " NERDCommenter allows you to wrangle your code comments
 Plug 'skywind3000/asyncrun.vim'               " Run Async Shell Commands in Vim
+Plug 'tpope/vim-fugitive'                     " A Git wrapper for Vim
+Plug 'vim-airline/vim-airline'                " Lean & mean status/tabline for vim that's light as air
+Plug 'vim-airline/vim-airline-themes'         " A collection of themes for vim-airline
 
 call plug#end()
 
@@ -137,3 +140,21 @@ augroup END
 
 " map F1 to toggle quickfix window
 nmap <F1> :call asyncrun#quickfix_toggle(20)<CR>
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" tpope/vim-fugitive
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" set git mappings
+nmap <leader>gb :Gblame<CR>
+nmap <leader>gs :Gstatus<CR>
+nmap <leader>gc :Gcommit<CR>
+nmap <leader>gp :Gpush<CR>
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" vim-airline/vim-airline
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+let g:airline_theme='base16_default'
