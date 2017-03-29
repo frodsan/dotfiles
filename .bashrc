@@ -11,8 +11,9 @@ export PATH=./node_modules/.bin:$PATH
 export PATH=./bin:$PATH
 export PS1='\W $ '
 
-export CLICOLOR=1
-export TERM=xterm-256color
+# Set Base16 shell.
+BASE16_SHELL=$HOME/.config/base16-shell/
+[ -n "$PS1" ] && [ -s $BASE16_SHELL/profile_helper.sh ] && eval "$($BASE16_SHELL/profile_helper.sh)"
 
 # Prevent file overwrite on stdout redirection
 # Use `>|` to force redirection to an existing file.

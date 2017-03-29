@@ -4,6 +4,7 @@
 
 call plug#begin('~/.vim/bundle')
 
+Plug 'chriskempson/base16-vim',               " Base16 for Vim
 Plug 'ctrlpvim/ctrlp.vim'                     " Fuzzy file, buffer, mru, tag, etc finder
 Plug 'ervandew/supertab'                      " Perform vim insert mode completions with <Tab>
 Plug 'janko-m/vim-test'                       " Run your tests at the speed of thought
@@ -11,7 +12,6 @@ Plug 'mileszs/ack.vim'                        " Vim plugin for the Perl module /
 Plug 'ntpeters/vim-better-whitespace'         " Better whitespace highlighting for Vim
 Plug 'scrooloose/nerdcommenter'               " NERDCommenter allows you to wrangle your code comments
 Plug 'skywind3000/asyncrun.vim'               " Run Async Shell Commands in Vim
-Plug 'tomasr/molokai'                         " Molokai color scheme for Vim
 
 call plug#end()
 
@@ -60,6 +60,16 @@ set visualbell                                " no beeping
 set wildmenu                                  " visual autocomplete for command menu
 set wildmode=list:longest                     " complete files like a shell
 
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" chriskempson/base16
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" access colors present in 256 colorspace
+let base16colorspace=256
+
+" set colorscheme
+colorscheme base16-default-dark
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " ctrlpvim/ctrlp.vim
@@ -126,11 +136,3 @@ augroup END
 
 " map F1 to toggle quickfix window
 nmap <F1> :call asyncrun#quickfix_toggle(20)<CR>
-
-
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" tomasr/molokai
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-" set colorscheme
-colorscheme molokai
