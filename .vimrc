@@ -65,11 +65,12 @@ set wildmode=list:longest                     " complete files like a shell
 " chriskempson/base16
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-" access colors present in 256 colorspace
-let base16colorspace=256
+if filereadable(expand("~/.vimrc_background"))
+  " access colors present in 256 colorspace
+  let base16colorspace=256
 
-" set colorscheme
-colorscheme base16-default-dark
+  source ~/.vimrc_background
+endif
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " ctrlpvim/ctrlp.vim
