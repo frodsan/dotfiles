@@ -4,19 +4,33 @@
 
 call plug#begin('~/.vim/bundle')
 
-Plug 'chriskempson/base16-vim',               " Base16 for Vim
-Plug 'ctrlpvim/ctrlp.vim'                     " Fuzzy file, buffer, mru, tag, etc finder
-Plug 'ervandew/supertab'                      " Perform vim insert mode completions with <Tab>
-Plug 'janko-m/vim-test'                       " Run your tests at the speed of thought
 Plug 'mileszs/ack.vim'                        " Vim plugin for the Perl module / CLI script 'ack'
+
+Plug 'chriskempson/base16-vim',               " Base16 for Vim
+
+Plug 'ctrlpvim/ctrlp.vim'                     " Fuzzy file, buffer, mru, tag, etc finder
+
+Plug 'ervandew/supertab'                      " Perform vim insert mode completions with <Tab>
+
+Plug 'janko-m/vim-test'                       " Run your tests at the speed of thought
+
 Plug 'ntpeters/vim-better-whitespace'         " Better whitespace highlighting for Vim
+
 Plug 'scrooloose/nerdcommenter'               " NERDCommenter allows you to wrangle your code comments
+
 Plug 'scrooloose/nerdtree'                    " A tree explorer plugin for Vim
-Plug 'skywind3000/asyncrun.vim'               " Run Async Shell Commands in Vim
-Plug 'tpope/vim-fugitive'                     " A Git wrapper for Vim
-Plug 'vim-airline/vim-airline'                " Lean & mean status/tabline for vim that's light as air
-Plug 'vim-airline/vim-airline-themes'         " A collection of themes for vim-airline
+
 Plug 'Xuyuanp/nerdtree-git-plugin'            " A plugin of NERDTree showing git status
+
+Plug 'skywind3000/asyncrun.vim'               " Run Async Shell Commands in Vim
+
+Plug 'tpope/vim-fugitive'                     " A Git wrapper for Vim
+
+Plug 'vim-airline/vim-airline'                " Lean & mean status/tabline for vim that's light as air
+
+Plug 'vim-airline/vim-airline-themes'         " A collection of themes for vim-airline
+
+Plug 'vim-syntastic/syntastic'                " Syntax checking hacks for Vim
 
 Plug 'ryanoasis/vim-devicons'                 " Add icons to Vim plugins
 
@@ -69,43 +83,7 @@ set wildmode=list:longest                     " complete files like a shell
 
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" chriskempson/base16
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-if filereadable(expand("~/.vimrc_background"))
-  " access colors present in 256 colorspace
-  let base16colorspace=256
-
-  source ~/.vimrc_background
-endif
-
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" ctrlpvim/ctrlp.vim
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-let g:ctrlp_match_window = "bottom,order:ttb"
-let g:ctrlp_switch_buffer = 0
-let g:ctrlp_user_command = 'ag %s -l --nocolor --hidden -g ""'
-let g:ctrlp_working_path_mode = 0
-
-
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" janko-m/vim-test
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-" run tests asynchronously
-let test#strategy = 'asyncrun'
-
-" set vim-test mappings
-nmap <silent> <leader>t :TestNearest<CR>
-nmap <silent> <leader>T :TestFile<CR>
-nmap <silent> <leader>r :TestLast<CR>
-nmap <silent> <leader>R :TestSuite<CR>
-nmap <silent> <leader>g :TestVisit<CR>
-
-
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" mileszs/ack.vim
+" ack.vim
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 " use the silver searcher instead of grep
@@ -115,44 +93,7 @@ endif
 
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" ntpeters/vim-better-whitespace
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-" disable trailiging whitespace highlighting
-autocmd VimEnter * DisableWhitespace
-
-" strip all trailing whitespace on save
-autocmd BufEnter * EnableStripWhitespaceOnSave
-
-
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" ryanoasis/vim-devicons
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-" set Vim font to a Nerd Font
-set guifont=Droid\ Sans\ Mono\ for\ Powerline\ Nerd\ Font\ Complete\ Mono:h13
-
-" set devicons for airline
-let g:airline_powerline_fonts = 1
-
-
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" scrooloose/nerdcommenter
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-" Add spaces after comment delimiters by default
-let g:NERDSpaceDelims = 1
-
-
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" scrooloose/nerdtree
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-nmap <leader>\ :NERDTreeToggle<CR>
-
-
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" skywind3000/asyncrun.vim
+" asyncrun.vim
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 " configure quickfix window for async commands
@@ -165,7 +106,93 @@ nmap <F1> :call asyncrun#quickfix_toggle(20)<CR>
 
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" tpope/vim-fugitive
+" base16
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+if filereadable(expand("~/.vimrc_background"))
+  " access colors present in 256 colorspace
+  let base16colorspace=256
+
+  source ~/.vimrc_background
+endif
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" ctrlp.vim
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+let g:ctrlp_match_window = "bottom,order:ttb"
+let g:ctrlp_switch_buffer = 0
+let g:ctrlp_user_command = 'ag %s -l --nocolor --hidden -g ""'
+let g:ctrlp_working_path_mode = 0
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" nerdcommenter
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" Add spaces after comment delimiters by default
+let g:NERDSpaceDelims = 1
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" nerdtree
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" set map to toggle tree view
+nmap <leader>\ :NERDTreeToggle<CR>
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" syntastic
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" use rubocop if available
+let g:syntastic_ruby_checkers = ['rubocop', 'mri']
+
+" lint when file is opened or saved.
+let g:syntastic_check_on_open = 1
+
+" don't lint when buffers are written to disk.
+let g:syntastic_check_on_wq = 0
+
+" set syntastic error symbols
+let g:syntastic_warning_symbol = 'W>'
+let g:syntastic_error_symbol = 'E>'
+let g:syntastic_style_warning_symbol = 'W}'
+let g:syntastic_style_error_symbol = 'E}'
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" vim-airline
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+let g:airline_theme='base16_default'
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" vim-better-whitespace
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" disable trailiging whitespace highlighting
+autocmd VimEnter * DisableWhitespace
+
+" strip all trailing whitespace on save
+autocmd BufEnter * EnableStripWhitespaceOnSave
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" vim-devicons
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+" set Vim font to a Nerd Font
+set guifont=Droid\ Sans\ Mono\ for\ Powerline\ Nerd\ Font\ Complete\ Mono:h13
+
+" set devicons for airline
+let g:airline_powerline_fonts = 1
+
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" vim-fugitive
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 " set git mappings
@@ -176,7 +203,15 @@ nmap <leader>gp :Gpush<CR>
 
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" vim-airline/vim-airline
+" vim-test
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-let g:airline_theme='base16_default'
+" run tests asynchronously
+let test#strategy = 'asyncrun'
+
+" set vim-test mappings
+nmap <silent> <leader>t :TestNearest<CR>
+nmap <silent> <leader>T :TestFile<CR>
+nmap <silent> <leader>r :TestLast<CR>
+nmap <silent> <leader>R :TestSuite<CR>
+nmap <silent> <leader>g :TestVisit<CR>
