@@ -30,8 +30,6 @@ Plug 'vim-airline/vim-airline'                " Lean & mean status/tabline for v
 
 Plug 'vim-airline/vim-airline-themes'         " A collection of themes for vim-airline
 
-Plug 'vim-syntastic/syntastic'                " Syntax checking hacks for Vim
-
 Plug 'ryanoasis/vim-devicons'                 " Add icons to Vim plugins
 
 call plug#end()
@@ -140,26 +138,6 @@ let g:NERDSpaceDelims = 1
 
 " set map to toggle tree view
 nmap <leader>\ :NERDTreeToggle<CR>
-
-
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" syntastic
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-" use rubocop if available
-let g:syntastic_ruby_checkers = ['rubocop', 'mri']
-
-" lint when file is opened or saved.
-let g:syntastic_check_on_open = 1
-
-" don't lint when buffers are written to disk.
-let g:syntastic_check_on_wq = 0
-
-" set syntastic error symbols
-let g:syntastic_warning_symbol = 'W>'
-let g:syntastic_error_symbol = 'E>'
-let g:syntastic_style_warning_symbol = 'W}'
-let g:syntastic_style_error_symbol = 'E}'
 
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
