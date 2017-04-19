@@ -32,6 +32,8 @@ Plug 'vim-airline/vim-airline-themes'         " A collection of themes for vim-a
 
 Plug 'ryanoasis/vim-devicons'                 " Add icons to Vim plugins
 
+Plug 'fatih/vim-go'                           " Go development plugin for Vim
+
 call plug#end()
 
 
