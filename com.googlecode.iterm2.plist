@@ -318,7 +318,7 @@
 	<key>NSWindow Frame SharedPreferences</key>
 	<string>136 164 796 473 0 0 1366 745 </string>
 	<key>NSWindow Frame iTerm Window 0</key>
-	<string>4 6 1362 732 0 0 1366 745 </string>
+	<string>4 21 1346 724 0 0 1366 745 </string>
 	<key>NSWindow Frame iTerm Window 1</key>
 	<string>247 107 650 502 0 0 1920 1057 </string>
 	<key>NeverWarnAboutShortLivedSessions_8DC4122F-9241-4D4B-97FC-8CF75EB7CCE6</key>
@@ -1072,11 +1072,15 @@
 	<key>SUHasLaunchedBefore</key>
 	<true/>
 	<key>SULastCheckTime</key>
-	<date>2017-04-19T21:15:31Z</date>
+	<date>2017-06-25T08:58:50Z</date>
 	<key>SUSendProfileInfo</key>
 	<false/>
 	<key>WordCharacters</key>
 	<string>/-+\~_.</string>
+	<key>findIgnoreCase_iTerm</key>
+	<true/>
+	<key>findRegex_iTerm</key>
+	<false/>
 	<key>iTerm Version</key>
 	<string>3.0.15</string>
 </dict>

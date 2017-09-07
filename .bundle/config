@@ -1,6 +1,9 @@
 ---
-BUNDLE_DISABLE_MULTISOURCE: '1'
-BUNDLE_DISABLE_SHARED_GEMS: 'true'
-BUNDLE_JOBS: '4'
+BUNDLE_DISABLE_MULTISOURCE: "1"
+BUNDLE_DISABLE_SHARED_GEMS: "true"
+BUNDLE_JOBS: "4"
 BUNDLE_PATH: ".gs"
 BUNDLE_BUILD__NOKOGIRI: "--with-xml2-dir=/usr --with-xslt-dir=/opt/local --with-iconv-dir=/opt/local"
+BUNDLE_GEM__TEST: "minitest"
+BUNDLE_GEM__MIT: "true"
+BUNDLE_GEM__COC: "false"
