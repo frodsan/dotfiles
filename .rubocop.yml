@@ -1,10 +1,23 @@
 AllCops:
+  TargetRubyVersion: 2.2
+
+  # RuboCop has a bunch of cops enabled by default. This setting tells RuboCop
+  # to ignore them, so only the ones explicitly set in this file are enabled.
   DisabledByDefault: true
+
   Exclude:
     - 'bin/**/*'
     - 'db/schema.rb'
     - 'tmp/**/*'
     - 'vendor/**/*'
+
+# Align `when` with `case`.
+Layout/CaseIndentation:
+  Enabled: true
+
+# Align comments with method definitions.
+Layout/CommentIndentation:
+  Enabled: true
 
 Layout/EmptyLineAfterMagicComment:
   Enabled: true
@@ -12,16 +25,30 @@ Layout/EmptyLineAfterMagicComment:
 Layout/EmptyLineBetweenDefs:
   Enabled: true
 
-Layout/EmptyLines:
+# In a regular class definition, no empty lines around the body.
+Layout/EmptyLinesAroundClassBody:
   Enabled: true
 
-Layout/EmptyLinesAroundAccessModifier:
+# In a regular method definition, no empty lines around the body.
+Layout/EmptyLinesAroundMethodBody:
+  Enabled: true
+
+# In a regular module definition, no empty lines around the body.
+Layout/EmptyLinesAroundModuleBody:
+  Enabled: true
+
+Layout/FirstParameterIndentation:
   Enabled: true
 
 Layout/IndentationConsistency:
   Enabled: true
 
+# Two spaces, no tabs (for indentation).
 Layout/IndentationWidth:
+  Enabled: true
+
+# Defining a method with parameters needs parentheses.
+Style/MethodDefParentheses:
   Enabled: true
 
 Layout/SpaceAfterColon:
@@ -30,61 +57,71 @@ Layout/SpaceAfterColon:
 Layout/SpaceAfterComma:
   Enabled: true
 
-Layout/SpaceAfterMethodName:
+Layout/SpaceAroundEqualsInParameterDefault:
   Enabled: true
 
-Layout/SpaceBeforeBlockBraces:
-  Enabled: true
-
-Layout/SpaceBeforeComma:
-  Enabled: true
-
-Layout/SpaceInsideBlockBraces:
-  Enabled: true
-
-Layout/SpaceAroundBlockParameters:
+Layout/SpaceAroundKeyword:
   Enabled: true
 
 Layout/SpaceAroundOperators:
   Enabled: true
 
-Layout/SpaceInsideBrackets:
+Layout/SpaceBeforeFirstArg:
+    Enabled: true
+
+# Use `foo {}` not `foo{}`.
+Layout/SpaceBeforeBlockBraces:
   Enabled: true
 
+# Use `foo { bar }` not `foo {bar}`.
+Layout/SpaceInsideBlockBraces:
+  Enabled: true
+
+# Use `{ a: 1 }` not `{a:1}`.
 Layout/SpaceInsideHashLiteralBraces:
   Enabled: true
 
 Layout/SpaceInsideParens:
   Enabled: true
 
-Layout/SpaceInsideStringInterpolation:
-  EnforcedStyle: space
-
-Lint/Debugger:
+# Detect hard tabs, no hard tabs.
+Layout/Tab:
   Enabled: true
 
-Lint/DefEndAlignment:
+# Blank lines should not have any spaces.
+Layout/TrailingBlankLines:
   Enabled: true
 
+# No trailing whitespace.
+Layout/TrailingWhitespace:
+  Enabled: true
+
+# Align `end` with the matching keyword or starting expression except for
+# assignments, where it should be aligned with the LHS.
 Lint/EndAlignment:
   Enabled: true
+  EnforcedStyleAlignWith: variable
 
-Metrics/LineLength:
-  Max: 120
-
-Rails:
+# Use my_method(my_arg) not my_method( my_arg ) or my_method my_arg.
+Lint/RequireParentheses:
   Enabled: true
 
-Security:
+# Prefer &&/|| over and/or.
+Style/AndOr:
   Enabled: true
 
-Style/DefWithParentheses:
+# Do not use braces for hash literals when they are the last argument of a
+# method call.
+Style/BracesAroundHashParameters:
   Enabled: true
+  EnforcedStyle: context_dependent
 
 Style/FrozenStringLiteralComment:
   Enabled: true
+  EnforcedStyle: always
 
-Style/MethodDefParentheses:
+# Use Ruby >= 1.9 syntax for hashes. Prefer { a: :b } over { :a => :b }.
+Style/HashSyntax:
   Enabled: true
 
 Style/RedundantFreeze:
@@ -93,8 +130,11 @@ Style/RedundantFreeze:
 Style/RedundantParentheses:
   Enabled: true
 
-Style/RedundantSelf:
-  Enabled: true
-
+# Check quotes usage according to lint rule below.
 Style/StringLiterals:
+  Enabled: true
   EnforcedStyle: double_quotes
+
+# Use quotes for string literals when they are enough.
+Style/UnneededPercentQ:
+  Enabled: true
