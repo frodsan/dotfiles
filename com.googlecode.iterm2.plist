@@ -8,6 +8,8 @@
 	<integer>0</integer>
 	<key>AppleSmoothFixedFontsSizeThreshold</key>
 	<integer>1</integer>
+	<key>AppleWindowTabbingMode</key>
+	<string>manual</string>
 	<key>Custom Color Presets</key>
 	<dict>
 		<key>base16-default.dark.256</key>
@@ -269,6 +271,8 @@
 	</dict>
 	<key>Default Bookmark Guid</key>
 	<string>8DC4122F-9241-4D4B-97FC-8CF75EB7CCE6</string>
+	<key>HotkeyMigratedFromSingleToMulti</key>
+	<true/>
 	<key>LoadPrefsFromCustomFolder</key>
 	<true/>
 	<key>NSNavLastRootDirectory</key>
@@ -313,12 +317,14 @@
 	</dict>
 	<key>NSWindow Frame NSFontPanel</key>
 	<string>1409 110 445 202 0 0 1920 1057 </string>
+	<key>NSWindow Frame SUUpdateAlert</key>
+	<string>375 264 620 392 0 0 1366 745 </string>
 	<key>NSWindow Frame SessionsPreferences</key>
 	<string>269 275 606 456 0 0 1920 1057 </string>
 	<key>NSWindow Frame SharedPreferences</key>
 	<string>136 164 796 473 0 0 1366 745 </string>
 	<key>NSWindow Frame iTerm Window 0</key>
-	<string>4 21 1346 724 0 0 1366 745 </string>
+	<string>4 23 1362 722 0 0 1366 745 </string>
 	<key>NSWindow Frame iTerm Window 1</key>
 	<string>247 107 650 502 0 0 1920 1057 </string>
 	<key>NeverWarnAboutShortLivedSessions_8DC4122F-9241-4D4B-97FC-8CF75EB7CCE6</key>
@@ -1063,6 +1069,8 @@
 	</dict>
 	<key>PrefsCustomFolder</key>
 	<string>/Users/frodsan/Code/frodsan/dotfiles</string>
+	<key>SUAutomaticallyUpdate</key>
+	<true/>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedAlternateAppNameKey</key>
@@ -1072,7 +1080,7 @@
 	<key>SUHasLaunchedBefore</key>
 	<true/>
 	<key>SULastCheckTime</key>
-	<date>2017-06-25T08:58:50Z</date>
+	<date>2017-10-09T16:35:34Z</date>
 	<key>SUSendProfileInfo</key>
 	<false/>
 	<key>WordCharacters</key>
@@ -1082,6 +1090,6 @@
 	<key>findRegex_iTerm</key>
 	<false/>
 	<key>iTerm Version</key>
-	<string>3.0.15</string>
+	<string>3.1.3</string>
 </dict>
 </plist>
