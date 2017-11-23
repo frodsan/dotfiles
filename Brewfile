@@ -23,6 +23,7 @@ brew "pcre"
 brew "crystal-lang"
 brew "ctags"
 brew "perl"
+brew "drafter", args: ["HEAD"]
 brew "go"
 brew "libtool"
 brew "graphviz"

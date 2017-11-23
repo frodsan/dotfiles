@@ -1,13 +1,11 @@
 export ARCHFLAGS="-arch x86_64"
 export BIN=/usr/local/bin
 export EDITOR=vim
-export GOPATH=$HOME/Code/go
 export PATH=/bin
 export PATH=/sbin:$PATH
 export PATH=/usr/bin:$PATH
 export PATH=/usr/sbin:$PATH
 export PATH=$BIN:$PATH
-export PATH=$GOPATH/bin:$PATH
 export PATH=/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH
 export PATH=./node_modules/.bin:$PATH
 export PATH=./bin:$PATH
