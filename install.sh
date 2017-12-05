@@ -26,6 +26,9 @@ fi
 ln -s "$PWD/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json"
 
 VSCODE_EXTENSIONS=(
+  lukehoban.Go
+  zhuangtongfa.material-theme
+  PKief.material-icon-theme
 )
 
 for EXTENSION in ${VSCODE_EXTENSIONS[@]}; do

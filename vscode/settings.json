@@ -1,10 +1,10 @@
 {
-    // editor
+    // Editor
     "editor.fontSize": 13,
     "editor.tabSize": 2,
     "editor.tabCompletion": true,
 
-    // files
+    // Files
     "files.trimTrailingWhitespace": true,
     "files.exclude": {
         "**/.git": true,
@@ -20,6 +20,13 @@
         "**/node_modules/**": true,
         "**/.gs/**": true
     },
+
+    // Git
     "git.confirmSync": false,
-    "git.enableSmartCommit": true
+    "git.enableSmartCommit": true,
+
+    // Workbench
+    "workbench.startupEditor": "newUntitledFile",
+    "workbench.colorTheme": "One Dark Pro",
+    "workbench.iconTheme": "material-icon-theme"
 }
