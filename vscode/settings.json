@@ -1,0 +1,17 @@
+{
+    // editor
+    "editor.fontSize": 13,
+    "editor.tabSize": 2,
+    "editor.tabCompletion": true,
+
+    // files
+    "files.trimTrailingWhitespace": true,
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/.gs": true
+    }
+}
