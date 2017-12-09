@@ -36,7 +36,7 @@ brew "ossp-uuid"
 brew "pcre"
 brew "pkg-config"
 brew "redis", restart_service: true
-brew "ruby", args: ["devel"]
+brew "ruby"
 brew "ruby-build"
 brew "scrypt"
 brew "snappy"
