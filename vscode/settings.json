@@ -1,11 +1,10 @@
 {
     // Editor
     "editor.fontSize": 13,
-    "editor.tabSize": 2,
     "editor.tabCompletion": true,
+    "editor.tabSize": 2,
 
     // Files
-    "files.trimTrailingWhitespace": true,
     "files.exclude": {
         "**/.git": true,
         "**/.svn": true,
@@ -14,11 +13,14 @@
         "**/.DS_Store": true,
         "**/.gs": true
     },
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "files.trimTrailingWhitespace": true,
     "files.watcherExclude": {
         "**/.git/objects/**": true,
         "**/.git/subtree-cache/**": true,
-        "**/node_modules/**": true,
-        "**/.gs/**": true
+        "**/.gs/**": true,
+        "**/node_modules/**": true
     },
 
     // Git
@@ -26,7 +28,7 @@
     "git.enableSmartCommit": true,
 
     // Workbench
-    "workbench.startupEditor": "newUntitledFile",
     "workbench.colorTheme": "One Dark Pro",
-    "workbench.iconTheme": "material-icon-theme"
+    "workbench.iconTheme": "material-icon-theme",
+    "workbench.startupEditor": "newUntitledFile"
 }
