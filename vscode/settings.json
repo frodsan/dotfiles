@@ -24,11 +24,19 @@
     },
 
     // Git
+    "git.autofetch": true,
     "git.confirmSync": false,
     "git.enableSmartCommit": true,
 
     // Workbench
     "workbench.colorTheme": "One Dark Pro",
+    "workbench.editor.enablePreview": false,
     "workbench.iconTheme": "material-icon-theme",
-    "workbench.startupEditor": "newUntitledFile"
+    "workbench.startupEditor": "newUntitledFile",
+
+    // Go extension
+    "go.formatTool": "goimports",
+
+    // Ruby extensions
+    "rufo.formatOnSave": true
 }
