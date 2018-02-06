@@ -95,6 +95,11 @@ export dotfiles="$HOME/Code/frodsan/dotfiles"
 export frodsan="$HOME/Code/frodsan"
 
 # ----------------------------------
+# Ruby on Rails
+# ----------------------------------
+alias r="bin/rails"
+
+# ----------------------------------
 # Docker
 # ----------------------------------
 

@@ -14,3 +14,7 @@ node_modules/
 
 # Ignore python bytecode.
 *.pyc
+
+# Ignore config files.
+.config/configstore
+.config/gocode
