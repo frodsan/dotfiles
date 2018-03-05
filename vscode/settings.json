@@ -1,8 +1,12 @@
 {
     // Editor
     "editor.fontSize": 13,
+    "editor.minimap.enabled": false,
     "editor.tabCompletion": true,
     "editor.tabSize": 2,
+
+    // Explorer
+    "explorer.confirmDragAndDrop": false,
 
     // Files
     "files.exclude": {
@@ -28,15 +32,18 @@
     "git.confirmSync": false,
     "git.enableSmartCommit": true,
 
+    // Go extension
+    "go.formatTool": "goimports",
+
+    // Material Icon Theme
+    "material-icon-theme.showUpdateMessage": false,
+
+    // Window
+    "window.zoomLevel": 1,
+
     // Workbench
     "workbench.colorTheme": "One Dark Pro",
     "workbench.editor.enablePreview": false,
     "workbench.iconTheme": "material-icon-theme",
-    "workbench.startupEditor": "newUntitledFile",
-
-    // Go extension
-    "go.formatTool": "goimports",
-
-    // Ruby extensions
-    "rufo.formatOnSave": true
+    "workbench.startupEditor": "newUntitledFile"
 }

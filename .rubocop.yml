@@ -8,6 +8,7 @@ AllCops:
   Exclude:
     - 'bin/**/*'
     - 'db/schema.rb'
+    - 'node_modules'
     - 'tmp/**/*'
     - 'vendor/**/*'
 
@@ -17,6 +18,9 @@ Layout/CaseIndentation:
 
 # Align comments with method definitions.
 Layout/CommentIndentation:
+  Enabled: true
+
+Layout/ElseAlignment:
   Enabled: true
 
 Layout/EmptyLineAfterMagicComment:
@@ -98,9 +102,10 @@ Layout/TrailingWhitespace:
 
 # Align `end` with the matching keyword or starting expression except for
 # assignments, where it should be aligned with the LHS.
-Lint/EndAlignment:
+Layout/EndAlignment:
   Enabled: true
   EnforcedStyleAlignWith: variable
+  AutoCorrect: true
 
 # Use my_method(my_arg) not my_method( my_arg ) or my_method my_arg.
 Lint/RequireParentheses:
