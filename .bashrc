@@ -95,6 +95,11 @@ export dotfiles="$HOME/Code/frodsan/dotfiles"
 export frodsan="$HOME/Code/frodsan"
 
 # ----------------------------------
+# Bundler
+# ----------------------------------
+alias be="bundle exec"
+
+# ----------------------------------
 # Ruby on Rails
 # ----------------------------------
 alias r="bin/rails"
