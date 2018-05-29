@@ -13,7 +13,7 @@ export PS1='\W $ '
 
 # Set up GOPATH
 export GOPATH=$HOME/go
-export PATH=$PATH:$GOPATH/bin
+export PATH=$GOPATH/bin:$PATH
 
 # Set Base16 shell.
 BASE16_SHELL=$HOME/.config/base16-shell/
