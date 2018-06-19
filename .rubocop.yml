@@ -111,6 +111,9 @@ Layout/EndAlignment:
 Lint/RequireParentheses:
   Enabled: true
 
+Lint/StringConversionInInterpolation:
+  Enabled: true
+
 # Prefer &&/|| over and/or.
 Style/AndOr:
   Enabled: true
