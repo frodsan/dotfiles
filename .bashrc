@@ -7,6 +7,7 @@ export PATH=/usr/bin:$PATH
 export PATH=/usr/sbin:$PATH
 export PATH=$BIN:$PATH
 export PATH=/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH
+export PATH=/usr/local/opt/redis@3.2/bin:$PATH
 export PATH=./node_modules/.bin:$PATH
 export PATH=./bin:$PATH
 export PS1='\W $ '
