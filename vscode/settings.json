@@ -51,4 +51,7 @@
 
     // Material Icon Theme
     "material-icon-theme.showUpdateMessage": false,
+
+    // Python
+    "python.linting.pep8Enabled": true
 }
