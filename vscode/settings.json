@@ -32,12 +32,6 @@
     "git.confirmSync": false,
     "git.enableSmartCommit": true,
 
-    // Go extension
-    "go.formatTool": "goimports",
-
-    // Material Icon Theme
-    "material-icon-theme.showUpdateMessage": false,
-
     // Window
     "window.zoomLevel": 1,
 
@@ -45,5 +39,16 @@
     "workbench.colorTheme": "One Dark Pro",
     "workbench.editor.enablePreview": false,
     "workbench.iconTheme": "material-icon-theme",
-    "workbench.startupEditor": "newUntitledFile"
+    "workbench.startupEditor": "newUntitledFile",
+
+    /*
+     * Extensions
+     *
+    */
+
+    // Go
+    "go.formatTool": "goimports",
+
+    // Material Icon Theme
+    "material-icon-theme.showUpdateMessage": false,
 }
