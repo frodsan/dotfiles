@@ -19,3 +19,6 @@ node_modules/
 # Ignore config files.
 .config/configstore
 .config/gocode
+
+# Ignore gcloud files
+.config/gcloud

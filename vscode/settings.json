@@ -53,5 +53,11 @@
     "material-icon-theme.showUpdateMessage": false,
 
     // Python
-    "python.linting.pep8Enabled": true
+    "[python]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4
+    },
+    "python.linting.pep8Enabled": true,
+    "python.pythonPath": "/usr/local/bin/python3",
+    "editor.multiCursorModifier": "alt"
 }
