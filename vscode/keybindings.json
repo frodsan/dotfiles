@@ -1,0 +1,43 @@
+// Place your key bindings in this file to overwrite the defaults
+[
+  {
+    "key": "cmd+r b",
+    "command": "workbench.action.tasks.runTask",
+    "args": "bundle install"
+  },
+  {
+    "key": "cmd+r c",
+    "command": "workbench.action.tasks.runTask",
+    "args": "rails console"
+  },
+  {
+    "key": "cmd+r m",
+    "command": "workbench.action.tasks.runTask",
+    "args": "rails db:migrate"
+  },
+  {
+    "key": "cmd+r n",
+    "command": "workbench.action.tasks.runTask",
+    "args": "rails db:rollback"
+  },
+  {
+    "key": "cmd+r t",
+    "command": "workbench.action.tasks.runTask",
+    "args": "rails test"
+  },
+  {
+    "key": "cmd+r y",
+    "command": "workbench.action.tasks.runTask",
+    "args": "rails test/file"
+  },
+  {
+    "key": "cmd+r u",
+    "command": "workbench.action.tasks.runTask",
+    "args": "rails test/method"
+  },
+  {
+    "key": "cmd+r r",
+    "command": "workbench.action.tasks.runTask",
+    "args": "rubocop"
+  }
+]
