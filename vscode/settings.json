@@ -2,6 +2,8 @@
     // Editor
     "editor.fontSize": 13,
     "editor.minimap.enabled": false,
+    "editor.multiCursorModifier": "alt",
+    "editor.snippetSuggestions": "top",
     "editor.tabCompletion": true,
     "editor.tabSize": 2,
 
@@ -48,6 +50,7 @@
 
     // Go
     "go.formatTool": "goimports",
+    "go.useCodeSnippetsOnFunctionSuggest": true,
 
     // Material Icon Theme
     "material-icon-theme.showUpdateMessage": false,
@@ -58,6 +61,5 @@
         "editor.tabSize": 4
     },
     "python.linting.pep8Enabled": true,
-    "python.pythonPath": "/usr/local/bin/python3",
-    "editor.multiCursorModifier": "alt"
+    "python.pythonPath": "/usr/local/bin/python3"
 }
