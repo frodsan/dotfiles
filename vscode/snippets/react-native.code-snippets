@@ -15,21 +15,10 @@
 	// 	],
 	// 	"description": "Log output to console"
 	// }
-	//
-	// ******************************************
-	// * Imports
-	// ******************************************
-	//
-	"Import react": {
-    "prefix": "imr",
-    "body": "import React from \"react\"",
+	"Import React-Native Element": {
+    "prefix": "imrn",
+		"body": "import { $1 } from \"react-native\"",
 		"scope": "javascript",
-    "description": "Import react"
-	},
-	"Import PropTypes": {
-    "prefix": "ipt",
-		"body": "import PropTypes from \"prop-types\"",
-		"scope": "javascript",
-		"description": "Import PropTypes"
+    "description": "Import React-Native Element"
   }
 }

@@ -15,21 +15,10 @@
 	// 	],
 	// 	"description": "Log output to console"
 	// }
-	//
-	// ******************************************
-	// * Imports
-	// ******************************************
-	//
-	"Import react": {
-    "prefix": "imr",
-    "body": "import React from \"react\"",
+	"Export default": {
+    "prefix": "ed",
+    "body": "export default $1",
 		"scope": "javascript",
-    "description": "Import react"
-	},
-	"Import PropTypes": {
-    "prefix": "ipt",
-		"body": "import PropTypes from \"prop-types\"",
-		"scope": "javascript",
-		"description": "Import PropTypes"
+    "description": "Export default"
   }
 }
