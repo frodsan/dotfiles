@@ -6,6 +6,9 @@ source ~/.bashrc
 # Load Rbenv
 eval "$(rbenv init -)"
 
+# Load hub
+eval "$(hub alias -s)"
+
 # Load AutoJump
 [ -f /usr/local/etc/profile.d/autojump.sh ] && . /usr/local/etc/profile.d/autojump.sh
 
