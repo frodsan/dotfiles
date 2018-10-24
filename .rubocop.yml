@@ -114,6 +114,9 @@ Lint/RequireParentheses:
 Lint/StringConversionInInterpolation:
   Enabled: true
 
+Rails:
+  Enabled: true
+
 # Prefer &&/|| over and/or.
 Style/AndOr:
   Enabled: true
