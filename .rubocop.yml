@@ -44,15 +44,14 @@ Layout/EmptyLinesAroundModuleBody:
 Layout/FirstParameterIndentation:
   Enabled: true
 
+Layout/LeadingCommentSpace:
+  Enabled: true
+
 Layout/IndentationConsistency:
   Enabled: true
 
 # Two spaces, no tabs (for indentation).
 Layout/IndentationWidth:
-  Enabled: true
-
-# Defining a method with parameters needs parentheses.
-Style/MethodDefParentheses:
   Enabled: true
 
 Layout/SpaceAfterColon:
@@ -70,8 +69,11 @@ Layout/SpaceAroundKeyword:
 Layout/SpaceAroundOperators:
   Enabled: true
 
+Layout/SpaceBeforeComma:
+  Enabled: true
+
 Layout/SpaceBeforeFirstArg:
-    Enabled: true
+  Enabled: true
 
 # Use `foo {}` not `foo{}`.
 Layout/SpaceBeforeBlockBraces:
@@ -114,6 +116,9 @@ Lint/RequireParentheses:
 Lint/StringConversionInInterpolation:
   Enabled: true
 
+Lint/UriEscapeUnescape:
+  Enabled: true
+
 Performance/FlatMap:
   Enabled: true
 
@@ -145,6 +150,13 @@ Style/BracesAroundHashParameters:
   Enabled: true
   EnforcedStyle: context_dependent
 
+# Prefer Foo.method over Foo::method
+Style/ColonMethodCall:
+  Enabled: true
+
+Style/DefWithParentheses:
+  Enabled: true
+
 Style/FrozenStringLiteralComment:
   Enabled: true
   EnforcedStyle: always
@@ -153,16 +165,34 @@ Style/FrozenStringLiteralComment:
 Style/HashSyntax:
   Enabled: true
 
+# Defining a method with parameters needs parentheses.
+Style/MethodDefParentheses:
+  Enabled: true
+
+Style/ParenthesesAroundCondition:
+  Enabled: true
+
 Style/RedundantFreeze:
   Enabled: true
 
 Style/RedundantParentheses:
   Enabled: true
 
+Style/RedundantReturn:
+  Enabled: true
+  AllowMultipleReturnValues: true
+
+Style/Semicolon:
+  Enabled: true
+  AllowAsExpressionSeparator: true
+
 # Check quotes usage according to lint rule below.
 Style/StringLiterals:
   Enabled: true
   EnforcedStyle: double_quotes
+
+Style/TrivialAccessors:
+  Enabled: true
 
 # Use quotes for string literals when they are enough.
 Style/UnneededPercentQ:
