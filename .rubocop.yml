@@ -114,6 +114,24 @@ Lint/RequireParentheses:
 Lint/StringConversionInInterpolation:
   Enabled: true
 
+Performance/FlatMap:
+  Enabled: true
+
+Performance/RedundantMerge:
+  Enabled: true
+
+Performance/StartWith:
+  Enabled: true
+
+Performance/EndWith:
+  Enabled: true
+
+Performance/RegexpMatch:
+  Enabled: true
+
+Performance/UnfreezeString:
+  Enabled: true
+
 Rails:
   Enabled: true
 
