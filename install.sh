@@ -3,7 +3,6 @@
 BLACKLIST=".
 ..
 .git
-vscode
 "
 
 for file in .*; do
@@ -11,26 +10,4 @@ for file in .*; do
     rm -rf $HOME/$file
     ln -s $PWD/$file $HOME/$file
   fi
-done
-
-# Setting VS Code
-
-if [[ ! -d "$HOME/Library/Application Support/Code" ]]; then
-  mkdir -p "$HOME/Library/Application Support/Code"
-fi
-
-if [[ ! -d "$HOME/Library/Application Support/Code/User" ]]; then
-  mkdir -p "$HOME/Library/Application Support/Code/User"
-fi
-
-ln -s "$PWD/vscode/settings.json" "$HOME/Library/Application Support/Code/User/settings.json"
-
-VSCODE_EXTENSIONS=(
-  lukehoban.Go
-  zhuangtongfa.material-theme
-  PKief.material-icon-theme
-)
-
-for EXTENSION in ${VSCODE_EXTENSIONS[@]}; do
-  code --install-extension $EXTENSION
 done
