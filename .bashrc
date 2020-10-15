@@ -12,6 +12,9 @@ export PATH=./node_modules/.bin:$PATH
 export PATH=./bin:$PATH
 export PS1='\W $ '
 
+# Ignore zsh/bash warning on macOS Catalina
+export BASH_SILENCE_DEPRECATION_WARNING=1
+
 # Set up GOPATH
 export GOPATH=$HOME/go
 export PATH=$GOPATH/bin:$PATH
