@@ -38,7 +38,7 @@
     "window.zoomLevel": 1,
 
     // Workbench
-    "workbench.colorTheme": "One Dark Pro",
+    "workbench.colorTheme": "Default Dark+",
     "workbench.editor.enablePreview": false,
     "workbench.iconTheme": "material-icon-theme",
     "workbench.startupEditor": "newUntitledFile",
