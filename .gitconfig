@@ -6,13 +6,26 @@
 [github]
   user = frodsan
 [alias]
-  st  = status
-  ci  = commit
-  co  = checkout
-  df  = diff
-  aa  = add -A .
-  p   = push
-  pom = pull origin master
-  pum = pull upstream master
+  gl   = config --global -l
+  c    = commit
+  ca   = commit --amend
+  co   = checkout
+  d    = diff
+  a    = add
+  aa   = add -A .
+  l    = log
+  ll   = log --oneline
+  last = log -1 HEAD --stat
+  p    = push
+  pom  = pull origin main
+  pomm = pull origin master
+  pum  = pull upstream main
+  pumm = pull upstream master
+  s    = status
+  st   = status
 [core]
   excludesfile = ~/.gitignore
+[init]
+	defaultBranch = main
+[help]
+	autocorrect = 20
