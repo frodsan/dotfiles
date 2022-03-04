@@ -19,3 +19,6 @@ node_modules/
 # Ignore config files
 .config/
 !.config/base16-shell
+
+# Ignore Xcode user settings
+xcuserdata/

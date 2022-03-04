@@ -22,7 +22,6 @@
   pum  = pull upstream main
   pumm = pull upstream master
   s    = status
-  st   = status
 [core]
   excludesfile = ~/.gitignore
 [init]

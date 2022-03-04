@@ -34,9 +34,6 @@
     "git.confirmSync": false,
     "git.enableSmartCommit": true,
 
-    // Window
-    "window.zoomLevel": 1,
-
     // Workbench
     "workbench.colorTheme": "Default Dark+",
     "workbench.editor.enablePreview": false,
@@ -61,5 +58,8 @@
         "editor.tabSize": 4
     },
     "python.linting.pep8Enabled": true,
-    "python.pythonPath": "/usr/local/bin/python3"
+    "python.pythonPath": "/usr/local/bin/python3",
+    "explorer.confirmDelete": false,
+    "security.workspace.trust.untrustedFiles": "open",
+    "window.zoomLevel": 1
 }
