@@ -16,9 +16,12 @@ node_modules/
 # Ignore python bytecode.
 *.pyc
 
-# Ignore config files
+# Ignore config files.
 .config/
 !.config/base16-shell
 
-# Ignore Xcode user settings
+# Ignore Xcode user settings.
 xcuserdata/
+
+# Ignore local bash config.
+.bashrc.local

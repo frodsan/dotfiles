@@ -7,7 +7,7 @@ export PATH=/usr/bin:$PATH
 export PATH=/usr/sbin:$PATH
 export PATH=$BIN:$PATH
 export PATH=/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH
-export PATH=/usr/local/opt/redis@3.2/bin:$PATH
+export PATH=/usr/local/opt/redis/bin:$PATH
 export PATH=./node_modules/.bin:$PATH
 export PATH=./bin:$PATH
 export PS1='\W $ '
@@ -91,14 +91,6 @@ CDPATH=".:~:~/Code"
 shopt -s cdable_vars
 
 # ----------------------------------
-# Shortcuts
-# ----------------------------------
-
-export code="$HOME/Code"
-export dotfiles="$HOME/Code/frodsan/dotfiles"
-export frodsan="$HOME/Code/frodsan"
-
-# ----------------------------------
 # Brew
 # ----------------------------------
 
@@ -117,33 +109,21 @@ alias be="bundle exec"
 # ----------------------------------
 # Ruby on Rails
 # ----------------------------------
-alias r="bin/rails"
+alias r="rails"
+
+# ----------------------------------
+# Kubernetes
+# ----------------------------------
+alias k="kubectl"
 
 # ----------------------------------
 # Docker
 # ----------------------------------
-
-# Get container process
-alias dps="docker ps"
-
-# Get process included stop container
-alias dpa="docker ps -a"
-
-# Stop all containers
-dstop() { docker stop $(docker ps -aq); }
-
-# Remove all containers
-drm() { docker rm $(docker ps -aq); }
+alias d="docker"
 
 # ----------------------------------
 # Docker Compose
 # ----------------------------------
+alias dc="docker-compose"
 
-# Build docker
-alias dbuild="docker-compose build"
-
-# Run docker
-alias dup="docker-compose up"
-
-# Run command
-alias drun="docker-compose run"
+. .bashrc.local

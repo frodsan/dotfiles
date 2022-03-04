@@ -7,9 +7,12 @@
   user = frodsan
 [alias]
   gl   = config --global -l
+  b    = branch
+  bd   = branch -d
   c    = commit
   ca   = commit --amend
   co   = checkout
+  cob  = checkout -b
   d    = diff
   a    = add
   aa   = add -A .

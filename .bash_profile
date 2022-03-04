@@ -17,3 +17,12 @@ if [ -f '/Users/frodsan/google-cloud-sdk/path.bash.inc' ]; then source '/Users/f
 
 # The next line enables shell command completion for gcloud.
 if [ -f '/Users/frodsan/google-cloud-sdk/completion.bash.inc' ]; then source '/Users/frodsan/google-cloud-sdk/completion.bash.inc'; fi
+
+JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-11.0.12.jdk/Contents/Home/
+export JAVA_HOME
+
+M2_HOME=/usr/local/Cellar/maven/3.8.2/libexec
+export M2_HOME
+
+PATH=$PATH:$JAVA_HOME/bin:$M2_HOME/bin
+export PATH
