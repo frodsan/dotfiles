@@ -4,8 +4,9 @@
     "editor.minimap.enabled": false,
     "editor.multiCursorModifier": "alt",
     "editor.snippetSuggestions": "top",
-    "editor.tabCompletion": true,
+    "editor.tabCompletion": "on",
     "editor.tabSize": 2,
+    "window.zoomLevel": 2,
 
     // Explorer
     "explorer.confirmDragAndDrop": false,
@@ -39,6 +40,7 @@
     "workbench.editor.enablePreview": false,
     "workbench.iconTheme": "material-icon-theme",
     "workbench.startupEditor": "newUntitledFile",
+    "security.workspace.trust.untrustedFiles": "open",
 
     /*
      * Extensions
@@ -57,9 +59,8 @@
         "editor.insertSpaces": true,
         "editor.tabSize": 4
     },
-    "python.linting.pep8Enabled": true,
-    "python.pythonPath": "/usr/local/bin/python3",
-    "explorer.confirmDelete": false,
-    "security.workspace.trust.untrustedFiles": "open",
-    "window.zoomLevel": 1
+
+    // Ruby
+    "solargraph.useBundler": true,
+    "solargraph.formatting": true
 }

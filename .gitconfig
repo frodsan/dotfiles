@@ -13,6 +13,8 @@
   ca   = commit --amend
   co   = checkout
   cob  = checkout -b
+  com  = checkout main
+  comm = checkout master
   d    = diff
   a    = add
   aa   = add -A .

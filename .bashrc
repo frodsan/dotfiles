@@ -126,4 +126,9 @@ alias d="docker"
 # ----------------------------------
 alias dc="docker-compose"
 
-. .bashrc.local
+# ----------------------------------
+# Git
+# ----------------------------------
+alias g="git"
+
+. ~/.bashrc.local
