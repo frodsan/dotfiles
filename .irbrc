@@ -32,4 +32,8 @@ if defined? Rails
 
   # Use custom prompt by default
   IRB.conf[:PROMPT_MODE] = :CUSTOM
+  
+  if File.exist? ".irbrc"
+    load ".irbrc"
+  end
 end
