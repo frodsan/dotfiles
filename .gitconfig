@@ -10,6 +10,7 @@
   b    = branch
   bd   = branch -d
   c    = commit
+  ci   = commit
   ca   = commit --amend
   co   = checkout
   cob  = checkout -b

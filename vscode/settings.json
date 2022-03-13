@@ -62,5 +62,6 @@
 
     // Ruby
     "solargraph.useBundler": true,
-    "solargraph.formatting": true
+    "solargraph.formatting": true,
+    "extensions.ignoreRecommendations": true
 }

@@ -10,7 +10,12 @@ export PATH=/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH
 export PATH=/usr/local/opt/redis/bin:$PATH
 export PATH=./node_modules/.bin:$PATH
 export PATH=./bin:$PATH
-export PS1='\W $ '
+
+# Set Bash prompt
+parse_git_branch() {
+     git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/(\1)/'
+}
+export PS1="\[\e[32m\]\w \[\e[91m\]\$(parse_git_branch)\[\e[00m\] $ "
 
 # Ignore zsh/bash warning on macOS Catalina
 export BASH_SILENCE_DEPRECATION_WARNING=1
