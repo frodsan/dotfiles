@@ -3,7 +3,7 @@
 cmd=$1
 
 if [[ $cmd = "init" ]]; then
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   brew update
   brew tap Homebrew/bundle
   brew bundle
