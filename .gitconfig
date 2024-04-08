@@ -1,6 +1,7 @@
 [user]
   name = Franco
   email = frodsan@hey.com
+	signingkey = /Users/frodriguez/.ssh/id_rsa.pub
 [push]
   default = current
 [github]
@@ -34,3 +35,9 @@
 	defaultBranch = main
 [help]
 	autocorrect = 20
+[gpg]
+	format = ssh
+[commit]
+	gpgsign = true
+[tag]
+	gpgsign = true

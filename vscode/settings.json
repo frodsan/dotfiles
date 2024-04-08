@@ -2,11 +2,9 @@
     // Editor
     "editor.fontSize": 13,
     "editor.minimap.enabled": false,
-    "editor.multiCursorModifier": "alt",
     "editor.snippetSuggestions": "top",
     "editor.tabCompletion": "on",
     "editor.tabSize": 2,
-    "window.zoomLevel": 2,
 
     // Explorer
     "explorer.confirmDragAndDrop": false,
@@ -63,5 +61,7 @@
     // Ruby
     "solargraph.useBundler": true,
     "solargraph.formatting": true,
-    "extensions.ignoreRecommendations": true
+    "extensions.ignoreRecommendations": true,
+    "terminal.integrated.enableMultiLinePasteWarning": false,
+    "rubyLsp.rubyVersionManager": "asdf"
 }

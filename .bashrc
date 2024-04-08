@@ -1,6 +1,6 @@
-export ARCHFLAGS="-arch x86_64"
+export ARCHFLAGS="-arch arm64"
 export BIN=/usr/local/bin
-export EDITOR=vim
+export EDITOR=code
 export PATH=/bin
 export PATH=/sbin:$PATH
 export PATH=/usr/bin:$PATH
