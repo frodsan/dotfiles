@@ -31,6 +31,7 @@
   s    = status
 [core]
   excludesfile = ~/.gitignore
+	editor = vim
 [init]
 	defaultBranch = main
 [help]

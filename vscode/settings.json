@@ -63,5 +63,7 @@
     "solargraph.formatting": true,
     "extensions.ignoreRecommendations": true,
     "terminal.integrated.enableMultiLinePasteWarning": false,
-    "rubyLsp.rubyVersionManager": "asdf"
+    "rubyLsp.rubyVersionManager": {
+        "identifier": "asdf"
+    }
 }
