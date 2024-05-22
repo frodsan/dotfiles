@@ -1,3 +1,7 @@
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
+
 export ARCHFLAGS="-arch arm64"
 export BIN=/usr/local/bin
 export EDITOR=code
@@ -9,6 +13,7 @@ export PATH=$BIN:$PATH
 export PATH=/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH
 export PATH=/usr/local/opt/redis/bin:$PATH
 export PATH=./node_modules/.bin:$PATH
+export PATH=~/fvm/default/bin:$PATH
 export PATH=./bin:$PATH
 
 # Set Bash prompt
@@ -135,3 +140,19 @@ alias dc="docker-compose"
 # Git
 # ----------------------------------
 alias g="git"
+
+# ----------------------------------
+# Libraries
+# ----------------------------------
+
+# Load brew
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Load AutoJump
+[ -f /opt/homebrew/etc/profile.d/autojump.sh ] && . /opt/homebrew/etc/profile.d/autojump.sh
+
+# Load asdf
+. /opt/homebrew/opt/asdf/libexec/asdf.sh
+
+. ~/.bashrc.local
+
