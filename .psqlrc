@@ -27,3 +27,6 @@
 
 -- Ignore errors in interactive mode.
 \set ON_ERROR_ROLLBACK interactive
+
+-- Show messages again after the setup above.
+\unset QUIET
