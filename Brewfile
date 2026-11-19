@@ -1,3 +1,5 @@
 brew "asdf"
 brew "gh"
+brew "git"
+brew "heroku"
 brew "ripgrep"
