@@ -1,5 +1,8 @@
 brew "asdf"
+brew "coreutils"
+brew "findutils"
 brew "gh"
 brew "git"
+brew "gnu-sed"
 brew "heroku"
 brew "ripgrep"
