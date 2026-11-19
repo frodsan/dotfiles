@@ -1,44 +1,47 @@
 [user]
-  name = Franco
-  email = frodsan@hey.com
-	signingkey = /Users/frodriguez/.ssh/id_rsa.pub
-[push]
-  default = current
-[github]
-  user = frodsan
-[alias]
-  gl   = config --global -l
-  b    = branch
-  bd   = branch -d
-  c    = commit
-  ci   = commit
-  ca   = commit --amend
-  co   = checkout
-  cob  = checkout -b
-  com  = checkout main
-  comm = checkout master
-  d    = diff
-  a    = add
-  aa   = add -A .
-  l    = log
-  ll   = log --oneline
-  last = log -1 HEAD --stat
-  p    = push
-  pom  = pull origin main
-  pomm = pull origin master
-  pum  = pull upstream main
-  pumm = pull upstream master
-  s    = status
+	name = Francesco Rodriguez
+	email = frodsan@me.com
+	signingkey = ~/.ssh/id_rsa.pub
 [core]
-  excludesfile = ~/.gitignore
+	excludesfile = ~/.gitignore
 	editor = vim
-[init]
-	defaultBranch = main
-[help]
-	autocorrect = 20
+	ignorecase = false
 [gpg]
 	format = ssh
 [commit]
 	gpgsign = true
 [tag]
 	gpgsign = true
+[push]
+	default = current
+[init]
+	defaultBranch = main
+[help]
+	autocorrect = 20
+[github]
+	user = frodsan
+[alias]
+	gl   = config --global -l
+	b    = branch
+	bd   = branch -d
+	c    = commit
+	ci   = commit
+	ca   = commit --amend
+	co   = checkout
+	cob  = checkout -b
+	com  = checkout main
+	comm = checkout master
+	d    = diff
+	a    = add
+	aa   = add -A .
+	l    = log
+	ll   = log --oneline
+	last = log -1 HEAD --stat
+	p    = push
+	pom  = pull origin main
+	pomm = pull origin master
+	pum  = pull upstream main
+	pumm = pull upstream master
+	s    = status
+[credential "https://git.heroku.com"]
+	helper = !heroku git:credentials
