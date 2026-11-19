@@ -8,3 +8,6 @@ brew "herdr"
 brew "heroku"
 brew "jump"
 brew "ripgrep"
+brew "worktrunk"
+
+cask "claude-code@latest"
