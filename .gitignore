@@ -21,3 +21,7 @@ xcuserdata/
 
 # Ignore local bash config.
 .bashrc.local
+
+# Ignore Claude Code local settings.
+**/.claude/settings.local.json
+CLAUDE.local.md
