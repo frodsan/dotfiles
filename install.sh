@@ -1,13 +1,35 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
-BLACKLIST=".
-..
-.git
-"
+set -euo pipefail
 
-for file in .*; do
-  if ! [[ $BLACKLIST =~ $file ]]; then
-    rm -rf $HOME/$file
-    ln -s $PWD/$file $HOME/$file
+DOTFILES="$(cd "$(dirname "$0")" && pwd)"
+
+FILES=(
+  .bundle/config
+  .config/nvim
+  .gemrc
+  .gitconfig
+  .gitignore
+  .irbrc
+  .psqlrc
+  .railsrc
+)
+
+for file in "${FILES[@]}"; do
+  source="$DOTFILES/$file"
+  target="$HOME/$file"
+
+  if [[ -L "$target" && "$(readlink "$target")" == "$source" ]]; then
+    continue
   fi
+
+  mkdir -p "$(dirname "$target")"
+
+  if [[ -e "$target" || -L "$target" ]]; then
+    mv "$target" "$target.bak"
+    echo "Moved $target to $target.bak"
+  fi
+
+  ln -s "$source" "$target"
+  echo "Linked $target"
 done
