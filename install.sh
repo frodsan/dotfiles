@@ -13,6 +13,9 @@ FILES=(
   .irbrc
   .psqlrc
   .railsrc
+  .zprofile
+  .zshenv
+  .zshrc
 )
 
 install_homebrew() {

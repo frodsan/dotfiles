@@ -19,8 +19,10 @@ node_modules/
 # Ignore Xcode user settings.
 xcuserdata/
 
-# Ignore local bash config.
-.bashrc.local
+# Ignore local shell config.
+.zshenv.local
+.zprofile.local
+.zshrc.local
 
 # Ignore Claude Code local settings.
 **/.claude/settings.local.json

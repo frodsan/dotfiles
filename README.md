@@ -1,6 +1,8 @@
 # dotfiles
 
-My macOS config for git, Ruby, PostgreSQL and Neovim with LazyVim.
+My macOS config for zsh, git, Ruby, PostgreSQL and Neovim with LazyVim.
+
+Each zsh file loads a matching `.local` file when it exists: `~/.zshenv.local`, `~/.zprofile.local` and `~/.zshrc.local`. Put machine-specific and work settings there. Git ignores them.
 
 ## Install
 
