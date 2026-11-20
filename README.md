@@ -18,7 +18,9 @@ The repo is private, so `git clone` asks for your GitHub username and a personal
 2. It installs the packages in `Brewfile` with `brew bundle`.
 3. It links each path in its `FILES` list from the repo into your home folder.
 
-When a path already exists in your home folder and isn't the link, the script renames it to `<name>.bak` and then creates the link. It never deletes files. You can run it again at any time.
+The script prints one line per path. When a path already exists in your home folder and isn't the link, the script skips it and says whether its content matches the repo. Run `./install.sh --force`, or set `FORCE=1`, to replace those paths. With `--force`, each existing path moves to `<name>.bak` first, so the script never deletes files.
+
+`brew bundle` runs with `--no-upgrade`, so the script installs missing packages and leaves installed ones at their current version. You can run it again at any time.
 
 ## Add a file
 
