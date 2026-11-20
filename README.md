@@ -7,12 +7,22 @@ Each zsh file loads a matching `.local` file when it exists: `~/.zshenv.local`, 
 ## Install
 
 ```sh
-git clone https://github.com/frodsan/dotfiles ~/Code/frodsan/dotfiles && ~/Code/frodsan/dotfiles/install.sh
+curl -fsSL https://raw.githubusercontent.com/frodsan/dotfiles/master/install.sh | bash
 ```
 
-The repo is private, so `git clone` asks for your GitHub username and a personal access token.
+To replace existing files, add `--force`:
 
-`install.sh` does three things:
+```sh
+curl -fsSL https://raw.githubusercontent.com/frodsan/dotfiles/master/install.sh | bash -s -- --force
+```
+
+From `curl`, the script first gets the repo:
+
+1. It installs the Xcode Command Line Tools if they are missing. They include `git`. Confirm the dialog that macOS shows.
+2. It creates `~/Code/frodsan` if needed and clones the repo into `~/Code/frodsan/dotfiles`. If the clone already exists, it updates it with `git pull --ff-only`. Set `DOTFILES_DIR` to clone somewhere else.
+3. It runs the clone's `install.sh` with the same options.
+
+From a clone, run `./install.sh` directly. `install.sh` does three things:
 
 1. It installs Homebrew if `brew` is missing.
 2. It installs the packages in `Brewfile` with `brew bundle`.

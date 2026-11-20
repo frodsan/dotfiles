@@ -2,7 +2,13 @@
 
 set -euo pipefail
 
-DOTFILES="$(cd "$(dirname "$0")" && pwd)"
+REPO_URL="https://github.com/frodsan/dotfiles.git"
+CLONE_DIR="${DOTFILES_DIR:-$HOME/Code/frodsan/dotfiles}"
+SCRIPT="${BASH_SOURCE[0]:-}"
+DOTFILES=""
+if [[ -n "$SCRIPT" && -f "$SCRIPT" ]]; then
+  DOTFILES="$(cd "$(dirname "$SCRIPT")" && pwd)"
+fi
 FORCE="${FORCE:-0}"
 
 FILES=(
@@ -22,6 +28,8 @@ FILES=(
 usage() {
   echo "Usage: install.sh [--force]"
   echo
+  echo "Run from curl, it installs the Xcode Command Line Tools, clones the repo into"
+  echo "\$DOTFILES_DIR (default ~/Code/frodsan/dotfiles) and runs the clone's install.sh."
   echo "Installs Homebrew and the Brewfile packages, then links the dotfiles into \$HOME."
   echo "Existing files are left alone unless you pass --force or set FORCE=1."
   echo "With --force, each existing file is moved to <name>.bak before it is linked."
@@ -35,6 +43,42 @@ parse_args() {
       *) echo "Unknown option: $arg"; usage; exit 1 ;;
     esac
   done
+}
+
+install_command_line_tools() {
+  echo "==> Xcode Command Line Tools"
+
+  if xcode-select -p >/dev/null 2>&1; then
+    echo "  already installed"
+    return
+  fi
+
+  echo "  installing: confirm the dialog that macOS shows"
+  xcode-select --install >/dev/null 2>&1 || true
+  until xcode-select -p >/dev/null 2>&1; do
+    sleep 5
+  done
+  echo "  installed"
+}
+
+bootstrap() {
+  install_command_line_tools
+
+  echo "==> Repo"
+  mkdir -p "$(dirname "$CLONE_DIR")"
+
+  if [[ -d "$CLONE_DIR/.git" ]]; then
+    echo "  updating $CLONE_DIR"
+    git -C "$CLONE_DIR" pull --ff-only
+  elif [[ -e "$CLONE_DIR" ]]; then
+    echo "  $CLONE_DIR exists and is not a git clone. Move it away, or set DOTFILES_DIR."
+    exit 1
+  else
+    echo "  cloning into $CLONE_DIR"
+    git clone "$REPO_URL" "$CLONE_DIR"
+  fi
+
+  exec bash "$CLONE_DIR/install.sh" "$@"
 }
 
 install_homebrew() {
@@ -111,6 +155,10 @@ link_files() {
 }
 
 parse_args "$@"
+if [[ -z "$DOTFILES" || ! -f "$DOTFILES/Brewfile" ]]; then
+  bootstrap "$@"
+  exit
+fi
 install_homebrew
 install_packages
 link_files
