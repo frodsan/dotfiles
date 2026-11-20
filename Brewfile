@@ -15,3 +15,4 @@ brew "tree-sitter-cli"
 brew "worktrunk"
 
 cask "claude-code@latest"
+cask "herdr-app"
