@@ -1414,16 +1414,25 @@ export default class Sessions extends View {
     if (existing) {
       if (this.activeView() !== "work") this.showView("work");
       run("space.select", { id: existing.id });
-      this.openClaude(existing, cx);
+      this.openNewClaude(existing);
       return;
     }
-    cx.spawn(async () => {
-      const folder = appHome();
-      const claude = await latestConversation(folder);
-      setShared("sessions.pending", [...(shared("sessions.pending") ?? []), { name: "Herdr config", dev: true, claude, at: Date.now() }]);
-      if (this.activeView() !== "work") this.showView("work");
-      run("space.new", { name: "Herdr config", folder, argv: claude ? [CLAUDE, "--resume", claude] : [CLAUDE] });
-    });
+    setShared("sessions.pending", [...(shared("sessions.pending") ?? []), { name: "Herdr config", dev: true, at: Date.now() }]);
+    if (this.activeView() !== "work") this.showView("work");
+    run("space.new", { name: "Herdr config", folder: appHome(), argv: [CLAUDE] });
+  }
+
+  openNewClaude(s) {
+    const ps = panes();
+    const open = claudePane(s, ps);
+    if (open) {
+      run("tab.select", { id: open.tab });
+      run("pane.focus", { pane: open.pane });
+      return;
+    }
+    const { [s.id]: _, ...pins } = map("sessions.claude");
+    setShared("sessions.claude", pins);
+    run("tab.new", { space: s.id, folder: place(s, ps), argv: [CLAUDE] });
   }
 
   openClaude(s, cx) {
