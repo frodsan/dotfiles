@@ -13,6 +13,16 @@ FORCE="${FORCE:-0}"
 
 FILES=(
   .bundle/config
+  .claude/skills/pr-autofix
+  .claude/skills/spin-off
+  .config/herdr-app/keys.json
+  .config/herdr-app/layouts/firehouse.json
+  .config/herdr-app/mods/firehouse-new-menu
+  .config/herdr-app/mods/firehouse-palette
+  .config/herdr-app/mods/firehouse-tabs
+  .config/herdr-app/mods/pull-request
+  .config/herdr-app/mods/sessions
+  .config/herdr-app/themes/firehouse.json
   .config/nvim
   .gemrc
   .gitconfig
@@ -23,6 +33,10 @@ FILES=(
   .zprofile
   .zshenv
   .zshrc
+)
+
+COPIES=(
+  .config/herdr-app/settings.json
 )
 
 usage() {
@@ -140,12 +154,31 @@ link_file() {
   echo "  linked   ~/$file -> $source"
 }
 
+copy_file() {
+  local file="$1"
+  local source="$DOTFILES/$file"
+  local target="$HOME/$file"
+
+  if [[ -e "$target" || -L "$target" ]]; then
+    echo "  ok       ~/$file exists, the app owns it now"
+    return
+  fi
+
+  mkdir -p "$(dirname "$target")"
+  cp "$source" "$target"
+  echo "  copied   ~/$file"
+}
+
 link_files() {
   echo "==> Dotfiles"
   SKIPPED=0
 
   for file in "${FILES[@]}"; do
     link_file "$file"
+  done
+
+  for file in "${COPIES[@]}"; do
+    copy_file "$file"
   done
 
   if [[ "$SKIPPED" -gt 0 ]]; then

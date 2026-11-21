@@ -32,6 +32,15 @@ The script prints one line per path. When a path already exists in your home fol
 
 `brew bundle` runs with `--no-upgrade`, so the script installs missing packages and leaves installed ones at their current version. You can run it again at any time.
 
+## Herdr
+
+`.config/herdr-app` holds my Herdr setup: the sessions sidebar with focus mode and chats, the pull request sidebar with auto-fix and merge when ready, Neovim and lazygit beside Claude, a tabs bar, a command palette, and the `firehouse` layout and theme. `.claude/skills` holds the two Claude skills it uses: `pr-autofix` and `spin-off`.
+
+- The script links each mod folder, the layout, the theme and `keys.json`. It copies `settings.json` once, because Herdr rewrites that file itself.
+- In Herdr, pick the layout once with `ctrl-shift-l` or the `layout.switch` command: `firehouse`.
+- Open the settings with `⇧⌘,` and the shortcuts with `⌘?`.
+- Other mods can add an icon and a view to the sidebar with a `sidebar.json` file in their folder. The `layout:work` keys in `keys.json` are for a private layout with such mods, and do nothing without it.
+
 ## Add a file
 
 1. Copy the file into the repo at the same path it has under your home folder.
