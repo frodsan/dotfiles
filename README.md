@@ -35,7 +35,9 @@ The script prints one line per path. When a path already exists in your home fol
 
 ## Claude Code
 
-`.claude/CLAUDE.md` holds my instructions for every Claude Code session: writing style and pull request descriptions. Claude Code loads `~/.claude/CLAUDE.md` at every start. Put work rules in a `CLAUDE.local.md` in the folder above your work repos, for example `~/Code/<company>/CLAUDE.local.md`. Claude Code loads it in every repo and worktree under that folder, and it stays out of this repo.
+`.claude/CLAUDE.md` holds my instructions for every Claude Code session: writing style and pull request descriptions. Claude Code loads `~/.claude/CLAUDE.md` at every start.
+
+`.claude/rules` holds rules for one kind of file, such as `ruby.md` for Ruby style. Each file has a `paths:` header, and Claude Code loads it only after it reads or edits a matching file. `install.sh` links each rule file, not the folder, so `~/.claude/rules` can also hold private rules that stay out of this repo. Put work rules in a `CLAUDE.local.md` in the folder above your work repos, for example `~/Code/<company>/CLAUDE.local.md`. Claude Code loads it in every repo and worktree under that folder, and it stays out of this repo.
 
 `SKILLS` lists the third-party skills to install, one `owner/repo@skill` per line. `install.sh` installs each missing one for Claude Code with `npx skills add <source> -g -a claude-code -y`. It needs Node.js 22.20 or later, which the `Brewfile` installs. To add a skill, read it first, then add its line and run `./install.sh`. To update installed skills, run `npx skills update -g`.
 

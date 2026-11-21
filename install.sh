@@ -14,6 +14,7 @@ FORCE="${FORCE:-0}"
 FILES=(
   .bundle/config
   .claude/CLAUDE.md
+  .claude/rules/ruby.md
   .claude/skills/herdr-app
   .config/herdr-app/keys.json
   .config/herdr-app/layouts/firehouse.json
