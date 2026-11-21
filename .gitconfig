@@ -20,6 +20,8 @@
 	autocorrect = 20
 [github]
 	user = frodsan
+[url "git@github.com:"]
+	pushInsteadOf = https://github.com/
 [alias]
 	gl   = config --global -l
 	b    = branch
