@@ -13,7 +13,7 @@ FORCE="${FORCE:-0}"
 
 FILES=(
   .bundle/config
-  .claude/skills/herdr
+  .claude/skills/herdr-app
   .config/herdr-app/keys.json
   .config/herdr-app/layouts/firehouse.json
   .config/herdr-app/mods/firehouse-new-menu

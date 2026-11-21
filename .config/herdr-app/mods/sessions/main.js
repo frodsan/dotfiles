@@ -2207,7 +2207,7 @@ export default class Sessions extends View {
       });
     }
     cx.spawn(async (cx) => {
-      const results = await Promise.all(WELCOME_SKILLS.map((name) => exec("test", ["-e", `${home()}/.claude/skills/herdr/skills/${name}/SKILL.md`]).then((r) => r.code === 0).catch(() => false)));
+      const results = await Promise.all(WELCOME_SKILLS.map((name) => exec("test", ["-e", `${home()}/.claude/skills/herdr-app/skills/${name}/SKILL.md`]).then((r) => r.code === 0).catch(() => false)));
       this.checks.skills = results.every(Boolean);
       cx.notify();
     });
@@ -2250,7 +2250,7 @@ export default class Sessions extends View {
               .child(check(true, "Branch prefix", "Optional. New branches start with it, e.g. fr/fix-login-1a2b."))
               .child(div().pl(26).child(Input.new(this.prefix).h(28).px(8).rounded(6).border_1().border_color(t.input).bg(t.background).text_size(12.5))),
             ...WELCOME_TOOLS.map(([name, , what, install]) => check(this.checks[name], name, this.checks[name] === false ? `${what} Install: ${install}` : what)),
-            check(this.checks.skills, "Claude skills", this.checks.skills === false ? "Auto-fix and /herdr:spin-off need the herdr plugin in ~/.claude/skills/herdr. Run the dotfiles install.sh." : "The herdr plugin: herdr:pr-autofix for auto-fix, and /herdr:spin-off."),
+            check(this.checks.skills, "Claude skills", this.checks.skills === false ? "Auto-fix and /herdr:spin-off need the herdr plugin in ~/.claude/skills/herdr-app. Run the dotfiles install.sh." : "The herdr plugin: herdr:pr-autofix for auto-fix, and /herdr:spin-off."),
           )))
         .child(v_flex().gap(10).child(heading("Shortcuts"))
           .child(card(
