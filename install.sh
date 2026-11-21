@@ -187,6 +187,29 @@ link_files() {
   fi
 }
 
+install_skills() {
+  echo "==> Agent skills"
+
+  if ! command -v npx >/dev/null; then
+    echo "  skipped  npx is missing. Install Node.js 22.20 or later, then run install.sh again."
+    return
+  fi
+
+  local source skill
+  while read -r source || [[ -n "$source" ]]; do
+    [[ -z "$source" || "$source" == \#* ]] && continue
+    skill="${source##*@}"
+
+    if [[ -e "$HOME/.claude/skills/$skill" ]]; then
+      echo "  ok       $skill is already installed"
+      continue
+    fi
+
+    npx --yes skills add "$source" -g -a claude-code -y </dev/null
+    echo "  added    $skill from ${source%@*}"
+  done <"$DOTFILES/SKILLS"
+}
+
 parse_args "$@"
 if [[ -z "$DOTFILES" || ! -f "$DOTFILES/Brewfile" ]]; then
   bootstrap "$@"
@@ -195,3 +218,4 @@ fi
 install_homebrew
 install_packages
 link_files
+install_skills

@@ -22,11 +22,12 @@ From `curl`, the script first gets the repo:
 2. It creates `~/Code/frodsan` if needed and clones the repo into `~/Code/frodsan/dotfiles`. If the clone already exists, it updates it with `git pull --ff-only`. Set `DOTFILES_DIR` to clone somewhere else.
 3. It runs the clone's `install.sh` with the same options.
 
-From a clone, run `./install.sh` directly. `install.sh` does three things:
+From a clone, run `./install.sh` directly. `install.sh` does four things:
 
 1. It installs Homebrew if `brew` is missing.
 2. It installs the packages in `Brewfile` with `brew bundle`.
 3. It links each path in its `FILES` list from the repo into your home folder.
+4. It installs the skills in `SKILLS` that are missing.
 
 The script prints one line per path. When a path already exists in your home folder and isn't the link, the script skips it and says whether its content matches the repo. Run `./install.sh --force`, or set `FORCE=1`, to replace those paths. With `--force`, each existing path moves to `<name>.bak` first, so the script never deletes files.
 
@@ -35,6 +36,8 @@ The script prints one line per path. When a path already exists in your home fol
 ## Claude Code
 
 `.claude/CLAUDE.md` holds my instructions for every Claude Code session: writing style and pull request descriptions. Claude Code loads `~/.claude/CLAUDE.md` at every start. Put work rules in a `CLAUDE.local.md` in the folder above your work repos, for example `~/Code/<company>/CLAUDE.local.md`. Claude Code loads it in every repo and worktree under that folder, and it stays out of this repo.
+
+`SKILLS` lists the third-party skills to install, one `owner/repo@skill` per line. `install.sh` installs each missing one for Claude Code with `npx skills add <source> -g -a claude-code -y`. It needs Node.js 22.20 or later, which the `Brewfile` installs. To add a skill, read it first, then add its line and run `./install.sh`. To update installed skills, run `npx skills update -g`.
 
 ## Herdr
 
