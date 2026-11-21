@@ -16,7 +16,7 @@ FILES=(
   .claude/skills/herdr-app
   .config/herdr-app/keys.json
   .config/herdr-app/layouts/firehouse.json
-  .config/herdr-app/mods/firehouse-new-menu
+  .config/herdr-app/mods/launcher
   .config/herdr-app/mods/command-palette
   .config/herdr-app/mods/tabs-bar
   .config/herdr-app/mods/pull-request
