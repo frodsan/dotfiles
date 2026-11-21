@@ -32,6 +32,10 @@ The script prints one line per path. When a path already exists in your home fol
 
 `brew bundle` runs with `--no-upgrade`, so the script installs missing packages and leaves installed ones at their current version. You can run it again at any time.
 
+## Claude Code
+
+`.claude/CLAUDE.md` holds my instructions for every Claude Code session: writing style and pull request descriptions. Claude Code loads `~/.claude/CLAUDE.md` at every start. Put work rules in a `CLAUDE.local.md` in the folder above your work repos, for example `~/Code/<company>/CLAUDE.local.md`. Claude Code loads it in every repo and worktree under that folder, and it stays out of this repo.
+
 ## Herdr
 
 `.config/herdr-app` holds my Herdr setup: the sessions sidebar with focus mode and chats, the pull request sidebar with auto-fix and merge when ready, Neovim and lazygit beside Claude, a tabs bar, a command palette, and the `firehouse` layout and theme. `.claude/skills/herdr-app` is a Claude Code plugin named `herdr-app` with the two skills it uses: `herdr-app:pr-autofix`, which auto-fix sends, and `/herdr-app:spin-off`. Claude Code loads a plugin folder in `~/.claude/skills` at every start, with no marketplace.
