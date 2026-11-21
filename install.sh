@@ -13,8 +13,7 @@ FORCE="${FORCE:-0}"
 
 FILES=(
   .bundle/config
-  .claude/skills/pr-autofix
-  .claude/skills/spin-off
+  .claude/skills/herdr
   .config/herdr-app/keys.json
   .config/herdr-app/layouts/firehouse.json
   .config/herdr-app/mods/firehouse-new-menu

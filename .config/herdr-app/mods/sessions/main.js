@@ -129,7 +129,7 @@ async function autoFixState(cwd, on) {
 }
 
 function autoFixPrompt(state, parts) {
-  const out = [`Auto-fix round for PR #${state.number} (${state.url}). Follow the pr-autofix skill.`];
+  const out = [`/herdr:pr-autofix Auto-fix round for PR #${state.number} (${state.url}).`];
   if (parts.conflict) out.push(`Merge conflicts with ${state.baseRefName}.`);
   if (parts.checks.length) out.push([
     `Failing checks on ${state.headRefOid.slice(0, 8)}:`,
@@ -2207,20 +2207,9 @@ export default class Sessions extends View {
       });
     }
     cx.spawn(async (cx) => {
-      const results = await Promise.all(WELCOME_SKILLS.map((name) => exec("test", ["-e", `${home()}/.claude/skills/${name}/SKILL.md`]).then((r) => r.code === 0).catch(() => false)));
+      const results = await Promise.all(WELCOME_SKILLS.map((name) => exec("test", ["-e", `${home()}/.claude/skills/herdr/skills/${name}/SKILL.md`]).then((r) => r.code === 0).catch(() => false)));
       this.checks.skills = results.every(Boolean);
       cx.notify();
-    });
-  }
-
-  linkSkills(cx) {
-    cx.spawn(async (cx) => {
-      this.linking = true;
-      cx.notify();
-      const script = 'mkdir -p "$HOME/.claude/skills"; for s in "$1"/claude-skills/*/; do n=$(basename "$s"); [ -e "$HOME/.claude/skills/$n" ] || ln -s "${s%/}" "$HOME/.claude/skills/$n"; done';
-      await exec("sh", ["-c", script, "sh", appHome()]).catch(() => null);
-      this.linking = false;
-      this.checkWelcome(cx);
     });
   }
 
@@ -2261,8 +2250,7 @@ export default class Sessions extends View {
               .child(check(true, "Branch prefix", "Optional. New branches start with it, e.g. fr/fix-login-1a2b."))
               .child(div().pl(26).child(Input.new(this.prefix).h(28).px(8).rounded(6).border_1().border_color(t.input).bg(t.background).text_size(12.5))),
             ...WELCOME_TOOLS.map(([name, , what, install]) => check(this.checks[name], name, this.checks[name] === false ? `${what} Install: ${install}` : what)),
-            check(this.checks.skills, "Claude skills", this.checks.skills === false ? "Auto-fix and /spin-off need pr-autofix and spin-off in ~/.claude/skills." : "pr-autofix and spin-off, for auto-fix and /spin-off.",
-              this.checks.skills === false ? action("welcome-skills", this.linking ? "Linking…" : "Link them", (cx) => this.linkSkills(cx)) : null),
+            check(this.checks.skills, "Claude skills", this.checks.skills === false ? "Auto-fix and /herdr:spin-off need the herdr plugin in ~/.claude/skills/herdr. Run the dotfiles install.sh." : "The herdr plugin: herdr:pr-autofix for auto-fix, and /herdr:spin-off."),
           )))
         .child(v_flex().gap(10).child(heading("Shortcuts"))
           .child(card(

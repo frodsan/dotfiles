@@ -34,7 +34,7 @@ The script prints one line per path. When a path already exists in your home fol
 
 ## Herdr
 
-`.config/herdr-app` holds my Herdr setup: the sessions sidebar with focus mode and chats, the pull request sidebar with auto-fix and merge when ready, Neovim and lazygit beside Claude, a tabs bar, a command palette, and the `firehouse` layout and theme. `.claude/skills` holds the two Claude skills it uses: `pr-autofix` and `spin-off`.
+`.config/herdr-app` holds my Herdr setup: the sessions sidebar with focus mode and chats, the pull request sidebar with auto-fix and merge when ready, Neovim and lazygit beside Claude, a tabs bar, a command palette, and the `firehouse` layout and theme. `.claude/skills/herdr` is a Claude Code plugin with the two skills it uses: `herdr:pr-autofix`, which auto-fix sends, and `/herdr:spin-off`. Claude Code loads a plugin folder in `~/.claude/skills` at every start, with no marketplace.
 
 - The script links each mod folder, the layout, the theme and `keys.json`. It copies `settings.json` once, because Herdr rewrites that file itself.
 - In Herdr, pick the layout once with `ctrl-shift-l` or the `layout.switch` command: `firehouse`.

@@ -49,7 +49,7 @@ Decide each thread:
 2. Your own comment, or your reply in the thread: do what it says. If it is unclear or is a question, ask. If it says to ignore the comment, resolve the thread (for the review bot, add 👎 first).
 3. Your 👍: fix it.
 4. No signal: fix it when the fix is technical and simple. Ask when it changes behavior, or when the reviewer is unsure (the comment is a question or hedges).
-5. Pre-existing findings (🟣) are about code the PR did not cause: ask. Offer **Fix it here**, **Spin it off** (a new session with the spin-off skill), **Ignore it**.
+5. Pre-existing findings (🟣) are about code the PR did not cause: ask. Offer **Fix it here**, **Spin it off** (a new session with the herdr:spin-off skill), **Ignore it**.
 6. The review bot reviewed the PR 3 or more times and only nits or pre-existing findings are left: ask about all of them at once instead of fixing.
 
 Fix every thread you fix in one commit. Check it with the specs of the changed files and `pre-commit run --files <files>`, then push. After the push, for each fixed thread, add 👍 to its first comment and resolve it:
