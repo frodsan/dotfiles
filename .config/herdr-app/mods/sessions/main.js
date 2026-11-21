@@ -129,7 +129,7 @@ async function autoFixState(cwd, on) {
 }
 
 function autoFixPrompt(state, parts) {
-  const out = [`/herdr:pr-autofix Auto-fix round for PR #${state.number} (${state.url}).`];
+  const out = [`Auto-fix round for PR #${state.number} (${state.url}). Follow the herdr:pr-autofix skill.`];
   if (parts.conflict) out.push(`Merge conflicts with ${state.baseRefName}.`);
   if (parts.checks.length) out.push([
     `Failing checks on ${state.headRefOid.slice(0, 8)}:`,
