@@ -1,5 +1,5 @@
 {
-  "name": "herdr",
+  "name": "herdr-app",
   "description": "Skills for the Herdr sessions setup: auto-fix rounds and spin-off sessions.",
   "version": "1.0.0",
   "author": { "name": "Francesco Rodriguez" }
