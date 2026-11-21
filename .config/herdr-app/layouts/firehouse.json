@@ -90,7 +90,7 @@
               "id": "tabs",
               "type": "block",
               "content": {
-                "mod": "firehouse-tabs"
+                "mod": "tabs-bar"
               },
               "size": {
                 "px": 42

@@ -2257,7 +2257,7 @@ export default class Sessions extends View {
             shortcut("sessions.new-session", "New session"),
             shortcut("sessions.focus", "Focus mode"),
             shortcut("sessions.pull-request", "Pull request panel"),
-            shortcut("mod.open:firehouse-palette", "Command palette"),
+            shortcut("mod.open:command-palette", "Command palette"),
             shortcut("sessions.settings", "Settings"),
             shortcut("sessions.dev", "Ask Claude to change this setup"),
             shortcut("sessions.shortcuts", "All shortcuts"),
@@ -2292,7 +2292,7 @@ export default class Sessions extends View {
       ["From Herdr", [
         ["tab.new", "New terminal tab"],
         ["terminal.search", "Find in the terminal"],
-        ["mod.open:firehouse-palette", "Command palette"],
+        ["mod.open:command-palette", "Command palette"],
         ["layout.toggle", "Show or hide the sidebar"],
         ["tab.close", "Close the tab"],
         ["app.settings", "Herdr settings"],

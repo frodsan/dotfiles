@@ -17,8 +17,8 @@ FILES=(
   .config/herdr-app/keys.json
   .config/herdr-app/layouts/firehouse.json
   .config/herdr-app/mods/firehouse-new-menu
-  .config/herdr-app/mods/firehouse-palette
-  .config/herdr-app/mods/firehouse-tabs
+  .config/herdr-app/mods/command-palette
+  .config/herdr-app/mods/tabs-bar
   .config/herdr-app/mods/pull-request
   .config/herdr-app/mods/sessions
   .config/herdr-app/themes/firehouse.json

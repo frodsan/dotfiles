@@ -109,8 +109,8 @@ export default class Tabs extends View {
       .child(toolButton("changes", "Changes", "mods/changes/changes.svg"))
       .child(panelButton("pull-request", pr ? `#${pr.number}` : "Pull request", "mods/sessions/pr-open.svg")
         .when(Boolean(pr?.ci), el => el.child(div().size(7).rounded(4).flex_none().bg(pr.ci === "failed" ? t.ansi1 : pr.ci === "running" ? t.working : t.done))))
-      .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/firehouse-tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))
-        .child(button("maximize", w.platform === "windows" ? svg(`mods/firehouse-tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
-        .child(button("close-window", w.platform === "windows" ? svg("mods/firehouse-tabs/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));
+      .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/tabs-bar/win-min.svg").size(16) : "−", () => run("window.minimize")))
+        .child(button("maximize", w.platform === "windows" ? svg(`mods/tabs-bar/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
+        .child(button("close-window", w.platform === "windows" ? svg("mods/tabs-bar/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));
   }
 }
