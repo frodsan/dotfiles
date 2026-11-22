@@ -1,16 +1,16 @@
 ---
 name: book-ideas
-description: Summarize a book as its top 25 ideas, ranked so that uncommon and practical ideas come first, and save the note to my TIL repo. Use when I ask to summarize a book or extract its ideas.
+description: Summarize a book as its top 25 ideas, ranked so that uncommon and practical ideas come first, and show them in the chat. Use when I ask to summarize a book or extract its ideas.
 compatible-with: [claude-code]
-tags: [books, til, writing]
+tags: [books, reading]
 argument-hint: "<title> [by <author>] [path to my highlights or notes]"
 disable-model-invocation: true
 ---
 
 # Book ideas
 
-Write the 25 best ideas of a book as one note in my TIL repo
-(`~/Code/til`). The note is for me to reread later, and it is public.
+Show the 25 best ideas of a book in the chat, for me to read. Don't save
+anything. I may ask afterwards to save some of them elsewhere.
 
 ## 1. Find the source
 
@@ -44,30 +44,29 @@ Put ideas that score high on both first, then ideas that score high on
 either one. Drop the rest. Keep exactly 25, or fewer if the book has fewer
 good ones. Don't pad.
 
-Merge ideas that say the same thing. Two bullets must not make the same
+Merge ideas that say the same thing. Two ideas must not make the same
 point in different words.
 
-## 4. Write the note
+## 4. Write the ideas
 
-Write in my own voice and words, not the book's:
+Write in plain words, not the book's:
 
 - Write each idea from your understanding. Don't paraphrase the text
   sentence by sentence.
-- Use at most three direct quotes in the whole note. Keep each one under
-  25 words, in quotation marks, with no page numbers unless I gave them.
-- Don't follow the book's chapter order. Don't copy its figures, tables or
-  examples. Describe an example in one sentence if the idea needs it.
+- Use at most three direct quotes. Keep each one under 25 words, in
+  quotation marks.
+- Don't follow the book's chapter order. Describe an example in one
+  sentence if the idea needs it.
 
-Each idea is one bullet. It starts with a bold sentence that states the
-idea, then one or two plain sentences: why it holds, or what to do. Stay
-under 40 words per bullet.
+Each idea is one numbered item. It starts with a bold sentence that states
+the idea, then one or two plain sentences: why it holds, or what to do.
+Stay under 40 words per idea.
 
 Follow the writing rules in my global CLAUDE.md.
 
-## 5. Save it
+## 5. Show it
 
-Save the note as `books/<title-slug>.md`, for example
-`books/the-mythical-man-month.md`, using this template:
+Show the result in the chat with this template. Don't write any file.
 
 ```markdown
 # <Title>
@@ -76,20 +75,8 @@ Save the note as `books/<title-slug>.md`, for example
 
 ## Ideas
 
-- **<Idea stated as a sentence.>** <Why, or what to do.>
-- ...
-
-## My take
-
-<Two or three sentences: what I'd keep, what I disagree with, who should
-read it. Leave this as a TODO for me unless I told you my opinion.>
+1. **<Idea stated as a sentence.>** <Why, or what to do.>
+2. ...
 ```
 
-Add the note to `README.md` under a `## Books` heading, as
-`- [<Title>](books/<title-slug>.md), <Author>`. Keep that list sorted by
-title. Create the heading if it doesn't exist.
-
-## 6. Show, then stop
-
-Show me the note and the README change. Don't commit or push until I say
-so. When I do, commit with a message like `Add ideas from <Title>`.
+Number the ideas so that I can pick some by number afterwards.
