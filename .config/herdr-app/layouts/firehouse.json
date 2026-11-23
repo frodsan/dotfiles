@@ -129,32 +129,6 @@
                       "lone": true
                     }
                   }
-                },
-                {
-                  "id": "panel",
-                  "type": "column",
-                  "children": [
-                    {
-                      "id": "panel-body",
-                      "type": "stack",
-                      "children": [
-                        {
-                          "id": "pull-request",
-                          "type": "block",
-                          "content": {
-                            "mod": "pull-request"
-                          }
-                        }
-                      ],
-                      "active": "pull-request"
-                    }
-                  ],
-                  "size": {
-                    "px": 368
-                  },
-                  "min": 280,
-                  "max": 900,
-                  "hidden": true
                 }
               ],
               "padding": 8,

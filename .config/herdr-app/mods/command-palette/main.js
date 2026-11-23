@@ -68,7 +68,6 @@ const FIREHOUSE = [
   ["sessions.focus", "Firehouse", "Focus mode", "focus quiet notifications"],
   ["sessions.chats", "Tools", "Chats with Claude", "chat conversation claude talk notes"],
   ["sessions.new-chat", "Tools", "New chat with Claude", "chat conversation claude talk new"],
-  ["sessions.pull-request", "Firehouse", "Pull request panel", "pr checks comments ci"],
   ["sessions.github", "Firehouse", "Open the pull request on GitHub", "pr browser"],
   ["sessions.changes", "Firehouse", "Changes panel", "diff git"],
   ["sessions.files", "Firehouse", "Files panel", "explorer tree editor"],
