@@ -1161,6 +1161,16 @@ export default class Sessions extends View {
           await new Promise((resolve) => cx.timer.after(100, resolve));
         }
       });
+    } else if (command === "pull-request") {
+      const find = (node, id) => (node?.id === id ? node : (node?.children ?? []).map((c) => find(c, id)).find(Boolean));
+      const root = layout();
+      const panel = find(root, "panel");
+      const body = find(root, "panel-body");
+      if (panel && !panel.hidden && body?.active === command) run("layout.hide", { id: "panel" });
+      else {
+        run("layout.select", { stack: "panel-body", child: command });
+        run("layout.show", { id: "panel" });
+      }
     } else if (command === "rails") {
       const existing = s.tabs.find((tab) => tab.named && tab.name === "Rails console");
       if (existing) run("tab.select", { id: existing.id });
@@ -2240,7 +2250,7 @@ export default class Sessions extends View {
       .on_key_down((e, cx) => { if (e.key === "escape") { close(); cx.stop_propagation(); } })
       .child(v_flex().flex_none().px(22).pt(22).pb(12).gap(6)
         .child(div().text_size(16).font_semibold().child("Welcome 👋"))
-        .child(div().text_size(12.5).text_color(t.muted).child("The left sidebar groups your Claude sessions by repo. Focus mode shows only the sessions you pick for today.")))
+        .child(div().text_size(12.5).text_color(t.muted).child("The left sidebar groups your Claude sessions by repo. Focus mode shows only the sessions you pick for today. The PR panel shows CI and reviews, and can fix, mark ready and merge for you.")))
       .child(v_flex().id("welcome-body").flex_1().min_h(0).px(22).pb(16).gap(18).overflow_y_scrollbar()
         .child(v_flex().gap(10).child(heading("Set up"))
           .child(card(
@@ -2255,6 +2265,7 @@ export default class Sessions extends View {
           .child(card(
             shortcut("sessions.new-session", "New session"),
             shortcut("sessions.focus", "Focus mode"),
+            shortcut("sessions.pull-request", "Pull request panel"),
             shortcut("mod.open:command-palette", "Command palette"),
             shortcut("sessions.settings", "Settings"),
             shortcut("sessions.dev", "Ask Claude to change this setup"),
@@ -2283,6 +2294,7 @@ export default class Sessions extends View {
       ["Panels & tools", [
         ["sessions.files", "Files"],
         ["sessions.changes", "Changes"],
+        ["sessions.pull-request", "Pull request"],
         ["sessions.rails", "Rails console"],
         ["sessions.chats", "Chats with Claude"],
       ]],

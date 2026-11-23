@@ -21,6 +21,7 @@ FILES=(
   .config/herdr-app/mods/launcher
   .config/herdr-app/mods/command-palette
   .config/herdr-app/mods/tabs-bar
+  .config/herdr-app/mods/pull-request
   .config/herdr-app/mods/sessions
   .config/herdr-app/themes/firehouse.json
   .config/nvim
