@@ -1,5 +1,5 @@
 ---
-name: book-ideas
+name: book-summary
 description: Summarize a book as its top 25 ideas, ranked so that uncommon and practical ideas come first, and show them in the chat. Use when I ask to summarize a book or extract its ideas.
 compatible-with: [claude-code]
 tags: [books, reading]
@@ -7,7 +7,7 @@ argument-hint: "<title> [by <author>] [path to my highlights or notes]"
 disable-model-invocation: true
 ---
 
-# Book ideas
+# Book summary
 
 Show the 25 best ideas of a book in the chat, for me to read. Don't save
 anything. I may ask afterwards to save some of them elsewhere.
