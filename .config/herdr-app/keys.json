@@ -84,7 +84,6 @@
   },
   "layout:work": {
     "cmd-shift-b": "sessions.ext-database",
-    "cmd-shift-r": "sessions.ext-reviews",
     "cmd-shift-s": "work-tools.standup"
   }
 }
