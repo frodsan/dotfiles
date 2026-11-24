@@ -306,6 +306,7 @@ const WELCOME_TOOLS = [
   ["lazygit", "command -v lazygit", "Changes (⌥⌘C) opens lazygit beside Claude.", "brew install lazygit"],
 ];
 const WELCOME_SKILLS = ["pr-autofix", "spin-off"];
+const DICTATE_SHORTCUT = "Dictate to Claude";
 
 async function branchSlug(text, folder) {
   if (conf().branchNames === "words") return fallbackSlug(text);
@@ -1171,6 +1172,30 @@ export default class Sessions extends View {
         run("layout.select", { stack: "panel-body", child: command });
         run("layout.show", { id: "panel" });
       }
+    } else if (command === "dictate") {
+      const claude = claudePane(s, ps);
+      if (!claude) return notify({ title: "No Claude in this space", body: "Open Claude here first, then dictate.", level: "warning" });
+      if (this.dictating) return;
+      this.dictating = true;
+      cx.spawn(async (cx) => {
+        try {
+          const dir = `${appHome()}/data`, out = `${dir}/dictation.txt`;
+          const r = await exec("sh", ["-c", 'mkdir -p "$2" && rm -f "$3" && shortcuts run "$1" --output-path "$3"', "sh", DICTATE_SHORTCUT, dir, out], { timeout: 180000 });
+          if (r.code !== 0) return notify({ title: "Dictation failed", body: (r.stderr.trim() || `Create a shortcut named "${DICTATE_SHORTCUT}" with the Dictate Text action.`), level: "error" });
+          const text = ((await readTextFile(out).catch(() => null)) ?? "").trim();
+          if (!text) return;
+          const old = await exec("pbpaste", []).catch(() => null);
+          await exec("sh", ["-c", 'printf %s "$1" | pbcopy', "sh", text]);
+          run("tab.select", { id: claude.tab });
+          run("pane.focus", { pane: claude.pane });
+          await new Promise((resolve) => cx.timer.after(150, resolve));
+          run("terminal.paste");
+          await new Promise((resolve) => cx.timer.after(1000, resolve));
+          if (old?.code === 0) await exec("sh", ["-c", 'printf %s "$1" | pbcopy', "sh", old.stdout]);
+        } finally {
+          this.dictating = false;
+        }
+      });
     } else if (command === "rails") {
       const existing = s.tabs.find((tab) => tab.named && tab.name === "Rails console");
       if (existing) run("tab.select", { id: existing.id });
@@ -2300,6 +2325,7 @@ export default class Sessions extends View {
         ["sessions.changes", "Changes"],
         ["sessions.pull-request", "Pull request"],
         ["sessions.rails", "Rails console"],
+        ["sessions.dictate", "Dictate to Claude"],
         ["sessions.chats", "Chats with Claude"],
       ]],
       ["From Herdr", [

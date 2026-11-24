@@ -65,6 +65,7 @@
     "cmd-shift-t": "sessions.rails",
     "cmd-alt-c": "sessions.changes",
     "cmd-alt-p": "sessions.pull-request",
+    "cmd-shift-m": "sessions.dictate",
     "cmd-alt-n": "sessions.new-session",
     "cmd-alt-,": "app.settings",
     "cmd-shift-,": "sessions.settings",

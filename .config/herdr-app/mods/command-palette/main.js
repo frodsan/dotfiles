@@ -72,6 +72,7 @@ const FIREHOUSE = [
   ["sessions.github", "Firehouse", "Open the pull request on GitHub", "pr browser"],
   ["sessions.changes", "Firehouse", "Changes panel", "diff git"],
   ["sessions.files", "Firehouse", "Files panel", "explorer tree editor"],
+  ["sessions.dictate", "Firehouse", "Dictate to Claude", "voice speech microphone dictation"],
   ["sessions.rails", "Firehouse", "Rails console", "ruby irb"],
   ["sessions.dev", "Tools", "Edit Herdr config with Claude", "develop herdr config mods settings dev"],
   ["sessions.settings", "Firehouse", "Firehouse settings", "preferences settled days options"],
