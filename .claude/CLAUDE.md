@@ -51,4 +51,4 @@ Write only what the reviewer cannot read faster in the diff:
 - Do not restate the diff. Do not list old and new versions, per-environment values, renamed keys or removed conditions.
 - Lead with the side effect the diff hides. Examples are an upgrade that deletes a running component, a data migration, downtime, or a change in who can access something.
 - Keep the context the diff lacks: why the change is needed, the upstream release or ticket link, whether config must change, and the rollout order.
-- Do not put your verification steps in the description, such as which chart diffs you read or which values you checked. Report them in the chat reply.
+- Do not describe how you checked the change. Report that in the chat reply.
