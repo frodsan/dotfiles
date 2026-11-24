@@ -883,9 +883,10 @@ export default class Sessions extends View {
   }
 
   async focusPressed() {
+    const elsewhere = this.chatsMode || this.activeView() !== "work";
     this.setChatsMode(false);
-    if (this.activeView() !== "work") {
-      this.showView("work");
+    if (elsewhere) {
+      if (this.activeView() !== "work") this.showView("work");
       if (!shared("focus.on")) await setFocus(true);
       return;
     }
