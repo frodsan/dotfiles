@@ -687,7 +687,10 @@ export default class Sessions extends View {
       this.command(job.command, cx);
       cx.notify();
     });
-    cx.timer.every(10000, (cx) => { if (this.chatsMode) this.loadChats(cx); });
+    cx.timer.every(10000, (cx) => {
+      const chatSpaces = new Set(Object.values(map("chats.space")));
+      if (this.chatsMode || spaces().some((sp) => chatSpaces.has(sp.id))) this.loadChats(cx);
+    });
     if (!shared("sessions.welcomed")) cx.timer.after(1500, () => { setShared("sessions.welcomed", true); openWelcome(); });
     this.refreshGit(cx);
     cx.timer.every(2000, (cx) => {
@@ -910,6 +913,23 @@ export default class Sessions extends View {
       const names = {};
       const r = await exec("sh", ["-c", 'cd "$1" 2>/dev/null && for f in *.jsonl; do [ -f "$f" ] && printf "%s %s\n" "$(date -r "$f" +%s)" "$f"; done', "sh", CHATS_PROJECT()]).catch(() => null);
       const files = (r?.stdout ?? "").split("\n").filter(Boolean).map((line) => { const [at, file] = line.split(" "); return { id: file.replace(/\.jsonl$/, ""), at: Number(at) * 1000 }; });
+      const live = new Set(spaces().map((sp) => sp.id));
+      const stored = new Set(files.map((x) => x.id));
+      const claimed = new Set(Object.keys(meta));
+      const moves = [];
+      const orphans = Object.entries(meta).filter(([id, m]) => !stored.has(id) && m.createdAt && live.has(map("chats.space")[id])).sort((a, b) => b[1].createdAt - a[1].createdAt);
+      for (const [id, m] of orphans) {
+        const file = files.filter((f) => !claimed.has(f.id) && f.at >= m.createdAt).sort((a, b) => b.at - a.at)[0];
+        if (!file) continue;
+        claimed.add(file.id);
+        moves.push([id, file.id]);
+      }
+      if (moves.length) {
+        meta = await updateChatsMeta((m) => { for (const [from, to] of moves) { m[to] = m[from]; delete m[from]; } });
+        const links = { ...map("chats.space") };
+        for (const [from, to] of moves) { links[to] = links[from]; delete links[from]; }
+        setShared("chats.space", links);
+      }
       let changed = false;
       for (const file of files) {
         if (meta[file.id]?.name && meta[file.id].name !== "New chat") continue;
@@ -922,6 +942,11 @@ export default class Sessions extends View {
         changed = true;
       }
       if (changed) meta = await updateChatsMeta((m) => { for (const [id, name] of Object.entries(names)) m[id] = { ...(m[id] ?? {}), name }; });
+      for (const [id, spaceId] of Object.entries(map("chats.space"))) {
+        const name = meta[id]?.name;
+        const space = spaces().find((sp) => sp.id === spaceId);
+        if (space?.name === "New chat" && name && name !== "New chat") run("space.rename", { id: spaceId, name });
+      }
       const ids = new Set(files.map((x) => x.id));
       const fresh = Object.entries(meta).filter(([id]) => !ids.has(id)).map(([id, m]) => ({ id, at: m.createdAt ?? 0 }));
       this.chats = [...files, ...fresh].map((x) => ({ id: x.id, at: x.at, name: meta[x.id]?.name ?? "New chat" })).sort((a, b) => b.at - a.at);
