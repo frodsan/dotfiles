@@ -181,7 +181,7 @@ export function toolPane(kind, s, ps = panes()) {
   const id = (shared("tools.panes") ?? {})[`${s?.id}|${kind}`];
   return id ? ps.find((p) => p.pane === id) ?? null : null;
 }
-const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", mainRepo: null, setup: {}, autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, nextWeekDay: 1, branchNames: "claude", autoToasts: false, autoReady: true };
+const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", mainRepo: null, setup: {}, autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, nextWeekDay: 1, branchNames: "claude", autoToasts: false, autoReady: true, readyFrom: 7, readyUntil: 18 };
 const conf = () => ({ ...DEFAULT_SETTINGS, ...(shared("firehouse.settings") ?? {}) });
 const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 const autoNotify = (n) => (conf().autoToasts ? notify(n) : null);
@@ -1186,6 +1186,8 @@ export default class Sessions extends View {
 
   runAutoReady(cx) {
     if (!conf().autoReady || this.readying) return;
+    const hour = new Date().getHours();
+    if (hour < conf().readyFrom || hour >= conf().readyUntil) return;
     const ps = panes();
     const off = map("pr.noAutoReady");
     const rows = spaces().filter((sp) => !off[sp.id] && sp.status !== "working" && sp.status !== "blocked").map((sp) => this.info(sp, ps)).filter((row) => row.g && row.pr?.state === "OPEN" && row.pr.isDraft);
@@ -2019,6 +2021,8 @@ export default class Sessions extends View {
         .child(group("Pull requests",
           row("GitHub API", "Herdr checks the PR of every session in one query. It slows down to every 30 seconds when fewer than 500 points are left, and to every 2 minutes below 100. The budget is shared with everything that uses your gh login, including Claude.", this.renderRate()),
           row("Mark drafts ready for review", "When a draft's required checks pass, the review bot reviewed it, and every thread is resolved, Herdr marks it ready for review. Turn it off for one session from its right-click menu.", chips("autoReady", [[true, "On"], [false, "Off"]])),
+          row("Mark ready from", null, chips("readyFrom", [6, 7, 8, 9, 10].map((h) => [h, `${h}:00`]))),
+          row("Mark ready until", "Outside these hours, drafts stay drafts. Herdr marks them ready at the next start time.", chips("readyUntil", [16, 17, 18, 19, 20].map((h) => [h, `${h}:00`]))),
           row("Review bot", "Part of the GitHub login of the bot that reviews your pull requests. Auto-fix treats its comments as bot comments, and Ready for review waits for its review. Empty means no bot.", input(this.fields.reviewBot))))
         .child(group("Settling",
           row("Auto-settle", "Settle a session when its pull request merges or closes. You can still turn it off per session.", onOff("autoSettle")),
