@@ -47,5 +47,5 @@ Write the description as a briefing that a reviewer can read in under a minute. 
 - Keep it under 250 words.
 - Use the repo's pull request template when it has one. Keep its sections short.
 - Do not paste raw output such as logs, commit lists or metric tables. Link to the source.
-- Lead with the side effect the diff hides.
+- Start with the effect of the change that a reviewer would not see in the diff.
 - Do not describe how you checked the change. Report that in the chat reply.
