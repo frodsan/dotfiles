@@ -47,7 +47,7 @@ Write the description as a briefing that a reviewer can read in under a minute. 
 - Keep it under 250 words.
 - Use the repo's pull request template when it has one. Keep its sections short.
 - Do not paste raw output such as logs, commit lists or metric tables. Link to the source.
-- Do not restate the diff. Do not list old and new versions, per-environment values, renamed keys or removed conditions.
+- Do not restate the diff, such as version bumps or renamed keys.
 - Lead with the side effect the diff hides. Examples are an upgrade that deletes a running component, a data migration, downtime, or a change in who can access something.
 - Keep the context the diff lacks: why the change is needed, the upstream release or ticket link, whether config must change, and the rollout order.
 - Do not describe how you checked the change. Report that in the chat reply.
