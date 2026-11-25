@@ -49,7 +49,7 @@ The script prints one line per path. When a path already exists in your home fol
 - In Herdr, pick the layout once with `ctrl-shift-l` or the `layout.switch` command: `firehouse`.
 - Open the settings with `⇧⌘,` and the shortcuts with `⌘?`.
 - Other mods can add an icon and a view to the sidebar with a `sidebar.json` file in their folder.
-- Set the main repo, the review bot and your commands in the settings. They stay on the machine, out of this repo. Each command has a title, a shell command and a folder (the main repo or the current session), and shows in the command palette.
+- Set the review bot and your palette commands in the settings. They stay on the machine, out of this repo. Each command has a title and a shell command, and runs in the current session's folder. Start it with `cd` to run it somewhere else.
 
 ## Add a file
 

@@ -182,7 +182,7 @@ export function toolPane(kind, s, ps = panes()) {
   const id = (shared("tools.panes") ?? {})[`${s?.id}|${kind}`];
   return id ? ps.find((p) => p.pane === id) ?? null : null;
 }
-const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", mainRepo: null, setup: {}, autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, nextWeekDay: 1, branchNames: "claude", autoToasts: false, autoReady: true, readyFrom: 7, readyUntil: 18 };
+const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", setup: {}, autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, nextWeekDay: 1, branchNames: "claude", autoToasts: false, autoReady: true, readyFrom: 7, readyUntil: 18 };
 const conf = () => ({ ...DEFAULT_SETTINGS, ...(shared("firehouse.settings") ?? {}) });
 const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 const autoNotify = (n) => (conf().autoToasts ? notify(n) : null);
@@ -1986,7 +1986,7 @@ export default class Sessions extends View {
       state.on("change", () => this.updateCommand(command.id, { [key]: state.value() }));
       return state;
     };
-    this.commandFields[command.id] = { title: field("title", "Title, e.g. Refresh login"), command: field("command", "Shell command, e.g. bin/login") };
+    this.commandFields[command.id] = { title: field("title", "Title, e.g. Refresh login"), command: field("command", "Shell command, e.g. cd ~/Code/app && bin/login") };
   }
 
   updateCommand(id, change) {
@@ -1996,7 +1996,7 @@ export default class Sessions extends View {
   renderCommands(t, input, choice) {
     const list = conf().commands ?? [];
     const add = () => {
-      const command = { id: Math.random().toString(36).slice(2, 10), title: "", command: "", where: "repo" };
+      const command = { id: Math.random().toString(36).slice(2, 10), title: "", command: "" };
       this.makeCommandFields(command);
       setConf({ commands: [...list, command] });
     };
@@ -2007,11 +2007,7 @@ export default class Sessions extends View {
           .child(div().flex_1().child(input(this.commandFields[c.id].title)))
           .child(div().id(`command-remove-${c.id}`).flex_none().px(8).py(5).rounded(6).text_size(12).text_color(t.dim).cursor_pointer()
             .hover((st) => st.bg(t.hover).text_color(t.foreground)).on_click((_e, cx) => { remove(c.id); cx.notify(); }).child("Remove")))
-        .child(input(this.commandFields[c.id].command))
-        .child(h_flex().gap(4).items_center()
-          .child(div().pr(4).text_size(11.5).text_color(t.dim).child("Runs in"))
-          .child(choice(`command-where-${c.id}-repo`, "Main repo", c.where !== "session", () => this.updateCommand(c.id, { where: "repo" })))
-          .child(choice(`command-where-${c.id}-session`, "Current session", c.where === "session", () => this.updateCommand(c.id, { where: "session" }))))))
+        .child(input(this.commandFields[c.id].command))))
       .child(h_flex().child(choice("command-add", "Add command", false, add)));
   }
 
@@ -2046,13 +2042,6 @@ export default class Sessions extends View {
       .child(div().text_size(11).font_semibold().text_color(t.muted).child(title.toUpperCase()))
       .child(v_flex().gap(14).p(14).rounded(10).border_1().border_color(t.border).bg(t.background).children(rows));
     const onOff = (key) => chips(key, [[true, "On"], [false, "Off"]]);
-    const folders = (shared("sessions.folders") ?? []).map((key) => JSON.parse(key)[1]).filter((path) => path && path !== home());
-    const repos = [...new Set([...(c.mainRepo ? [c.mainRepo] : []), ...folders])];
-    const pick = (cx) => cx.spawn(async (cx) => {
-      const path = await pickFolder({ prompt: "Main repo" });
-      if (path) setConf({ mainRepo: path });
-      cx.notify();
-    });
     return v_flex().id("firehouse-settings").size_full().min_h(0).bg(t.popover).text_color(t.foreground)
       .on_key_down((e, cx) => { if (e.key === "escape") { closeOverlay(props().overlay); cx.stop_propagation(); } })
       .child(h_flex().flex_none().px(22).pt(22).pb(12).items_center().child(div().flex_1().text_size(16).font_semibold().child("Firehouse settings")).child(div().text_size(11).text_color(t.dim).child("Esc")))
@@ -2061,11 +2050,8 @@ export default class Sessions extends View {
           row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b.", input(this.fields.branchPrefix)),
           row("Branch names come from", "Claude asks Sonnet for a short slug. Message words uses the first words you type.", chips("branchNames", [["claude", "Claude"], ["words", "Message words"]])),
           div().text_size(11.5).text_color(t.dim).child("To run a setup command in new worktrees, right-click a folder in Sessions.")))
-        .child(group("Tools",
-          row("Main repo", "Your main project. Tools and extensions use it by default.", h_flex().gap(4).flex_wrap()
-            .children(repos.map((path) => choice(`repo-${path}`, base(path), c.mainRepo === path, () => setConf({ mainRepo: path }))))
-            .child(choice("repo-pick", "Choose…", false, pick))),
-          row("Commands", "Each one shows in the command palette and opens a terminal on the right. They stay on this machine.", this.renderCommands(t, input, choice))))
+        .child(group("Commands",
+          row("Palette commands", "Each one shows in the command palette and opens a terminal on the right, in the current session's folder or your home folder. Start it with cd to run it somewhere else. They stay on this machine.", this.renderCommands(t, input, choice))))
         .child(group("Pull requests",
           row("GitHub API", "Herdr checks the PR of every session in one query. It slows down to every 30 seconds when fewer than 500 points are left, and to every 2 minutes below 100. The budget is shared with everything that uses your gh login, including Claude.", this.renderRate()),
           row("Mark drafts ready for review", "When a draft's required checks pass, the review bot reviewed it, and every thread is resolved, Herdr marks it ready for review. Turn it off for one session from its right-click menu.", chips("autoReady", [[true, "On"], [false, "Off"]])),
@@ -2293,11 +2279,6 @@ export default class Sessions extends View {
     const shortcut = (action, label, fallback) => h_flex().h(26).gap(10).items_center().text_size(12.5)
       .child(div().flex_1().min_w(0).truncate().child(label))
       .child(chip(keyLabel(action) ?? fallback ?? "no key"));
-    const pickRepo = (cx) => cx.spawn(async (cx) => {
-      const path = await pickFolder({ prompt: "Main repo" });
-      if (path) { setConf({ mainRepo: path }); this.addFolders?.([JSON.stringify([null, path])]); }
-      cx.notify();
-    });
     return v_flex().id("sessions-welcome").size_full().min_h(0).bg(t.popover).text_color(t.foreground)
       .on_key_down((e, cx) => { if (e.key === "escape") { close(); cx.stop_propagation(); } })
       .child(v_flex().flex_none().px(22).pt(22).pb(12).gap(6)
@@ -2306,7 +2287,6 @@ export default class Sessions extends View {
       .child(v_flex().id("welcome-body").flex_1().min_h(0).px(22).pb(16).gap(18).overflow_y_scrollbar()
         .child(v_flex().gap(10).child(heading("Set up"))
           .child(card(
-            check(Boolean(c.mainRepo), "Main repo", c.mainRepo ?? "Your main project. Tools and extensions use it by default.", action("welcome-repo", c.mainRepo ? "Change" : "Choose…", pickRepo)),
             v_flex().gap(6)
               .child(check(true, "Branch prefix", "Optional. New branches start with it, e.g. fr/fix-login-1a2b."))
               .child(div().pl(26).child(Input.new(this.prefix).h(28).px(8).rounded(6).border_1().border_color(t.input).bg(t.background).text_size(12.5))),
@@ -2398,15 +2378,12 @@ export default class Sessions extends View {
     const line = () => div().my(4).h(1).bg(t.border);
     if (p.menu.folderMenu) {
       const folder = JSON.parse(p.menu.folderMenu)[1];
-      const main = conf().mainRepo === folder;
       return v_flex().id("sessions-folder-menu").w_full().p(5).bg(t.popover)
         .on_key_down((e, cx) => { if (e.key === "escape") { close(); cx.stop_propagation(); } })
         .child(label(`Setup command for new ${base(folder)} worktrees`))
         .child(v_flex().px(6).pt(2).pb(4).gap(5)
           .child(Input.new(this.setupInput).h(28).px(8).rounded(6).border_1().border_color(t.input).bg(t.background).text_size(12.5).text_color(t.foreground))
-          .child(div().px(2).text_size(11.5).text_color(t.dim).child("Runs in the background in each new worktree. Empty means none.")))
-        .child(line())
-        .child(item("main-repo", main ? "Main repo ✓" : "Make this the main repo", () => setConf({ mainRepo: main ? null : folder }), "mods/workspace-chrome/layers.svg"));
+          .child(div().px(2).text_size(11.5).text_color(t.dim).child("Runs in the background in each new worktree. Empty means none.")));
     }
     if (p.menu.snoozeOnly) {
       const store = p.menu.store;
