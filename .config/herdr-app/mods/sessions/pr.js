@@ -2,6 +2,11 @@ import { div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { spaces, panes, exec, hc, run, theme, shared, setShared, notify, home, window } from "herdr";
 
+export const updateBranchPrompt = (base) => [
+  `Update this branch with the latest ${base}: git fetch origin ${base}, then git merge origin/${base}. Do not rebase or force-push.`,
+  "Fix the conflicts and keep the intent of both sides. Use the repo's generators for generated files. If a conflict is not clear, stop and ask me.",
+  "Run the specs of the files that had conflicts, then commit the merge and push it. If the branch is already up to date, say so and do nothing.",
+].join("\n");
 const ICON = (name) => `mods/sessions/${name}.svg`;
 const REFRESH_MS = 60000;
 const MEMBER = ["OWNER", "MEMBER", "COLLABORATOR"];
@@ -81,7 +86,7 @@ const PROMPTS = {
   fix: (s, checks) => [`CI is failing on pull request #${s.number} (${s.url}). ${checks.length === 1 ? "Fix only this check, leave the others for later:" : "These checks failed:"}`, ...checks.map(checkLine), "", "Read the logs with `gh pr checks` and `gh run view <run-id> --log-failed`. Find the root cause, fix it, run the relevant tests locally, then commit and push.", "If a failure is flaky or unrelated to this branch, say so instead of changing code."].join("\n"),
   address: (s, comments) => [`Address these review comments on pull request #${s.number} (${s.url}):`, ...commentLines(comments), "", "Make the changes, run the relevant tests, then commit and push. Reply on each thread with `gh` to say what you changed. If you disagree with a comment, explain why instead of changing the code."].join("\n"),
   opinion: (s, comments) => [`Give me your opinion on these review comments on pull request #${s.number} (${s.url}):`, ...commentLines(comments), "", "For each one, say whether you agree and what you would change. Do not change any files yet."].join("\n"),
-  updateBase: (s) => [`Update pull request #${s.number} (${s.url}) with the latest ${s.baseRefName}.`, `Fetch origin and merge origin/${s.baseRefName} into ${s.headRefName}. Do not rebase or force-push.`, "If there are conflicts, resolve them and keep the intent of both sides, then run the tests for the files you touched.", "Push the merge commit. If the branch is already up to date, say so and do nothing."].join("\n"),
+  updateBase: (s) => updateBranchPrompt(s.baseRefName),
 };
 
 export class PullRequestPanel {
@@ -267,7 +272,7 @@ export class PullRequestPanel {
       .child(div().pt(4).text_size(11.5).text_color(t.dim).child(`${s.headRefName} → ${s.baseRefName}`))
       .when(open, (el) => el.child(h_flex().pt(12).gap(6).flex_wrap()
         .when(s.isDraft, (el) => el.child(this.button("pr-ready", this.busy === "Ready for review" ? "Marking ready…" : "Ready for review", (_e, cx) => this.act("Ready for review", (path) => gh(["pr", "ready", s.url], path), cx), t, true, busy)))
-        .child(this.button("pr-update", s.mergeable === "CONFLICTING" ? `Resolve conflicts with ${s.baseRefName}` : `Merge ${s.baseRefName} & push`, () => this.send(PROMPTS.updateBase(s)), t, s.mergeable === "CONFLICTING"))
+        .child(this.button("pr-update", "Update branch", () => this.send(PROMPTS.updateBase(s)), t, s.mergeable === "CONFLICTING"))
         .child(this.button("pr-autofix", shared("pr.autoFix")?.[c.s.id] ? "Auto-fix on ✓" : "Auto-fix", () => {
           const all = { ...(shared("pr.autoFix") ?? {}) };
           if (all[c.s.id]) delete all[c.s.id];

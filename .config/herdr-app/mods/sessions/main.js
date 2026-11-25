@@ -1,6 +1,6 @@
 import { View, div, svg } from "gpui-kit";
 import { initBar, renderBar } from "./bar.js";
-import { PullRequestPanel } from "./pr.js";
+import { PullRequestPanel, updateBranchPrompt } from "./pr.js";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea } from "gpui-base";
 import { hc, keys, spaces, panes, machines, layout, run, exec, theme, shared, setShared, openOverlay, closeOverlay, props, nextCommand, playSound, readTextFile, writeTextFile, appHome, home, window, pickFolder, notify } from "herdr";
 
@@ -1485,7 +1485,7 @@ export default class Sessions extends View {
       )
       .when(s.id !== shared("sessions.dev") && !shared("focus.on"), (el) => el.child(
         div().id(`star-${s.id}`).flex_none().p(3).rounded(4).text_color(starred ? t.working : t.dim).when(!starred, this.reveal(`row-${s.id}`))
-          .tooltip(starred ? "Remove from focus" : "Add to focus: focus mode shows only these sessions")
+          .tooltip(starred ? "Remove from focus mode" : "Add to focus mode: it shows only these sessions")
           .hover((st) => st.bg(t.raised).text_color(starred ? t.working : t.foreground))
           .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
           .on_click((_e, cx) => { cx.stop_propagation(); star(s.id, !starred); cx.notify(); })
@@ -1926,7 +1926,7 @@ export default class Sessions extends View {
           .when(c.focus, (el) => el.bg(t.selected).text_color(t.foreground)).when(!c.focus, (el) => el.text_color(t.muted).hover((st) => st.bg(t.hover).text_color(t.foreground)))
           .on_click((_e, cx) => { c.focus = !c.focus; cx.notify(); })
           .child(svg(ICON(c.focus ? "bulb-fill" : "bulb")).size(13).text_color(c.focus ? t.working : t.dim))
-          .child("Add to focus")]))
+          .child("Add to focus mode")]))
       .child(row("Claude", [...MODELS.map(([value, label]) => choice(`model-${value ?? "default"}`, label, c.model === value, () => { c.model = value; })), div().w(10), ...MODES.map(([value, label]) => choice(`mode-${value}`, label, c.mode === value, () => { c.mode = value; }))]))
       .when(Boolean(c.launched?.length), (el) => el.child(v_flex().gap(2).flex_none()
         .child(div().text_size(11.5).text_color(t.dim).child(`Started ${c.launched.length} in the background`))
@@ -2075,14 +2075,14 @@ export default class Sessions extends View {
     const updateFrom = p.menu.entry?.branch && !DEFAULT_BRANCHES.has(p.menu.entry.branch) ? (p.menu.entry.pr?.baseRefName || this.defaultBranch || null) : null;
     const noAutoSettle = Boolean(map("sessions.noAutoSettle")[id]);
     return v_flex().id("sessions-menu").w_full().p(4).bg(t.popover)
-      .when(id !== shared("sessions.dev"), (el) => el.child(item("focus", starred ? "Remove from focus" : "Add to focus", () => star(id, !starred), ICON(starred ? "bulb-fill" : "bulb"))))
+      .when(id !== shared("sessions.dev"), (el) => el.child(item("focus", starred ? "Remove from focus mode" : "Add to focus mode", () => star(id, !starred), ICON(starred ? "bulb-fill" : "bulb"))))
       .child(item("settle", "Settle", () => request({ kind: "settle", entry: p.menu.entry }), ICON("check")))
       .when(starred, (el) => el.child(line()))
       .when(starred, (el) => el.child(item("snooze", isSnoozed ? `Snoozed until ${snoozeLabel(id)}…` : "Snooze…", () => openOverlay({ mod: "sessions", kind: "popup", width: 280, height: 300, props: { menu: { id, snoozeOnly: true, prOpen: open } } }), ICON("clock"))))
       .when(starred, (el) => el.child(item("pin", pinned(id) ? "Unpin" : "Pin", () => setPinned(id, !pinned(id)), `mods/workspace-chrome/${pinned(id) ? "pin-off" : "pin"}.svg`)))
       .when(Boolean(updateFrom), (el) => el.child(line()).child(item("update-base", "Update branch", () => {
         const space = spaces().find((s) => s.id === id);
-        if (space) this.sendToClaude(space, `Merge the latest ${updateFrom} into this branch: git fetch origin ${updateFrom}, then git merge origin/${updateFrom}. Fix the conflicts. Use the repo's generators for generated files. Run the specs of the files that had conflicts, then commit the merge. If a conflict is not clear, stop and ask me.`);
+        if (space) this.sendToClaude(space, updateBranchPrompt(updateFrom));
       }, "mods/workspace-chrome/branch.svg")))
       .when(Boolean(url), (el) => el.child(line()).child(label("Automatically")))
       .when(open, (el) => el.child(toggle("autofix", "Fix", Boolean(map("pr.autoFix")[id]), () => setAutoFix(id, !map("pr.autoFix")[id]), ICON("wrench"))))
