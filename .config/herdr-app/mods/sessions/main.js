@@ -2069,7 +2069,7 @@ export default class Sessions extends View {
         .child(group("Notifications",
           row("Toasts for automatic actions", "Auto-fix, merge when ready, auto-settle, snooze wake-ups and spin-offs. Off: the sidebar shows the change, and Herdr still plays its sounds. Errors from things you click always show.", chips("autoToasts", [[true, "On"], [false, "Off"]])))
         .child(group("Commands",
-          row("Palette commands", "Each one shows in the command palette and opens a terminal on the right, in the current session's folder or your home folder. Start it with cd to run it somewhere else. They stay on this machine.", this.renderCommands(t, input, choice)))))
+          row("Palette commands", "Each one shows in the command palette and opens a terminal on the right, in the folder of the focused terminal. Start it with cd to run it somewhere else. They stay on this machine.", this.renderCommands(t, input, choice)))))
 );
   }
 
