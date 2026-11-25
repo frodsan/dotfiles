@@ -28,10 +28,10 @@ const MEMBER = ["OWNER", "MEMBER", "COLLABORATOR"];
 const THREADS = `query($owner: String!, $name: String!, $number: Int!) {
   viewer { login }
   repository(owner: $owner, name: $name) { pullRequest(number: $number) {
-    reviews(last: 30) { nodes { id state body url authorAssociation author { login } reactions(first: 20) { nodes { content user { login } } } } }
+    reviews(last: 30) { nodes { id state body url authorAssociation author { __typename login } reactions(first: 20) { nodes { content user { login } } } } }
     reviewThreads(first: 100) { nodes {
     id isResolved path line
-    comments(first: 30) { nodes { id body url authorAssociation author { login } reactions(first: 20) { nodes { content user { login } } } } }
+    comments(first: 30) { nodes { id body url authorAssociation author { __typename login } reactions(first: 20) { nodes { content user { login } } } } }
   } } } }
 }`;
 
@@ -41,7 +41,7 @@ function failedCheck(e) {
 }
 
 const reviewBot = () => (shared("firehouse.settings")?.reviewBot ?? "").trim().toLowerCase();
-const isReviewBot = (login) => Boolean(reviewBot()) && (login ?? "").toLowerCase().includes(reviewBot());
+const isReviewBot = (author) => (reviewBot() ? (author?.login ?? "").toLowerCase().includes(reviewBot()) : author?.__typename === "Bot");
 const AUTOFIX_DIR = () => `${appHome()}/data/autofix`;
 const AUTOFIX_ROUNDS = 5;
 
@@ -82,13 +82,13 @@ async function autoFixState(cwd, on) {
     const data = JSON.parse(g.stdout).data;
     const me = data.viewer.login;
     unresolved = data.repository.pullRequest.reviewThreads.nodes.filter((thread) => !thread.isResolved).length;
-    reviewedByBot = !reviewBot() || (data.repository.pullRequest.reviews?.nodes ?? []).some((review) => isReviewBot(review.author?.login));
+    reviewedByBot = !reviewBot() || (data.repository.pullRequest.reviews?.nodes ?? []).some((review) => isReviewBot(review.author));
     threads = data.repository.pullRequest.reviewThreads.nodes.flatMap((thread) => {
       const all = thread.comments.nodes;
       const first = all[0];
       if (thread.isResolved || !first) return [];
       const login = first.author?.login ?? "ghost";
-      const origin = login === me ? "you" : isReviewBot(login) ? "bot" : MEMBER.includes(first.authorAssociation) ? "human" : null;
+      const origin = login === me ? "you" : isReviewBot(first.author) ? "bot" : MEMBER.includes(first.authorAssociation) ? "human" : null;
       if (!origin) return [];
       const reactions = (first.reactions?.nodes ?? []).filter((x) => x.user?.login === me).map((x) => x.content);
       if (reactions.includes("THUMBS_DOWN") || reactions.includes("CONFUSED")) return [];
@@ -102,7 +102,7 @@ async function autoFixState(cwd, on) {
       const login = review.author?.login ?? "ghost";
       const body = (review.body ?? "").replace(/\n-{3,}\n_Was this review helpful[\s\S]*$/, "").trim();
       if (!body || login === me || review.state === "APPROVED" || review.state === "DISMISSED") continue;
-      const origin = isReviewBot(login) ? "bot" : MEMBER.includes(review.authorAssociation) ? "human" : null;
+      const origin = isReviewBot(review.author) ? "bot" : MEMBER.includes(review.authorAssociation) ? "human" : null;
       if (!origin) continue;
       if (origin === "bot" && !/\*\*(🔴|🟡|💬|🟣)/u.test(body)) continue;
       const reactions = (review.reactions?.nodes ?? []).filter((x) => x.user?.login === me).map((x) => x.content);
@@ -2083,6 +2083,7 @@ export default class Sessions extends View {
       .child(div().flex_1().truncate().child(text))
       .child(div().flex_none().px(6).py(1).rounded(4).text_size(11).when(on, (el) => el.bg(t.selected).text_color(t.foreground)).when(!on, (el) => el.text_color(t.dim)).child(on ? "On" : "Off"));
     const autoMerge = Boolean(p.menu.entry?.pr?.autoMergeRequest) || Boolean(mergeWaiting(id));
+    const updateFrom = p.menu.entry?.branch && !DEFAULT_BRANCHES.has(p.menu.entry.branch) ? (p.menu.entry.pr?.baseRefName || p.menu.entry.pr?.defaultBranch || "master") : null;
     const noAutoSettle = Boolean(map("sessions.noAutoSettle")[id]);
     return v_flex().id("sessions-menu").w_full().p(4).bg(t.popover)
       .when(id !== shared("sessions.dev"), (el) => el.child(item("focus", starred ? "Remove from focus" : "Add to focus", () => star(id, !starred), ICON(starred ? "bulb-fill" : "bulb"))))
@@ -2090,6 +2091,10 @@ export default class Sessions extends View {
       .when(starred, (el) => el.child(line()))
       .when(starred, (el) => el.child(item("snooze", isSnoozed ? `Snoozed until ${snoozeLabel(id)}…` : "Snooze…", () => openOverlay({ mod: "sessions", kind: "popup", width: 280, height: 300, props: { menu: { id, snoozeOnly: true, prOpen: open } } }), ICON("clock"))))
       .when(starred, (el) => el.child(item("pin", pinned(id) ? "Unpin" : "Pin", () => setPinned(id, !pinned(id)), `mods/workspace-chrome/${pinned(id) ? "pin-off" : "pin"}.svg`)))
+      .when(Boolean(updateFrom), (el) => el.child(line()).child(item("update-base", `Update from ${updateFrom}`, () => {
+        const space = spaces().find((s) => s.id === id);
+        if (space) this.sendToClaude(space, `Merge the latest ${updateFrom} into this branch: git fetch origin ${updateFrom}, then git merge origin/${updateFrom}. Fix the conflicts. Use the repo's generators for generated files. Run the specs of the files that had conflicts, then commit the merge. If a conflict is not clear, stop and ask me.`);
+      }, "mods/workspace-chrome/branch.svg")))
       .when(Boolean(url), (el) => el.child(line()).child(label("Automatically")))
       .when(open, (el) => el.child(toggle("autofix", "Fix", Boolean(map("pr.autoFix")[id]), () => setAutoFix(id, !map("pr.autoFix")[id]), ICON("wrench"))))
       .when(open && Boolean(p.menu.entry?.pr?.isDraft) && conf().autoReady, (el) => el.child(toggle("auto-ready", "Ready for review", !map("pr.noAutoReady")[id], () => {
