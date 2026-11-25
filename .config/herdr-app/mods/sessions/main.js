@@ -1830,7 +1830,7 @@ export default class Sessions extends View {
     const t = theme();
     const focus = Boolean(shared("focus.on"));
     return h_flex().h(34).pl(14).pr(8).flex_none().items_center().gap(4).text_size(12).text_color(t.dim)
-      .child(div().flex_1().font_medium().child("Sessions"))
+      .child(div().flex_1())
       .child(div().id("chats-toggle").p(5).rounded(6).text_color(this.chatsMode ? t.accent : t.dim).when(this.chatsMode, (el) => el.bg(t.raised))
         .hover((st) => st.bg(t.hover).text_color(this.chatsMode ? t.accent : t.foreground))
         .tooltip(this.chatsMode ? "Back to the sessions (⇧⌘C)" : "Chats with Claude (⇧⌘C)")
