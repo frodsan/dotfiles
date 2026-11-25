@@ -3,7 +3,7 @@
 // order, word starts and runs rank higher. Empty: recent first, then every
 // group. Choices are entries of their own ("Layout: Zen"); commands that need
 // a name ask for it. Enter runs, ↑/↓ move, Esc closes.
-// Firehouse copy of Herdr's palette (frame/palette): adds the Firehouse and Tools groups.
+// Copy of Herdr's palette (frame/palette): adds the Sessions, Tools and Commands groups.
 
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
@@ -17,7 +17,7 @@ const SHOWN = 10;
 const ROW_H = 32;
 const HEAD_H = 26;
 const LIST_H = SHOWN * ROW_H;
-const GROUPS = ["Recent", "Firehouse", "Tools", "Tab", "Pane", "Space", "Layout", "Terminal", "Agent", "Window", "App"];
+const GROUPS = ["Recent", "Sessions", "Tools", "Tab", "Pane", "Space", "Layout", "Terminal", "Agent", "Window", "App"];
 
 // The palette's names for commands: [command, args, group, title, keywords].
 const NAMED = [
@@ -63,20 +63,20 @@ const NAMED = [
 ];
 
 // Our mod commands: commands() does not list them, so they are always shown.
-const FIREHOUSE = [
-  ["sessions.new-session", "Firehouse", "New session…", "create start claude worktree"],
-  ["sessions.focus", "Firehouse", "Focus mode", "focus quiet notifications"],
+const SESSIONS = [
+  ["sessions.new-session", "Sessions", "New session…", "create start claude worktree"],
+  ["sessions.focus", "Sessions", "Focus mode", "focus quiet notifications"],
   ["sessions.chats", "Tools", "Chats with Claude", "chat conversation claude talk notes"],
   ["sessions.new-chat", "Tools", "New chat with Claude", "chat conversation claude talk new"],
-  ["sessions.pull-request", "Firehouse", "Pull request panel", "pr checks comments ci"],
-  ["sessions.github", "Firehouse", "Open the pull request on GitHub", "pr browser"],
-  ["sessions.changes", "Firehouse", "Changes panel", "diff git"],
-  ["sessions.files", "Firehouse", "Files panel", "explorer tree editor"],
-  ["sessions.rails", "Firehouse", "Rails console", "ruby irb"],
+  ["sessions.pull-request", "Sessions", "Pull request panel", "pr checks comments ci"],
+  ["sessions.github", "Sessions", "Open the pull request on GitHub", "pr browser"],
+  ["sessions.changes", "Sessions", "Changes panel", "diff git"],
+  ["sessions.files", "Sessions", "Files panel", "explorer tree editor"],
+  ["sessions.rails", "Sessions", "Rails console", "ruby irb"],
   ["sessions.dev", "Tools", "Edit Herdr config with Claude", "develop herdr config mods settings dev"],
-  ["sessions.settings", "Firehouse", "Custom settings", "preferences settled days options commands"],
-  ["sessions.shortcuts", "Firehouse", "Firehouse shortcuts", "keys help"],
-  ["sessions.welcome", "Firehouse", "Welcome and setup", "welcome setup onboarding getting started install tools skills"],
+  ["sessions.settings", "Sessions", "Custom settings", "preferences settled days options commands"],
+  ["sessions.shortcuts", "Sessions", "Shortcuts", "keys help"],
+  ["sessions.welcome", "Sessions", "Welcome and setup", "welcome setup onboarding getting started install tools skills"],
 ];
 
 // Commands that act on something you point at (ids, terminals): not for a list.
@@ -100,7 +100,7 @@ function entries() {
   const list = NAMED.filter(([n]) => known.has(n))
     .filter(([n]) => !(mac && n.startsWith("window.")))
     .map(([name, args, group, title, words]) => ({ name, args, group, title, words }));
-  for (const [name, group, title, words] of FIREHOUSE) list.push({ name, args: {}, group, title, words });
+  for (const [name, group, title, words] of SESSIONS) list.push({ name, args: {}, group, title, words });
   for (const ext of shared("sidebar.extensions") ?? []) {
     if (ext.view) list.push({ name: `sessions.ext-${ext.id}`, args: {}, group: "Tools", title: ext.title, words: ext.words ?? "" });
     for (const [name, group, title, words] of ext.palette ?? []) list.push({ name, args: {}, group, title, words });
