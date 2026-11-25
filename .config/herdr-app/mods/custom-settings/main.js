@@ -57,7 +57,7 @@ export default class CustomSettings extends View {
       .child(div().text_size(11).font_semibold().text_color(t.muted).child(title.toUpperCase()))
       .child(v_flex().gap(14).p(14).rounded(10).border_1().border_color(t.border).bg(t.background).children(rows));
     const onOff = (key) => chips(key, [[true, "On"], [false, "Off"]]);
-    return v_flex().id("firehouse-settings").size_full().min_h(0).bg(t.popover).text_color(t.foreground)
+    return v_flex().id("custom-settings").size_full().min_h(0).bg(t.popover).text_color(t.foreground)
       .on_key_down((e, cx) => { if (e.key === "escape") { closeOverlay(props().overlay); cx.stop_propagation(); } })
       .child(h_flex().flex_none().px(22).pt(22).pb(12).items_center().child(div().flex_1().text_size(16).font_semibold().child("Custom settings")).child(div().text_size(11).text_color(t.dim).child("Esc")))
       .child(v_flex().id("settings-body").flex_1().min_h(0).px(22).pb(22).gap(20).overflow_y_scrollbar()
