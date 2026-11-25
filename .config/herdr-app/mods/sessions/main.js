@@ -1,8 +1,3 @@
-// Sessions, the Firehouse way: spaces grouped by folder (a repo's main checkout,
-// its worktrees under it), then by sections you make. A space with a pull request
-// shows its title. Focus mode shows only the sessions you add to it (💡), unless snoozed, and
-// mutes Herdr's sounds, except when a shown session is blocked on you.
-
 import { View, div, svg } from "gpui-kit";
 import { initBar, renderBar } from "./bar.js";
 import { PullRequestPanel } from "./pr.js";

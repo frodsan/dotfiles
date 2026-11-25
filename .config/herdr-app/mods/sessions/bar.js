@@ -16,8 +16,6 @@ export function initBar(view) {
   view.panels = JSON.parse(localStorage.getItem("panels") ?? "{}");
 }
 
-// The side panel is remembered per space: switching shows that space's choice
-// (closed if it never had one), and opening or closing it records it.
 function syncPanel(view, space, panel, body, enabled) {
   if (!space || !panel) return;
   const now = panel.hidden ? null : body?.active ?? null;
@@ -34,7 +32,6 @@ function syncPanel(view, space, panel, body, enabled) {
       }
     }
   }
-  // Until the restore lands (or something else won), the old state isn't a choice.
   if (view.pending) {
     if (view.pending.want !== now && Date.now() < view.pending.until) return;
     view.pending = null;
@@ -71,7 +68,6 @@ export function renderBar(view, isChat) {
       .when(c.active, el => el.child(div().id(`close-${c.id}`).text_color(t.dim).on_mouse_down("left", stop).on_click((_e, cx) => { cx.stop_propagation(); run("tab.close", { id: c.id }); }).child(svg("mods/pane/close.svg").size(12))));
   };
   const root = layout(), sidebar = find(root, "sidebar"), w = window();
-  // Old saved rails and a dragged-narrow sidebar can be smaller than the window buttons.
   const lightsPadding = w?.platform === "macos" && w.titlebar === "none" && !w.fullscreen && root?.traffic_lights
     ? Math.max(10, (root.traffic_lights[0] + 64) / settings().zoom - (sidebar?.hidden ? 0 : sidebar?.size?.px ?? 0))
     : 10;

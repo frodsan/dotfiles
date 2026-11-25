@@ -1,8 +1,3 @@
-// The pull request of the shown session, ported from Firehouse's PR bar: state and
-// review, CI checks (investigate, fix, re-run), unresolved review comments (ask
-// Claude, address, resolve), ready for review, auto-merge, conflicts. Claude actions
-// type into the session's Claude tab, or open one on its conversation.
-
 import { div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { spaces, panes, exec, hc, run, theme, shared, setShared, notify, home, window } from "herdr";
