@@ -14,18 +14,7 @@ const GIT_REFRESH_MS = 60000;
 const PR_FRESH_MS = 5000;
 const CHATS_DIR = () => `${appHome()}/data/chats`;
 const CHATS_CWD = () => `${CHATS_DIR()}/workspace`;
-const CHATS_META = () => `${CHATS_DIR()}/chats.json`;
-const CHATS_PROJECT = () => `${home()}/.claude/projects/${CHATS_CWD().replace(/[^A-Za-z0-9]/g, "-")}`;
-async function updateChatsMeta(change) {
-  const raw = await readTextFile(CHATS_META()).catch(() => null);
-  const meta = JSON.parse(raw ?? "{}");
-  const next = change(meta) ?? meta;
-  await writeTextFile(CHATS_META(), JSON.stringify(next, null, 2), raw);
-  return next;
-}
 const isChatSpace = (s) => s.folder === CHATS_CWD() || Object.values(map("chats.space")).includes(s.id);
-const chatTitle = (title) => { const t = (title ?? "").replace(/^[^\p{L}\p{N}]+/u, "").trim(); return t && !/^claude( code)?$/i.test(t) ? t : null; };
-const newUuid = () => "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => { const r = Math.floor(Math.random() * 16); return (c === "x" ? r : (r & 3) | 8).toString(16); });
 function snoozeStore(menu, until) {
   const all = { ...map(menu.store) };
   delete all[menu.id];
@@ -161,6 +150,10 @@ const DEFAULT_BRANCHES = new Set(["master", "main"]);
 function inLayout(id) {
   const find = (node) => (node?.id === id ? node : (node?.children ?? []).map(find).find(Boolean));
   return Boolean(find(layout()));
+}
+function sidebarList() {
+  const find = (node, id) => (node?.id === id ? node : (node?.children ?? []).map((c) => find(c, id)).find(Boolean));
+  return find(layout(), "sidebar-lists")?.active ?? "sessions";
 }
 function listVisible() {
   const find = (node, id) => (node?.id === id ? node : (node?.children ?? []).map((c) => find(c, id)).find(Boolean));
@@ -642,7 +635,7 @@ export default class Sessions extends View {
           if (listVisible()) continue;
           if (command.startsWith("ext-")) this.toggleExtension(command.slice(4));
           else if (command === "focus") await this.focusPressed();
-          else if (command === "chats") { this.showView("work"); this.setChatsMode(true); }
+          else if (command === "chats") this.toggleChats();
           else setShared("sessions.forward", { command, at: Date.now() });
           cx.notify();
         }
@@ -673,10 +666,6 @@ export default class Sessions extends View {
       this.forwardedAt = job.at;
       this.command(job.command, cx);
       cx.notify();
-    });
-    cx.timer.every(10000, (cx) => {
-      this.nameChatSpaces();
-      if (this.chatsMode || spaces().some(isChatSpace)) this.loadChats(cx);
     });
     if (!shared("sessions.welcomed")) cx.timer.after(1500, () => { setShared("sessions.welcomed", true); openWelcome(); });
     this.refreshGit(cx);
@@ -880,170 +869,17 @@ export default class Sessions extends View {
   }
 
   get chatsMode() {
-    return Boolean(shared("sidebar.chats"));
+    return !listVisible() && sidebarList() === "chats";
   }
 
   setChatsMode(on) {
-    if (Boolean(shared("sidebar.chats")) !== on) setShared("sidebar.chats", on);
+    if (on !== this.chatsMode) run("layout.select", { stack: "sidebar-lists", child: on ? "chats" : "sessions" });
   }
 
-  nameChatSpaces() {
-    const ps = panes();
-    const links = Object.entries(map("chats.space"));
-    const names = {};
-    for (const sp of spaces().filter((s) => isChatSpace(s) && s.name === "New chat")) {
-      const name = chatTitle(claudePane(sp, ps)?.title);
-      if (!name) continue;
-      run("space.rename", { id: sp.id, name });
-      const chat = links.find(([, spaceId]) => spaceId === sp.id)?.[0];
-      if (chat) names[chat] = name;
-    }
-    if (Object.keys(names).length) updateChatsMeta((m) => { for (const [id, name] of Object.entries(names)) m[id] = { ...(m[id] ?? {}), name }; }).catch(() => null);
-  }
-
-  async loadChats(cx) {
-    if (this.chatsLoading) return;
-    this.chatsLoading = true;
-    try {
-      await exec("mkdir", ["-p", CHATS_CWD()]);
-      let meta = JSON.parse((await readTextFile(CHATS_META()).catch(() => null)) ?? "{}");
-      const names = {};
-      const r = await exec("sh", ["-c", 'cd "$1" 2>/dev/null && for f in *.jsonl; do [ -f "$f" ] && printf "%s %s\n" "$(date -r "$f" +%s)" "$f"; done', "sh", CHATS_PROJECT()]).catch(() => null);
-      const files = (r?.stdout ?? "").split("\n").filter(Boolean).map((line) => { const [at, file] = line.split(" "); return { id: file.replace(/\.jsonl$/, ""), at: Number(at) * 1000 }; });
-      const live = new Set(spaces().map((sp) => sp.id));
-      const stored = new Set(files.map((x) => x.id));
-      const claimed = new Set(Object.keys(meta));
-      const moves = [];
-      const orphans = Object.entries(meta).filter(([id, m]) => !stored.has(id) && m.createdAt && live.has(map("chats.space")[id])).sort((a, b) => b[1].createdAt - a[1].createdAt);
-      for (const [id, m] of orphans) {
-        const file = files.filter((f) => !claimed.has(f.id) && f.at >= m.createdAt).sort((a, b) => b.at - a.at)[0];
-        if (!file) continue;
-        claimed.add(file.id);
-        moves.push([id, file.id]);
-      }
-      if (moves.length) {
-        meta = await updateChatsMeta((m) => { for (const [from, to] of moves) { m[to] = m[from]; delete m[from]; } });
-        const links = { ...map("chats.space") };
-        for (const [from, to] of moves) { links[to] = links[from]; delete links[from]; }
-        setShared("chats.space", links);
-      }
-      let changed = false;
-      for (const file of files) {
-        if (meta[file.id]?.name && meta[file.id].name !== "New chat") continue;
-        const path = `${CHATS_PROJECT()}/${file.id}.jsonl`;
-        const title = await exec("sh", ["-c", 'grep "\"type\":\"ai-title\"" "$1" | tail -1', "sh", path]).catch(() => null);
-        let text = "";
-        try { text = JSON.parse(title?.stdout ?? "").aiTitle ?? ""; } catch {}
-        if (!text) {
-          const first = await exec("sh", ["-c", 'head -c 400000 "$1" | grep -m1 "\"type\":\"user\""', "sh", path]).catch(() => null);
-          try { const c = JSON.parse(first?.stdout ?? "").message?.content; text = typeof c === "string" ? c : (c ?? []).map((x) => x.text ?? "").join(" "); } catch {}
-        }
-        text = text.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, "").replace(/\s+/g, " ").trim();
-        if (!text) continue;
-        names[file.id] = text.length > 60 ? `${text.slice(0, 57)}…` : text;
-        changed = true;
-      }
-      if (changed) meta = await updateChatsMeta((m) => { for (const [id, name] of Object.entries(names)) m[id] = { ...(m[id] ?? {}), name }; });
-      for (const [id, spaceId] of Object.entries(map("chats.space"))) {
-        const name = meta[id]?.name;
-        const space = spaces().find((sp) => sp.id === spaceId);
-        if (space?.name === "New chat" && name && name !== "New chat") run("space.rename", { id: spaceId, name });
-      }
-      const ids = new Set(files.map((x) => x.id));
-      const fresh = Object.entries(meta).filter(([id]) => !ids.has(id)).map(([id, m]) => ({ id, at: m.createdAt ?? 0 }));
-      this.chats = [...files, ...fresh].map((x) => ({ id: x.id, at: x.at, name: meta[x.id]?.name ?? "New chat" })).sort((a, b) => b.at - a.at);
-    } finally {
-      this.chatsLoading = false;
-      cx.notify();
-    }
-  }
-
-  async openChat(chat) {
-    const spaceId = map("chats.space")[chat.id];
-    const existing = spaces().find((sp) => sp.id === spaceId);
-    if (existing) return run("space.select", { id: existing.id });
-    await exec("mkdir", ["-p", CHATS_CWD()]);
-    const stored = await exec("test", ["-f", `${CHATS_PROJECT()}/${chat.id}.jsonl`]).then((r) => r.code === 0).catch(() => false);
-    setShared("sessions.pending", [...(shared("sessions.pending") ?? []), { name: chat.name, chat: chat.id, at: Date.now() }]);
-    run("space.new", { name: chat.name, folder: CHATS_CWD(), argv: stored ? [CLAUDE, "--resume", chat.id] : [CLAUDE, "--session-id", chat.id] });
-  }
-
-  removeChat(chat, cx) {
-    cx.spawn(async (cx) => {
-      const spaceId = map("chats.space")[chat.id];
-      if (spaces().some((sp) => sp.id === spaceId)) run("space.close", { id: spaceId });
-      const stamp = Date.now();
-      const script = 'mkdir -p "$HOME/.Trash" && for p in "$1/$2.jsonl" "$1/$2"; do [ -e "$p" ] && mv "$p" "$HOME/.Trash/chat-$(basename "$p")-$3"; done; true';
-      await exec("sh", ["-c", script, "sh", CHATS_PROJECT(), chat.id, String(stamp)]).catch(() => null);
-      await updateChatsMeta((m) => { delete m[chat.id]; });
-      const live = { ...map("chats.space") };
-      delete live[chat.id];
-      setShared("chats.space", live);
-      this.confirmChat = null;
-      await this.loadChats(cx);
-    });
-  }
-
-  newChat(cx) {
-    cx.spawn(async (cx) => {
-      await exec("mkdir", ["-p", CHATS_CWD()]);
-      const id = newUuid();
-      await updateChatsMeta((m) => { m[id] = { name: "New chat", createdAt: Date.now() }; });
-      await this.openChat({ id, name: "New chat" });
-      await this.loadChats(cx);
-    });
-  }
-
-  chatsList(t, cx) {
-    if (!this.chats && !this.chatsLoading) cx.spawn(async (cx) => this.loadChats(cx));
-    const chats = this.chats ?? [];
-    const live = map("chats.space");
-    const activeId = spaces().find((sp) => sp.active)?.id;
-    const age = (at) => {
-      const minutes = Math.max(0, Math.round((Date.now() - at) / 60000));
-      if (minutes < 60) return `${minutes}m`;
-      const hours = Math.round(minutes / 60);
-      return hours < 48 ? `${hours}h` : `${Math.round(hours / 24)}d`;
-    };
-    const row = (chat) => {
-      const spaceId = live[chat.id];
-      const space = spaces().find((sp) => sp.id === spaceId);
-      const on = Boolean(space) && space.id === activeId;
-      const key = `chat-${chat.id}`;
-      const confirming = this.confirmChat === chat.id;
-      return h_flex().id(key).px(8).py(6).gap(8).items_center().rounded(8).cursor_pointer()
-        .on_hover(this.hovering(key))
-        .when(on, (el) => el.bg(t.selected)).when(!on, (el) => el.hover((st) => st.bg(t.hover)))
-        .on_click((_e, cx) => { this.openChat(chat).catch(() => null); cx.notify(); })
-        .child(div().flex_none().size(6).rounded(3).bg(space?.status === "working" ? t.working : space?.status === "blocked" ? t.blocked : space ? t.done : t.chrome))
-        .child(v_flex().flex_1().min_w(0)
-          .child(div().truncate().text_size(13).text_color(t.foreground).child(chat.name))
-          .child(div().truncate().text_size(11).text_color(t.dim).child(chat.at ? `${age(chat.at)} ago` : "not started")))
-        .child(div().id(`${key}-remove`).flex_none().px(confirming ? 6 : 3).py(3).rounded(4).text_size(11)
-          .text_color(confirming ? t.blocked : t.dim)
-          .when(!confirming, (el) => el.map(this.reveal(key)))
-          .hover((st) => st.bg(t.raised).text_color(confirming ? t.blocked : t.foreground))
-          .tooltip(confirming ? "Click again to move this chat to the Trash" : "Remove this chat")
-          .on_click((_e, cx) => {
-            cx.stop_propagation();
-            if (!confirming) {
-              this.confirmChat = chat.id;
-              cx.timer.after(4000, (cx) => { if (this.confirmChat === chat.id) { this.confirmChat = null; cx.notify(); } });
-              return cx.notify();
-            }
-            this.removeChat(chat, cx);
-          })
-          .child(confirming ? "Remove?" : svg("mods/workspace-chrome/x.svg").size(11)));
-    };
-    return v_flex().flex_1().min_h(0)
-      .child(h_flex().flex_none().px(14).pt(4).pb(8).gap(8).items_center()
-        .child(div().flex_1().text_size(12.5).font_medium().child("Chats"))
-        .child(div().id("chat-new").p(4).rounded(6).text_color(t.dim).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground)).tooltip("New chat")
-          .on_click((_e, cx) => this.newChat(cx))
-          .child(svg(ICON("plus")).size(13))))
-      .child(v_flex().id("chats-list").flex_1().min_h(0).px(8).pb(14).gap(2).overflow_y_scrollbar()
-        .when(Boolean(this.chats) && chats.length === 0, (el) => el.child(div().px(8).py(8).text_size(12.5).text_color(t.dim).child("No chats yet. Press + to start one.")))
-        .children(chats.map(row)));
+  toggleChats() {
+    const on = !(this.chatsMode && this.activeView() === "work");
+    if (this.activeView() !== "work") this.showView("work");
+    this.setChatsMode(on);
   }
 
   activeView() {
@@ -1108,14 +944,8 @@ export default class Sessions extends View {
     if (command.startsWith("ext-")) return this.toggleExtension(command.slice(4));
     if (command === "requests") return this.runRequests(cx);
     if (command === "spinoff") return this.runSpinoffs(cx);
-    if (command === "new-chat") return this.newChat(cx);
-    if (command === "chats") {
-      const on = !(this.chatsMode && this.activeView() === "work");
-      if (this.activeView() !== "work") this.showView("work");
-      this.setChatsMode(on);
-      if (on) this.loadChats(cx);
-      return;
-    }
+    if (command === "new-chat") return run("chats.new");
+    if (command === "chats") return this.toggleChats();
     if (command === "new-session") return this.openComposer();
     if (command === "dev") return this.openDev(cx);
     if (command === "settings") return openOverlay({ mod: "sessions", kind: "dialog", width: 620, height: 680, props: { settings: true } });
@@ -1507,7 +1337,6 @@ export default class Sessions extends View {
       if (Date.now() - p.at > 120000) return false;
       const space = sp.find((s) => s.named && s.name === p.name && !taken.has(s.id));
       if (!space) return true;
-      if (p.chat) { setShared("chats.space", { ...map("chats.space"), [p.chat]: space.id }); return false; }
       if (p.dev) setShared("sessions.dev", space.id);
       if (p.section) moveTo(space.id, p.section);
       if (p.focus && !p.dev) star(space.id, true);
@@ -1819,7 +1648,6 @@ export default class Sessions extends View {
       : null;
     const rows = listed;
     this.visibleOrder = [];
-    if (this.chatsMode) return v_flex().size_full().min_h(0).bg(t.chrome).child(this.chatsList(t, cx));
     return v_flex().size_full().min_h(0).bg(t.chrome)
       .on_mouse_up("left", (_e, cx) => { this.pressed = null; this.over = null; cx.notify(); })
       .when(Boolean(banner), (el) => el.child(banner))
@@ -1840,7 +1668,7 @@ export default class Sessions extends View {
       .child(div().id("chats-toggle").p(5).rounded(6).text_color(this.chatsMode ? t.accent : t.dim).when(this.chatsMode, (el) => el.bg(t.raised))
         .hover((st) => st.bg(t.hover).text_color(this.chatsMode ? t.accent : t.foreground))
         .tooltip(this.chatsMode ? "Back to the sessions (⇧⌘C)" : "Chats with Claude (⇧⌘C)")
-        .on_click((_e, cx) => { const on = !(this.chatsMode && this.activeView() === "work"); if (this.activeView() !== "work") this.showView("work"); this.setChatsMode(on); cx.notify(); })
+        .on_click((_e, cx) => { this.toggleChats(); cx.notify(); })
         .child(svg(ICON("chat")).size(14)))
       .child(div().id("focus-toggle").p(5).rounded(6).text_color(focus ? t.accent : t.dim).when(focus, (el) => el.bg(t.raised))
         .hover((st) => st.bg(t.hover).text_color(focus ? t.accent : t.foreground))

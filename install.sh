@@ -19,6 +19,7 @@ FILES=(
   .config/herdr-app/keys.json
   .config/herdr-app/layouts/firehouse.json
   .config/herdr-app/mods/sessions
+  .config/herdr-app/mods/chats
   .config/herdr-app/mods/custom-commands
   .config/herdr-app/themes/firehouse.json
   .config/nvim

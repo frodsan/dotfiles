@@ -48,6 +48,17 @@
               "content": {
                 "mod": "sessions"
               }
+            },
+            {
+              "id": "chats",
+              "type": "block",
+              "size": {
+                "weight": 1
+              },
+              "min": 90,
+              "content": {
+                "mod": "chats"
+              }
             }
           ],
           "active": "sessions",
