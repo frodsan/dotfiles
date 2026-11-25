@@ -14,7 +14,7 @@ async function start(entry) {
   run("terminal.open", { argv: [shell?.stdout.trim() || "/bin/zsh", "-ilc", entry.command], folder: currentFolder(), place: "right" });
 }
 
-export default class Commands extends View {
+export default class CustomCommands extends View {
   init(_props, cx) {
     cx.spawn(async () => {
       for (;;) {
