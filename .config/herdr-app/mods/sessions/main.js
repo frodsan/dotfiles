@@ -1645,15 +1645,8 @@ export default class Sessions extends View {
           .when(state === "merged" || state === "closed" || state === "draft", (el) => el.child(div().flex_none().child({ merged: "Merged", closed: "Closed", draft: "Draft" }[state])))
           .child(div().flex_none().child(`· ${age(pr.createdAt)}`))
           .map((el) => {
-            const fix = this.autoFixMarker(s, t);
-            const waiting = mergeWaiting(s.id);
-            const merge = pr.state === "OPEN" && (Boolean(pr.autoMergeRequest) || Boolean(waiting));
-            const mergeLook = waiting?.state === "queued" ? [t.done, "In the merge queue"] : waiting?.state === "dropped" ? [t.blocked, "It left the merge queue. Turn Merge when ready off and on to queue it again"] : [t.dim, waiting && autoFixBusy(s.id) ? "Merge when ready: waiting for auto-fix to finish" : waiting ? "Merge when ready: Herdr adds it to the merge queue once it is approved, green and auto-fix is done" : "Auto-merge is on: GitHub merges this PR when it is ready"];
-            if (!fix && !merge) return el;
-            return el.child(h_flex().flex_none().gap(4).items_center()
-              .child(div().child("·"))
-              .when(Boolean(fix), (el) => el.child(div().id(`autofix-${s.id}`).flex_none().text_color(fix.color).tooltip(fix.tip).child(svg(ICON("wrench")).size(11))))
-              .when(merge, (el) => el.child(div().id(`automerge-${s.id}`).flex_none().text_color(mergeLook[0]).tooltip(mergeLook[1]).child(svg(ICON("git-merge-queue")).size(11)))));
+            const markers = this.autoMarkers(s, pr, t);
+            return markers ? el.child(h_flex().flex_none().gap(4).items_center().child(div().child("·")).child(markers)) : el;
           })
       : div().truncate().child(g?.branch && row.name !== g.branch && !DEFAULT_BRANCHES.has(g.branch) ? g.branch : g ? (g.linked ? base(g.top) : g.branch ?? "") : "");
     const dragging = this.pressed?.id === s.id;
@@ -1936,6 +1929,17 @@ export default class Sessions extends View {
         .child(svg("mods/workspace-chrome/pin.svg").size(12))))];
   }
 
+  autoMarkers(s, pr, t) {
+    const fix = this.autoFixMarker(s, t);
+    const waiting = mergeWaiting(s.id);
+    const merge = pr?.state === "OPEN" && (Boolean(pr.autoMergeRequest) || Boolean(waiting));
+    if (!fix && !merge) return null;
+    const mergeLook = waiting?.state === "queued" ? [t.done, "In the merge queue"] : waiting?.state === "dropped" ? [t.blocked, "It left the merge queue. Turn Merge when ready off and on to queue it again"] : [t.dim, waiting && autoFixBusy(s.id) ? "Merge when ready: waiting for auto-fix to finish" : waiting ? "Merge when ready: Herdr adds it to the merge queue once it is approved, green and auto-fix is done" : "Auto-merge is on: GitHub merges this PR when it is ready"];
+    return h_flex().flex_none().gap(4).items_center()
+      .when(Boolean(fix), (el) => el.child(div().id(`autofix-${s.id}`).flex_none().text_color(fix.color).tooltip(fix.tip).child(svg(ICON("wrench")).size(11))))
+      .when(merge, (el) => el.child(div().id(`automerge-${s.id}`).flex_none().text_color(mergeLook[0]).tooltip(mergeLook[1]).child(svg(ICON("git-merge-queue")).size(11))));
+  }
+
   snoozedList(rows, t) {
     const now = Date.now();
     const sleeping = rows.filter((r) => map("focus.starred")[r.s.id] && snoozed(r.s.id, now)).sort((a, b) => (map("focus.snoozed")[a.s.id] ?? Infinity) - (map("focus.snoozed")[b.s.id] ?? Infinity));
@@ -1953,6 +1957,7 @@ export default class Sessions extends View {
       .child(v_flex().flex_1().min_w(0)
         .child(div().truncate().text_size(12.5).text_color(t.muted).child(r.name))
         .child(div().truncate().text_size(11).text_color(t.dim).child(`${r.pr ? `#${r.pr.number} · ` : ""}${base(JSON.parse(r.folderKey)[1])} · until ${snoozeLabel(r.s.id)}`)))
+      .map((el) => { const markers = this.autoMarkers(r.s, r.pr, t); return markers ? el.child(markers) : el; })
       .child(div().id(`snoozed-change-${r.s.id}`).flex_none().p(3).rounded(4).text_color(t.dim).tooltip("Change the time or unsnooze")
         .hover((st) => st.bg(t.raised).text_color(t.foreground))
         .on_click((_e, cx) => { cx.stop_propagation(); openOverlay({ mod: "sessions", kind: "popup", width: 260, height: 250, props: { menu: { id: r.s.id, snoozeOnly: true } } }); })
