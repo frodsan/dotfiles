@@ -185,6 +185,23 @@ link_files() {
   fi
 }
 
+select_herdr_layout() {
+  echo "==> Herdr layout"
+  local state="$HOME/.config/herdr-app/shared.json"
+
+  if [[ ! -e "$state" ]]; then
+    mkdir -p "$(dirname "$state")"
+    printf '{\n  "layout": "firehouse"\n}\n' >"$state"
+    echo "  set      firehouse for the first start"
+  elif grep -q '"layout": *"firehouse"' "$state"; then
+    echo "  ok       firehouse is the layout"
+  elif command -v herdr-app >/dev/null && herdr-app do layout.switch --name firehouse >/dev/null 2>&1; then
+    echo "  switched to firehouse"
+  else
+    echo "  skipped  Herdr is not running. Open it and run install.sh again."
+  fi
+}
+
 install_skills() {
   echo "==> Agent skills"
 
@@ -216,4 +233,5 @@ fi
 install_homebrew
 install_packages
 link_files
+select_herdr_layout
 install_skills

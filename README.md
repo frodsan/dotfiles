@@ -14,8 +14,7 @@ My macOS config.
 
 2. Put machine-specific and work settings in `~/.zshenv.local`, `~/.zprofile.local` and `~/.zshrc.local`.
 3. Put work rules for Claude Code in `~/Code/<company>/CLAUDE.local.md`.
-4. In Herdr, switch to the `firehouse` layout with `ctrl-shift-l`.
-5. In Herdr, open the custom settings with `⇧⌘,`. Set the review bot and add your commands.
+4. In Herdr, open the custom settings with `⇧⌘,`. Set the review bot and add your commands.
 
 ## Add a file
 
