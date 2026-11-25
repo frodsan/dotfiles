@@ -1840,7 +1840,7 @@ export default class Sessions extends View {
     const banner = focus
       ? h_flex().mx(8).mb(2).px(10).py(6).flex_none().items_center().rounded(8).bg(t.raised).text_size(12).text_color(t.muted)
           .child(svg(ICON("focus")).size(12).mr(6).text_color(t.accent))
-          .child(div().flex_1().child(`Focus · ${listed.length} ${listed.length === 1 ? "session" : "sessions"}${workingRows.length ? ` · ${workingRows.length} working` : ""}${snoozedCount ? ` · ${snoozedCount} snoozed` : ""}`))
+          .child(div().flex_1().child("Focus mode"))
           .child(div().id("focus-off").text_color(t.accent).cursor_pointer().hover((st) => st.text_color(t.foreground)).on_click((_e, cx) => cx.spawn(async (cx) => { await setFocus(false); cx.notify(); })).child("Show all"))
       : null;
     const empty = focus && listed.length === 0
