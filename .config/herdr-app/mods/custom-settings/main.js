@@ -2,15 +2,9 @@ import { View, div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { theme, shared, setShared, props, closeOverlay, openOverlay } from "herdr";
 
-const PR_FRESH_MS = 5000;
 const conf = () => ({ ...(shared("settings.defaults") ?? {}), ...(shared("firehouse.settings") ?? {}) });
 const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 const SETTLED_DAYS = [1, 3, 7, 14, 30];
-const prInterval = () => {
-  const rate = shared("github.rateLimit");
-  if (!rate || Date.parse(rate.resetAt) < Date.now()) return PR_FRESH_MS;
-  return rate.remaining < 100 ? 120000 : rate.remaining < 500 ? 30000 : PR_FRESH_MS;
-};
 
 export default class CustomSettings extends View {
   init() {
@@ -22,23 +16,7 @@ export default class CustomSettings extends View {
     };
     this.fields = {
       branchPrefix: field("branchPrefix", "e.g. fr/"),
-      reviewBot: field("reviewBot", "e.g. review-bot"),
     };
-  }
-
-  renderRate() {
-    const t = theme();
-    const rate = shared("github.rateLimit");
-    if (!rate) return div().text_size(12.5).text_color(t.dim).child("No data yet.");
-    const reset = new Date(rate.resetAt);
-    const pct = Math.min(1, rate.used / rate.limit);
-    const every = prInterval() / 1000;
-    return v_flex().gap(6)
-      .child(h_flex().gap(8).items_center().text_size(12.5)
-        .child(div().child(`${rate.used.toLocaleString()} of ${rate.limit.toLocaleString()} points used`))
-        .child(div().text_color(t.dim).child(`· resets at ${String(reset.getHours()).padStart(2, "0")}:${String(reset.getMinutes()).padStart(2, "0")} · PR status every ${every < 60 ? `${every} s` : `${every / 60} min`}`)))
-      .child(div().h(6).w_full().rounded(3).bg(t.raised)
-        .child(div().h_full().rounded(3).w(`${Math.round(pct * 100)}%`).bg(rate.remaining < 500 ? t.blocked : t.accent)));
   }
 
   render() {
@@ -65,9 +43,6 @@ export default class CustomSettings extends View {
           row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b.", input(this.fields.branchPrefix)),
           row("Branch names come from", "Claude asks Haiku for a short slug. Message words uses the first words you type.", chips("branchNames", [["claude", "Claude"], ["words", "Message words"]])),
           div().text_size(11.5).text_color(t.dim).child("To run a setup command in new worktrees, right-click a folder in Sessions.")))
-        .child(group("Pull requests",
-          row("GitHub API", "Herdr checks the PR of every session in one query. It slows down to every 30 seconds when fewer than 500 points are left, and to every 2 minutes below 100. The budget is shared with everything that uses your gh login, including Claude.", this.renderRate()),
-          row("Review bot", "Part of the GitHub login of the bot that reviews your pull requests. Auto-fix treats its comments as bot comments, and marks a draft ready for review only after the bot reviewed it. Empty: any GitHub bot account counts, and auto-fix does not wait for a bot review.", input(this.fields.reviewBot))))
         .child(group("Settling",
           row("Auto-settle", "Settle a session when its pull request merges or closes. You can still turn it off per session.", onOff("autoSettle")),
           row("Keep settled sessions for", "After that, Herdr deletes its worktree and Claude conversation. A worktree with uncommitted changes or commits that are not on GitHub stays, with a warning in Settled. The branch always stays.", h_flex().gap(4).children(SETTLED_DAYS.map((d) => choice(`settled-${d}`, d === 1 ? "1 day" : `${d} days`, c.settledDays === d, () => setConf({ settledDays: d })))))))

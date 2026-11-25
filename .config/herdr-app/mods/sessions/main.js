@@ -40,8 +40,7 @@ function failedCheck(e) {
   return e.status === "COMPLETED" && !["SUCCESS", "NEUTRAL", "SKIPPED", "CANCELLED", "STALE"].includes(e.conclusion);
 }
 
-const reviewBot = () => (shared("firehouse.settings")?.reviewBot ?? "").trim().toLowerCase();
-const isReviewBot = (author) => (reviewBot() ? (author?.login ?? "").toLowerCase().includes(reviewBot()) : author?.__typename === "Bot");
+const isReviewBot = (author) => author?.__typename === "Bot";
 const AUTOFIX_DIR = () => `${appHome()}/data/autofix`;
 const AUTOFIX_ROUNDS = 5;
 
@@ -76,13 +75,11 @@ async function autoFixState(cwd, on) {
   const pending = [...latest.values()].some((e) => (e.__typename === "StatusContext" ? e.state === "PENDING" || e.state === "EXPECTED" : e.status !== "COMPLETED"));
   let threads = [];
   let unresolved = null;
-  let reviewedByBot = false;
   const g = await exec("gh", ["api", "graphql", "-f", `query=${THREADS}`, "-f", `owner=${owner}`, "-f", `name=${name}`, "-F", `number=${number}`], { cwd, on }).catch(() => null);
   if (g?.code === 0) {
     const data = JSON.parse(g.stdout).data;
     const me = data.viewer.login;
     unresolved = data.repository.pullRequest.reviewThreads.nodes.filter((thread) => !thread.isResolved).length;
-    reviewedByBot = !reviewBot() || (data.repository.pullRequest.reviews?.nodes ?? []).some((review) => isReviewBot(review.author));
     threads = data.repository.pullRequest.reviewThreads.nodes.flatMap((thread) => {
       const all = thread.comments.nodes;
       const first = all[0];
@@ -111,7 +108,7 @@ async function autoFixState(cwd, on) {
     }
   }
   const conflict = view.mergeable === "CONFLICTING";
-  const readyForReview = view.isDraft && !conflict && !failing.length && !(requiredPending ?? pending) && latest.size > 0 && unresolved === 0 && reviewedByBot;
+  const readyForReview = view.isDraft && !conflict && !failing.length && !(requiredPending ?? pending) && latest.size > 0 && unresolved === 0;
   return { ...view, failing, requiredFailing, threads, conflict, readyForReview };
 }
 
