@@ -1977,16 +1977,16 @@ export default class Sessions extends View {
       reviewBot: field("reviewBot", "e.g. review-bot"),
     };
     this.commandFields = {};
+    for (const command of c.commands ?? []) this.makeCommandFields(command);
   }
 
-  commandField(id, key, placeholder) {
-    const fields = (this.commandFields[id] ??= {});
-    if (!fields[key]) {
-      const value = (conf().commands ?? []).find((c) => c.id === id)?.[key] ?? "";
-      fields[key] = InputState.new({ value, placeholder });
-      fields[key].on("change", () => this.updateCommand(id, { [key]: fields[key].value() }));
-    }
-    return fields[key];
+  makeCommandFields(command) {
+    const field = (key, placeholder) => {
+      const state = InputState.new({ value: command[key] ?? "", placeholder });
+      state.on("change", () => this.updateCommand(command.id, { [key]: state.value() }));
+      return state;
+    };
+    this.commandFields[command.id] = { title: field("title", "Title, e.g. Refresh login"), command: field("command", "Shell command, e.g. bin/login") };
   }
 
   updateCommand(id, change) {
@@ -1995,15 +1995,19 @@ export default class Sessions extends View {
 
   renderCommands(t, input, choice) {
     const list = conf().commands ?? [];
-    const add = () => setConf({ commands: [...list, { id: Math.random().toString(36).slice(2, 10), title: "", command: "", where: "repo" }] });
+    const add = () => {
+      const command = { id: Math.random().toString(36).slice(2, 10), title: "", command: "", where: "repo" };
+      this.makeCommandFields(command);
+      setConf({ commands: [...list, command] });
+    };
     const remove = (id) => { delete this.commandFields[id]; setConf({ commands: list.filter((c) => c.id !== id) }); };
     return v_flex().gap(10)
-      .children(list.map((c) => v_flex().gap(6).p(10).rounded(8).border_1().border_color(t.border)
+      .children(list.filter((c) => this.commandFields[c.id]).map((c) => v_flex().gap(6).p(10).rounded(8).border_1().border_color(t.border)
         .child(h_flex().gap(6).items_center()
-          .child(div().flex_1().child(input(this.commandField(c.id, "title", "Title, e.g. Refresh login"))))
+          .child(div().flex_1().child(input(this.commandFields[c.id].title)))
           .child(div().id(`command-remove-${c.id}`).flex_none().px(8).py(5).rounded(6).text_size(12).text_color(t.dim).cursor_pointer()
             .hover((st) => st.bg(t.hover).text_color(t.foreground)).on_click((_e, cx) => { remove(c.id); cx.notify(); }).child("Remove")))
-        .child(input(this.commandField(c.id, "command", "Shell command, e.g. bin/login")))
+        .child(input(this.commandFields[c.id].command))
         .child(h_flex().gap(4).items_center()
           .child(div().pr(4).text_size(11.5).text_color(t.dim).child("Runs in"))
           .child(choice(`command-where-${c.id}-repo`, "Main repo", c.where !== "session", () => this.updateCommand(c.id, { where: "repo" })))
