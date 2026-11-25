@@ -100,7 +100,10 @@
               "id": "tabs",
               "type": "block",
               "content": {
-                "mod": "tabs-bar"
+                "mod": "sessions",
+                "props": {
+                  "bar": true
+                }
               },
               "size": {
                 "px": 42
@@ -152,7 +155,10 @@
                           "id": "pull-request",
                           "type": "block",
                           "content": {
-                            "mod": "pull-request"
+                            "mod": "sessions",
+                            "props": {
+                              "pr": true
+                            }
                           }
                         }
                       ],

@@ -3,7 +3,7 @@
 // Claude, address, resolve), ready for review, auto-merge, conflicts. Claude actions
 // type into the session's Claude tab, or open one on its conversation.
 
-import { View, div, svg } from "gpui-kit";
+import { div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { spaces, panes, exec, hc, run, theme, shared, setShared, notify, home, window } from "herdr";
 
@@ -89,7 +89,7 @@ const PROMPTS = {
   updateBase: (s) => [`Update pull request #${s.number} (${s.url}) with the latest ${s.baseRefName}.`, `Fetch origin and merge origin/${s.baseRefName} into ${s.headRefName}. Do not rebase or force-push.`, "If there are conflicts, resolve them and keep the intent of both sides, then run the tests for the files you touched.", "Push the merge commit. If the branch is already up to date, say so and do nothing."].join("\n"),
 };
 
-export default class PullRequest extends View {
+export class PullRequestPanel {
   init(_props, cx) {
     this.cache = shared("pr.cache") ?? {};
     this.loading = new Set();
@@ -216,7 +216,7 @@ export default class PullRequest extends View {
       h_flex().h(38).px(14).flex_none().items_center().border_b_1().border_color(t.border).gap(8)
         .child(svg(ICON("pr-open")).size(14).text_color(t.dim))
         .child(div().flex_1().text_size(12.5).font_medium().text_color(t.foreground).child("Pull request"))
-        .when(Boolean(c && this.loading.has(c.path)), (el) => el.child(svg("mods/pull-request/spinner.svg").size(12).spin(900).text_color(t.dim)))
+        .when(Boolean(c && this.loading.has(c.path)), (el) => el.child(svg("mods/sessions/spinner.svg").size(12).spin(900).text_color(t.dim)))
         .child(div().id("pr-refresh").p(4).rounded(5).text_size(11.5).text_color(t.dim).cursor_pointer().hover((s) => s.bg(t.hover).text_color(t.foreground)).tooltip("Refresh")
           .on_click((_e, cx) => this.refresh(cx, true)).child("↻")),
     ).child(v_flex().id("pr-body").flex_1().min_h(0).px(14).pb(18).overflow_y_scrollbar().child(child));
@@ -259,7 +259,7 @@ export default class PullRequest extends View {
         .child(h_flex().id(`open-${i}`).px(6).py(2).gap(4).items_center().rounded(5).text_size(11.5).text_color(t.accent).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground))
           .tooltip("Open the thread on GitHub")
           .on_click((_e, cx) => { cx.stop_propagation(); exec("open", [k.url]); })
-          .child("GitHub").child(svg("mods/pull-request/external-link.svg").size(11))));
+          .child("GitHub").child(svg("mods/sessions/external-link.svg").size(11))));
     const busy = Boolean(this.busy);
     return frame(v_flex()
       .child(h_flex().pt(14).gap(6).items_center()

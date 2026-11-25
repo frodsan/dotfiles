@@ -18,8 +18,6 @@ FILES=(
   .claude/skills/herdr-app
   .config/herdr-app/keys.json
   .config/herdr-app/layouts/firehouse.json
-  .config/herdr-app/mods/tabs-bar
-  .config/herdr-app/mods/pull-request
   .config/herdr-app/mods/sessions
   .config/herdr-app/mods/custom-commands
   .config/herdr-app/themes/firehouse.json

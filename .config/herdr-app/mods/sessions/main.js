@@ -4,6 +4,8 @@
 // mutes Herdr's sounds, except when a shown session is blocked on you.
 
 import { View, div, svg } from "gpui-kit";
+import { initBar, renderBar } from "./bar.js";
+import { PullRequestPanel } from "./pr.js";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea } from "gpui-base";
 import { hc, keys, spaces, panes, machines, layout, run, exec, theme, shared, setShared, openOverlay, closeOverlay, props, nextCommand, playSound, readTextFile, writeTextFile, appHome, home, window, pickFolder, notify } from "herdr";
 
@@ -630,6 +632,8 @@ const openWelcome = () => openOverlay({ mod: "sessions", kind: "dialog", width: 
 
 export default class Sessions extends View {
   init(_props, cx) {
+    if (props()?.bar) return initBar(this);
+    if (props()?.pr) { this.panel = new PullRequestPanel(); return this.panel.init(_props, cx); }
     if (props()?.header) {
       cx.timer.every(2000, (cx) => cx.notify());
       cx.spawn(async (cx) => {
@@ -1782,6 +1786,8 @@ export default class Sessions extends View {
   }
 
   render(cx) {
+    if (props()?.pr) return this.panel.render();
+    if (props()?.bar) return renderBar(this, isChatSpace(spaces().find((s) => s.active) ?? {}));
     if (props()?.header) return this.renderHeader();
     if (props()?.composer) return this.renderComposer();
     if (props()?.settings) return this.renderSettings();
