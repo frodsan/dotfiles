@@ -17,7 +17,7 @@ FILES=(
   .claude/rules/ruby.md
   .claude/skills/herdr-app
   .config/herdr-app/keys.json
-  .config/herdr-app/layouts/firehouse.json
+  .config/herdr-app/layouts/Firehouse.json
   .config/herdr-app/mods/sessions
   .config/herdr-app/mods/chats
   .config/herdr-app/mods/custom-commands
@@ -194,12 +194,12 @@ select_herdr_layout() {
 
   if [[ ! -e "$state" ]]; then
     mkdir -p "$(dirname "$state")"
-    printf '{\n  "layout": "firehouse"\n}\n' >"$state"
-    echo "  set      firehouse for the first start"
-  elif grep -q '"layout": *"firehouse"' "$state"; then
-    echo "  ok       firehouse is the layout"
-  elif command -v herdr-app >/dev/null && herdr-app do layout.switch --name firehouse >/dev/null 2>&1; then
-    echo "  switched to firehouse"
+    printf '{\n  "layout": "Firehouse"\n}\n' >"$state"
+    echo "  set      Firehouse for the first start"
+  elif grep -q '"layout": *"Firehouse"' "$state"; then
+    echo "  ok       Firehouse is the layout"
+  elif command -v herdr-app >/dev/null && herdr-app do layout.switch --name Firehouse >/dev/null 2>&1; then
+    echo "  switched to Firehouse"
   else
     echo "  skipped  Herdr is not running. Open it and run install.sh again."
   fi
