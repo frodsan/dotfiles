@@ -191,6 +191,18 @@ link_files() {
   fi
 }
 
+create_local_files() {
+  local file
+  for file in .zshenv.local .zprofile.local .zshrc.local; do
+    if [[ -e "$HOME/$file" ]]; then
+      echo "  ok       ~/$file exists"
+    else
+      touch "$HOME/$file"
+      echo "  created  ~/$file"
+    fi
+  done
+}
+
 select_herdr_layout() {
   echo "==> Herdr layout"
   local state="$HOME/.config/herdr-app/shared.json"
@@ -238,10 +250,12 @@ if [[ -z "$DOTFILES" || ! -f "$DOTFILES/Brewfile" ]]; then
 fi
 if [[ "$LINKS_ONLY" -eq 1 ]]; then
   link_files
+  create_local_files
   exit
 fi
 install_homebrew
 install_packages
 link_files
+create_local_files
 select_herdr_layout
 install_skills

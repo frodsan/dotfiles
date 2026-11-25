@@ -12,6 +12,6 @@ My macOS config.
 
    To replace files that already exist, add `-s -- --force`. Each one moves to `<name>.bak` first.
 
-2. Put machine-specific and work settings in `~/.zshenv.local`, `~/.zprofile.local` and `~/.zshrc.local`.
+2. Put machine-specific and work settings in `~/.zshenv.local`, `~/.zprofile.local` and `~/.zshrc.local`. The installer creates them empty.
 3. Put work rules for Claude Code in `~/Code/<company>/CLAUDE.local.md`.
 4. In Herdr, open the custom settings with `⇧⌘,`. Add your commands.
