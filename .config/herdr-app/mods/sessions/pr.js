@@ -2,11 +2,7 @@ import { div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { spaces, panes, exec, hc, run, theme, shared, setShared, notify, home, window } from "herdr";
 
-export const updateBranchPrompt = (base) => [
-  `Update this branch with the latest ${base}: git fetch origin ${base}, then git merge origin/${base}. Do not rebase or force-push.`,
-  "Fix the conflicts and keep the intent of both sides. Use the repo's generators for generated files. If a conflict is not clear, stop and ask me.",
-  "Run the specs of the files that had conflicts, then commit the merge and push it. If the branch is already up to date, say so and do nothing.",
-].join("\n");
+export const updateBranchCommand = (base) => `/herdr-app:update-branch ${base}`;
 const ICON = (name) => `mods/sessions/${name}.svg`;
 const REFRESH_MS = 60000;
 const MEMBER = ["OWNER", "MEMBER", "COLLABORATOR"];
@@ -77,16 +73,15 @@ async function fetchStatus(cwd) {
 
 const checkLine = (c) => `- ${c.workflow ? `${c.workflow} / ` : ""}${c.name}${c.url ? ` (${c.url})` : ""}`;
 const runIds = (c) => c.url?.match(/\/actions\/runs\/(\d+)(?:\/job\/(\d+))?/);
-const commentLines = (comments) => comments.flatMap((c) => [`- @${c.author}${c.path ? ` on ${c.path}${c.line ? `:${c.line}` : ""}` : ""} (${c.url}):`, ...c.body.split("\n").map((l) => `  > ${l}`)]);
+const commentLines = (comments) => comments.flatMap((c) => [`- @${c.author}${c.path ? ` on ${c.path}${c.line ? `:${c.line}` : ""}` : ""} (${c.url}, thread ${c.threadId}, first comment ${c.id}):`, ...c.body.split("\n").map((l) => `  > ${l}`)]);
 
+const pr = (s) => `Pull request #${s.number} (${s.url}).`;
 const PROMPTS = {
-  investigate: (s, checks) => checks.length === 1
-    ? `The check "${checks[0].workflow ? `${checks[0].workflow} / ` : ""}${checks[0].name}" failed on pull request #${s.number} (${s.url}).\nRead its logs with ${runIds(checks[0])?.[2] ? `\`gh run view --job ${runIds(checks[0])[2]} --log-failed\`` : "`gh pr checks` and the check link"}. Explain the root cause, whether this branch caused it or it looks flaky, and what you would change. Do not change any files yet.`
-    : [`These checks failed on pull request #${s.number} (${s.url}):`, ...checks.map(checkLine), "", "Read their logs with `gh run view --job <job-id> --log-failed`. For each one, explain the root cause and whether this branch caused it or it looks flaky. Do not change any files yet."].join("\n"),
-  fix: (s, checks) => [`CI is failing on pull request #${s.number} (${s.url}). ${checks.length === 1 ? "Fix only this check, leave the others for later:" : "These checks failed:"}`, ...checks.map(checkLine), "", "Read the logs with `gh pr checks` and `gh run view <run-id> --log-failed`. Find the root cause, fix it, run the relevant tests locally, then commit and push.", "If a failure is flaky or unrelated to this branch, say so instead of changing code."].join("\n"),
-  address: (s, comments) => [`Address these review comments on pull request #${s.number} (${s.url}):`, ...commentLines(comments), "", "Make the changes, run the relevant tests, then commit and push. Reply on each thread with `gh` to say what you changed. If you disagree with a comment, explain why instead of changing the code."].join("\n"),
-  opinion: (s, comments) => [`Give me your opinion on these review comments on pull request #${s.number} (${s.url}):`, ...commentLines(comments), "", "For each one, say whether you agree and what you would change. Do not change any files yet."].join("\n"),
-  updateBase: (s) => updateBranchPrompt(s.baseRefName),
+  investigate: (s, checks) => [`/herdr-app:pr-fix why ${pr(s)} Failed checks:`, ...checks.map(checkLine)].join("\n"),
+  fix: (s, checks) => [`/herdr-app:pr-fix fix ${pr(s)} Failed checks:`, ...checks.map(checkLine)].join("\n"),
+  address: (s, comments) => [`/herdr-app:pr-fix address ${pr(s)} Comments:`, ...commentLines(comments)].join("\n"),
+  opinion: (s, comments) => [`/herdr-app:pr-fix ask ${pr(s)} Comments:`, ...commentLines(comments)].join("\n"),
+  updateBase: (s) => updateBranchCommand(s.baseRefName),
 };
 
 export class PullRequestPanel {

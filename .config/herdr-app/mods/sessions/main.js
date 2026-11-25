@@ -1,6 +1,6 @@
 import { View, div, svg } from "gpui-kit";
 import { initBar, renderBar } from "./bar.js";
-import { PullRequestPanel, updateBranchPrompt } from "./pr.js";
+import { PullRequestPanel, updateBranchCommand } from "./pr.js";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea } from "gpui-base";
 import { hc, keys, spaces, panes, machines, layout, run, exec, theme, shared, setShared, openOverlay, closeOverlay, props, nextCommand, playSound, readTextFile, writeTextFile, appHome, home, window, pickFolder, notify } from "herdr";
 
@@ -113,7 +113,7 @@ async function autoFixState(cwd, on) {
 }
 
 function autoFixPrompt(state, parts) {
-  const out = [`Auto-fix round for PR #${state.number} (${state.url}). Follow the herdr-app:pr-autofix skill.`];
+  const out = [`/herdr-app:pr-autofix Auto-fix round for PR #${state.number} (${state.url}).`];
   if (parts.conflict) out.push(`Merge conflicts with ${state.baseRefName}.`);
   if (parts.checks.length) out.push([
     `Failing checks on ${state.headRefOid.slice(0, 8)}:`,
@@ -293,7 +293,7 @@ const WELCOME_TOOLS = [
   ["nvim", "command -v nvim", "Files (⌘E) opens Neovim beside Claude.", "brew install neovim ripgrep fd tree-sitter-cli, then git clone https://github.com/LazyVim/starter ~/.config/nvim"],
   ["lazygit", "command -v lazygit", "Changes (⌥⌘C) opens lazygit beside Claude.", "brew install lazygit"],
 ];
-const WELCOME_SKILLS = ["pr-autofix", "spin-off"];
+const WELCOME_SKILLS = ["pr-autofix", "pr-fix", "update-branch", "spin-off"];
 
 async function branchSlug(text, folder) {
   const repo = base(folder).toLowerCase().split(/[^a-z0-9]+/);
@@ -2000,7 +2000,7 @@ export default class Sessions extends View {
               .child(check(true, "Branch prefix", "Optional. New branches start with it, e.g. fr/fix-login-1a2b."))
               .child(div().pl(26).child(Input.new(this.prefix).h(28).px(8).rounded(6).border_1().border_color(t.input).bg(t.background).text_size(12.5))),
             ...WELCOME_TOOLS.map(([name, , what, install]) => check(this.checks[name], name, this.checks[name] === false ? `${what} Install: ${install}` : what)),
-            check(this.checks.skills, "Claude skills", this.checks.skills === false ? "Auto-fix and /herdr-app:spin-off need the herdr-app plugin in ~/.claude/skills/herdr-app. Run the dotfiles install.sh." : "The herdr-app plugin: herdr-app:pr-autofix for auto-fix, and /herdr-app:spin-off."),
+            check(this.checks.skills, "Claude skills", this.checks.skills === false ? "Auto-fix and /herdr-app:spin-off need the herdr-app plugin in ~/.claude/skills/herdr-app. Run the dotfiles install.sh." : "The herdr-app plugin: /herdr-app:pr-autofix for auto-fix, /herdr-app:pr-fix for the PR panel, /herdr-app:update-branch and /herdr-app:spin-off."),
           )))
         .child(v_flex().gap(10).child(heading("Shortcuts"))
           .child(card(
@@ -2082,7 +2082,7 @@ export default class Sessions extends View {
       .when(starred, (el) => el.child(item("pin", pinned(id) ? "Unpin" : "Pin", () => setPinned(id, !pinned(id)), `mods/workspace-chrome/${pinned(id) ? "pin-off" : "pin"}.svg`)))
       .when(Boolean(updateFrom), (el) => el.child(line()).child(item("update-base", "Update branch", () => {
         const space = spaces().find((s) => s.id === id);
-        if (space) this.sendToClaude(space, updateBranchPrompt(updateFrom));
+        if (space) this.sendToClaude(space, updateBranchCommand(updateFrom));
       }, "mods/workspace-chrome/branch.svg")))
       .when(Boolean(url), (el) => el.child(line()).child(label("Automatically")))
       .when(open, (el) => el.child(toggle("autofix", "Fix", Boolean(map("pr.autoFix")[id]), () => setAutoFix(id, !map("pr.autoFix")[id]), ICON("wrench"))))
