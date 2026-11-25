@@ -636,7 +636,15 @@ export default class Sessions extends View {
     if (props()?.menu?.snoozeOnly) return this.initSnooze(cx);
     if (props()?.menu?.folderMenu) return this.initFolderMenu(cx);
     if (props()?.welcome) return this.initWelcome(cx);
-    if (props()?.menu) return;
+    if (props()?.menu) {
+      const entry = props().menu.entry;
+      if (entry?.branch && !entry.pr?.baseRefName && entry.cwd) cx.spawn(async (cx) => {
+        const r = await exec("git", ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], { cwd: entry.cwd, on: entry.machine ?? undefined }).catch(() => null);
+        this.defaultBranch = r?.code === 0 ? r.stdout.trim().replace(/^origin\//, "") : null;
+        cx.notify();
+      });
+      return;
+    }
     this.git = {};
     this.checked = {};
     this.collapsed = new Set(JSON.parse(localStorage.getItem("folders.collapsed") ?? "[]"));
@@ -2064,7 +2072,7 @@ export default class Sessions extends View {
       .child(div().flex_1().truncate().child(text))
       .child(div().flex_none().px(6).py(1).rounded(4).text_size(11).when(on, (el) => el.bg(t.selected).text_color(t.foreground)).when(!on, (el) => el.text_color(t.dim)).child(on ? "On" : "Off"));
     const autoMerge = Boolean(p.menu.entry?.pr?.autoMergeRequest) || Boolean(mergeWaiting(id));
-    const updateFrom = p.menu.entry?.branch && !DEFAULT_BRANCHES.has(p.menu.entry.branch) ? (p.menu.entry.pr?.baseRefName || p.menu.entry.pr?.defaultBranch || "master") : null;
+    const updateFrom = p.menu.entry?.branch && !DEFAULT_BRANCHES.has(p.menu.entry.branch) ? (p.menu.entry.pr?.baseRefName || this.defaultBranch || null) : null;
     const noAutoSettle = Boolean(map("sessions.noAutoSettle")[id]);
     return v_flex().id("sessions-menu").w_full().p(4).bg(t.popover)
       .when(id !== shared("sessions.dev"), (el) => el.child(item("focus", starred ? "Remove from focus" : "Add to focus", () => star(id, !starred), ICON(starred ? "bulb-fill" : "bulb"))))
