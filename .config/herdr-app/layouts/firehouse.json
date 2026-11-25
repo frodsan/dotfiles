@@ -56,6 +56,16 @@
           }
         },
         {
+          "id": "work-tools",
+          "type": "block",
+          "size": {
+            "px": 0
+          },
+          "content": {
+            "mod": "work-tools"
+          }
+        },
+        {
           "id": "sidebar-footer",
           "type": "block",
           "content": {

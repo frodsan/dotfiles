@@ -1,0 +1,23 @@
+{
+  "id": "work-tools",
+  "palette": [
+    [
+      "work-tools.standup",
+      "Tools",
+      "Standup update",
+      "standup daily yesterday today slack"
+    ],
+    [
+      "work-tools.aws",
+      "Tools",
+      "Refresh AWS login",
+      "aws token bedrock login expired credentials sso awslogin"
+    ],
+    [
+      "work-tools.mcp",
+      "Tools",
+      "MCP servers: sign in or reconnect",
+      "mcp auth oauth slack linear reconnect login"
+    ]
+  ]
+}

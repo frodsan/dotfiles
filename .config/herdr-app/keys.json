@@ -68,7 +68,8 @@
     "cmd-alt-n": "sessions.new-session",
     "cmd-alt-,": "app.settings",
     "cmd-shift-,": "sessions.settings",
-    "cmd-shift-c": "sessions.chats"
+    "cmd-shift-c": "sessions.chats",
+    "cmd-shift-s": "work-tools.standup"
   },
   "terminal": {
     "cmd-f": "terminal.search",
@@ -81,8 +82,5 @@
     "cmd-left": "send:\u0001",
     "cmd-right": "send:\u0005",
     "cmd-backspace": "send:\u0015"
-  },
-  "layout:work": {
-    "cmd-shift-s": "work-tools.standup"
   }
 }

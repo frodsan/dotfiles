@@ -23,6 +23,7 @@ FILES=(
   .config/herdr-app/mods/tabs-bar
   .config/herdr-app/mods/pull-request
   .config/herdr-app/mods/sessions
+  .config/herdr-app/mods/work-tools
   .config/herdr-app/themes/firehouse.json
   .config/nvim
   .gemrc

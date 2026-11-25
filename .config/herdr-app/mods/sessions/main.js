@@ -2016,6 +2016,7 @@ export default class Sessions extends View {
     this.fields = {
       branchPrefix: field("branchPrefix", "e.g. fr/"),
       reviewBot: field("reviewBot", "e.g. review-bot"),
+      awsCommand: field("awsCommand", "e.g. aws sso login"),
     };
   }
 
@@ -2063,6 +2064,7 @@ export default class Sessions extends View {
       .child(v_flex().id("settings-body").flex_1().min_h(0).px(22).pb(22).gap(20).overflow_y_scrollbar()
         .child(group("New sessions",
           row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b.", input(this.fields.branchPrefix)),
+          row("AWS login command", "Refresh AWS login runs it in the main repo. Empty means the command is off.", input(this.fields.awsCommand)),
           row("Branch names come from", "Claude asks Sonnet for a short slug. Message words uses the first words you type.", chips("branchNames", [["claude", "Claude"], ["words", "Message words"]])),
           div().text_size(11.5).text_color(t.dim).child("To run a setup command in new worktrees, right-click a folder in Sessions.")))
         .child(group("Tools",
