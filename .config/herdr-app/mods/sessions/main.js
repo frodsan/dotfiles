@@ -21,7 +21,8 @@ async function updateChatsMeta(change) {
   await writeTextFile(CHATS_META(), JSON.stringify(next, null, 2), raw);
   return next;
 }
-const isChatSpace = (s, ps) => place(s, ps) === CHATS_CWD();
+const isChatSpace = (s) => s.folder === CHATS_CWD() || Object.values(map("chats.space")).includes(s.id);
+const chatTitle = (title) => { const t = (title ?? "").replace(/^[^\p{L}\p{N}]+/u, "").trim(); return t && !/^claude( code)?$/i.test(t) ? t : null; };
 const newUuid = () => "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => { const r = Math.floor(Math.random() * 16); return (c === "x" ? r : (r & 3) | 8).toString(16); });
 function snoozeStore(menu, until) {
   const all = { ...map(menu.store) };
@@ -688,8 +689,8 @@ export default class Sessions extends View {
       cx.notify();
     });
     cx.timer.every(10000, (cx) => {
-      const chatSpaces = new Set(Object.values(map("chats.space")));
-      if (this.chatsMode || spaces().some((sp) => chatSpaces.has(sp.id))) this.loadChats(cx);
+      this.nameChatSpaces();
+      if (this.chatsMode || spaces().some(isChatSpace)) this.loadChats(cx);
     });
     if (!shared("sessions.welcomed")) cx.timer.after(1500, () => { setShared("sessions.welcomed", true); openWelcome(); });
     this.refreshGit(cx);
@@ -904,6 +905,20 @@ export default class Sessions extends View {
     if (Boolean(shared("sidebar.chats")) !== on) setShared("sidebar.chats", on);
   }
 
+  nameChatSpaces() {
+    const ps = panes();
+    const links = Object.entries(map("chats.space"));
+    const names = {};
+    for (const sp of spaces().filter((s) => isChatSpace(s) && s.name === "New chat")) {
+      const name = chatTitle(claudePane(sp, ps)?.title);
+      if (!name) continue;
+      run("space.rename", { id: sp.id, name });
+      const chat = links.find(([, spaceId]) => spaceId === sp.id)?.[0];
+      if (chat) names[chat] = name;
+    }
+    if (Object.keys(names).length) updateChatsMeta((m) => { for (const [id, name] of Object.entries(names)) m[id] = { ...(m[id] ?? {}), name }; }).catch(() => null);
+  }
+
   async loadChats(cx) {
     if (this.chatsLoading) return;
     this.chatsLoading = true;
@@ -933,9 +948,14 @@ export default class Sessions extends View {
       let changed = false;
       for (const file of files) {
         if (meta[file.id]?.name && meta[file.id].name !== "New chat") continue;
-        const first = await exec("sh", ["-c", 'head -c 400000 "$1" | grep -m1 "\"type\":\"user\""', "sh", `${CHATS_PROJECT()}/${file.id}.jsonl`]).catch(() => null);
+        const path = `${CHATS_PROJECT()}/${file.id}.jsonl`;
+        const title = await exec("sh", ["-c", 'grep "\"type\":\"ai-title\"" "$1" | tail -1', "sh", path]).catch(() => null);
         let text = "";
-        try { const c = JSON.parse(first?.stdout ?? "").message?.content; text = typeof c === "string" ? c : (c ?? []).map((x) => x.text ?? "").join(" "); } catch {}
+        try { text = JSON.parse(title?.stdout ?? "").aiTitle ?? ""; } catch {}
+        if (!text) {
+          const first = await exec("sh", ["-c", 'head -c 400000 "$1" | grep -m1 "\"type\":\"user\""', "sh", path]).catch(() => null);
+          try { const c = JSON.parse(first?.stdout ?? "").message?.content; text = typeof c === "string" ? c : (c ?? []).map((x) => x.text ?? "").join(" "); } catch {}
+        }
         text = text.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, "").replace(/\s+/g, " ").trim();
         if (!text) continue;
         names[file.id] = text.length > 60 ? `${text.slice(0, 57)}…` : text;
@@ -1806,7 +1826,7 @@ export default class Sessions extends View {
     if (props()?.shortcuts) return this.renderShortcuts();
     if (props()?.menu) return this.renderMenu();
     const t = theme();
-    const sp = spaces().filter((s) => !isChatSpace(s, panes()));
+    const sp = spaces().filter((s) => !isChatSpace(s));
     const ps = panes();
     this.prune(sp);
     const focus = Boolean(shared("focus.on"));
@@ -1849,7 +1869,7 @@ export default class Sessions extends View {
       const row = this.info(sp, ps);
       return { name: row.name, pr: row.pr ? { number: row.pr.number, url: row.pr.url, title: row.pr.title, state: row.pr.state } : null };
     };
-    const list = spaces().filter((sp) => sp.id !== shared("sessions.dev") && !isChatSpace(sp, ps));
+    const list = spaces().filter((sp) => sp.id !== shared("sessions.dev") && !isChatSpace(sp));
     const today = { focus: list.filter((sp) => map("focus.starred")[sp.id]).map(item), worked: list.filter((sp) => todayLog[sp.id]).map(item) };
     if (JSON.stringify(today) !== JSON.stringify(shared("sessions.today"))) setShared("sessions.today", today);
   }
