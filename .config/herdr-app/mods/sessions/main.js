@@ -1975,8 +1975,40 @@ export default class Sessions extends View {
     this.fields = {
       branchPrefix: field("branchPrefix", "e.g. fr/"),
       reviewBot: field("reviewBot", "e.g. review-bot"),
-      awsCommand: field("awsCommand", "e.g. aws sso login"),
     };
+    this.commandFields = {};
+  }
+
+  commandField(id, key, placeholder) {
+    const fields = (this.commandFields[id] ??= {});
+    if (!fields[key]) {
+      const value = (conf().commands ?? []).find((c) => c.id === id)?.[key] ?? "";
+      fields[key] = InputState.new({ value, placeholder });
+      fields[key].on("change", () => this.updateCommand(id, { [key]: fields[key].value() }));
+    }
+    return fields[key];
+  }
+
+  updateCommand(id, change) {
+    setConf({ commands: (conf().commands ?? []).map((c) => (c.id === id ? { ...c, ...change } : c)) });
+  }
+
+  renderCommands(t, input, choice) {
+    const list = conf().commands ?? [];
+    const add = () => setConf({ commands: [...list, { id: Math.random().toString(36).slice(2, 10), title: "", command: "", where: "repo" }] });
+    const remove = (id) => { delete this.commandFields[id]; setConf({ commands: list.filter((c) => c.id !== id) }); };
+    return v_flex().gap(10)
+      .children(list.map((c) => v_flex().gap(6).p(10).rounded(8).border_1().border_color(t.border)
+        .child(h_flex().gap(6).items_center()
+          .child(div().flex_1().child(input(this.commandField(c.id, "title", "Title, e.g. Refresh login"))))
+          .child(div().id(`command-remove-${c.id}`).flex_none().px(8).py(5).rounded(6).text_size(12).text_color(t.dim).cursor_pointer()
+            .hover((st) => st.bg(t.hover).text_color(t.foreground)).on_click((_e, cx) => { remove(c.id); cx.notify(); }).child("Remove")))
+        .child(input(this.commandField(c.id, "command", "Shell command, e.g. bin/login")))
+        .child(h_flex().gap(4).items_center()
+          .child(div().pr(4).text_size(11.5).text_color(t.dim).child("Runs in"))
+          .child(choice(`command-where-${c.id}-repo`, "Main repo", c.where !== "session", () => this.updateCommand(c.id, { where: "repo" })))
+          .child(choice(`command-where-${c.id}-session`, "Current session", c.where === "session", () => this.updateCommand(c.id, { where: "session" }))))))
+      .child(h_flex().child(choice("command-add", "Add command", false, add)));
   }
 
   renderRate() {
@@ -2023,13 +2055,13 @@ export default class Sessions extends View {
       .child(v_flex().id("settings-body").flex_1().min_h(0).px(22).pb(22).gap(20).overflow_y_scrollbar()
         .child(group("New sessions",
           row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b.", input(this.fields.branchPrefix)),
-          row("AWS login command", "Refresh AWS login runs it in the main repo. Empty means the command is off.", input(this.fields.awsCommand)),
           row("Branch names come from", "Claude asks Sonnet for a short slug. Message words uses the first words you type.", chips("branchNames", [["claude", "Claude"], ["words", "Message words"]])),
           div().text_size(11.5).text_color(t.dim).child("To run a setup command in new worktrees, right-click a folder in Sessions.")))
         .child(group("Tools",
           row("Main repo", "Your main project. Tools and extensions use it by default.", h_flex().gap(4).flex_wrap()
             .children(repos.map((path) => choice(`repo-${path}`, base(path), c.mainRepo === path, () => setConf({ mainRepo: path }))))
-            .child(choice("repo-pick", "Choose…", false, pick)))))
+            .child(choice("repo-pick", "Choose…", false, pick))),
+          row("Commands", "Each one shows in the command palette and opens a terminal on the right. They stay on this machine.", this.renderCommands(t, input, choice))))
         .child(group("Pull requests",
           row("GitHub API", "Herdr checks the PR of every session in one query. It slows down to every 30 seconds when fewer than 500 points are left, and to every 2 minutes below 100. The budget is shared with everything that uses your gh login, including Claude.", this.renderRate()),
           row("Mark drafts ready for review", "When a draft's required checks pass, the review bot reviewed it, and every thread is resolved, Herdr marks it ready for review. Turn it off for one session from its right-click menu.", chips("autoReady", [[true, "On"], [false, "Off"]])),

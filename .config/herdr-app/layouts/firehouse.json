@@ -56,13 +56,13 @@
           }
         },
         {
-          "id": "work-tools",
+          "id": "commands",
           "type": "block",
           "size": {
             "px": 0
           },
           "content": {
-            "mod": "work-tools"
+            "mod": "commands"
           }
         },
         {

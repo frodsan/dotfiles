@@ -105,6 +105,9 @@ function entries() {
     if (ext.view) list.push({ name: `sessions.ext-${ext.id}`, args: {}, group: "Tools", title: ext.title, words: ext.words ?? "" });
     for (const [name, group, title, words] of ext.palette ?? []) list.push({ name, args: {}, group, title, words });
   }
+  for (const c of shared("firehouse.settings")?.commands ?? []) {
+    if (c.title?.trim() && c.command?.trim()) list.push({ name: `commands.run-${c.id}`, args: {}, group: "Commands", title: c.title.trim(), words: c.command });
+  }
   for (const l of layouts()) {
     const t = { main: "Herdr", terminals: "Terminals", win98: "Herdr 98" }[l] ?? l.charAt(0).toUpperCase() + l.slice(1);
     list.push({ name: "layout.switch", args: { name: l }, group: "Layout", title: `Layout: ${t}`, words: `look ${l}` });

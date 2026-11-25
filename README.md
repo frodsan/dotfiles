@@ -43,13 +43,13 @@ The script prints one line per path. When a path already exists in your home fol
 
 ## Herdr
 
-`.config/herdr-app` holds my Herdr setup: the sessions sidebar with focus mode and chats, the pull request sidebar with auto-fix and merge when ready, Neovim and lazygit beside Claude, a tabs bar, a command palette, work tools (an AWS login refresh and MCP sign-in), and the `firehouse` layout and theme. `.claude/skills/herdr-app` is a Claude Code plugin named `herdr-app` with the two skills it uses: `herdr-app:pr-autofix`, which auto-fix sends, and `/herdr-app:spin-off`. Claude Code loads a plugin folder in `~/.claude/skills` at every start, with no marketplace.
+`.config/herdr-app` holds my Herdr setup: the sessions sidebar with focus mode and chats, the pull request sidebar with auto-fix and merge when ready, Neovim and lazygit beside Claude, a tabs bar, a command palette, your own palette commands, and the `firehouse` layout and theme. `.claude/skills/herdr-app` is a Claude Code plugin named `herdr-app` with the two skills it uses: `herdr-app:pr-autofix`, which auto-fix sends, and `/herdr-app:spin-off`. Claude Code loads a plugin folder in `~/.claude/skills` at every start, with no marketplace.
 
 - The script links each mod folder, the layout, the theme and `keys.json`. It copies `settings.json` once, because Herdr rewrites that file itself.
 - In Herdr, pick the layout once with `ctrl-shift-l` or the `layout.switch` command: `firehouse`.
 - Open the settings with `⇧⌘,` and the shortcuts with `⌘?`.
 - Other mods can add an icon and a view to the sidebar with a `sidebar.json` file in their folder.
-- Set the main repo, the review bot and the AWS login command in the settings. They stay on the machine, out of this repo.
+- Set the main repo, the review bot and your commands in the settings. They stay on the machine, out of this repo. Each command has a title, a shell command and a folder (the main repo or the current session), and shows in the command palette.
 
 ## Add a file
 
