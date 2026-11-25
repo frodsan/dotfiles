@@ -68,8 +68,7 @@
     "cmd-alt-n": "sessions.new-session",
     "cmd-alt-,": "app.settings",
     "cmd-shift-,": "sessions.settings",
-    "cmd-shift-c": "sessions.chats",
-    "cmd-shift-s": "work-tools.standup"
+    "cmd-shift-c": "sessions.chats"
   },
   "terminal": {
     "cmd-f": "terminal.search",

@@ -2,12 +2,6 @@
   "id": "work-tools",
   "palette": [
     [
-      "work-tools.standup",
-      "Tools",
-      "Standup update",
-      "standup daily yesterday today slack"
-    ],
-    [
       "work-tools.aws",
       "Tools",
       "Refresh AWS login",

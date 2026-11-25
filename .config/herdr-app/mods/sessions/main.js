@@ -423,22 +423,6 @@ async function forgetSettled(entry) {
   return null;
 }
 
-const LOG_DAYS = 7;
-
-const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-function logActivity(id, item, event) {
-  if (!id || id === shared("sessions.dev")) return;
-  const day = dayKey();
-  const log = shared("standup.log") ?? {};
-  const today = { ...(log[day] ?? {}) };
-  const current = today[id] ?? { events: [] };
-  const pr = item.pr ? { number: item.pr.number, url: item.pr.url, title: item.pr.title, state: item.pr.state } : (current.pr ?? null);
-  if (current.events.includes(event) && current.name === item.name && JSON.stringify(current.pr ?? null) === JSON.stringify(pr)) return;
-  today[id] = { name: item.name, folder: item.folder ?? current.folder ?? null, pr, events: [...new Set([...current.events, event])], at: Date.now() };
-  const kept = Object.fromEntries(Object.entries({ ...log, [day]: today }).sort(([a], [b]) => a.localeCompare(b)).slice(-LOG_DAYS));
-  setShared("standup.log", kept);
-}
 
 const PR_QUEUE = `query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) {
   id state isDraft mergeable mergeStateStatus reviewDecision isMergeQueueEnabled isInMergeQueue autoMergeRequest { enabledAt } baseRefName
@@ -500,7 +484,6 @@ function request(job) {
 }
 
 async function settleSession(entry) {
-  logActivity(entry.id, { name: entry.name, pr: entry.pr, folder: base(JSON.parse(entry.folderKey)[1]) }, "settled");
   const claude = map("sessions.claude")[entry.id] ?? (await latestConversation(entry.cwd));
   const pr = entry.pr ? { number: entry.pr.number, title: entry.pr.title, state: entry.pr.state, isDraft: entry.pr.isDraft, url: entry.pr.url } : null;
   setShared("sessions.archive", [{ key: newId(), name: entry.name, folderKey: entry.folderKey, cwd: entry.cwd, branch: entry.branch ?? null, pr, claude, section: map("sessions.membership")[entry.id] ?? null, focused: Boolean(map("focus.starred")[entry.id]), settledAt: Date.now() }, ...archived()]);
@@ -679,7 +662,6 @@ export default class Sessions extends View {
     cx.spawn(async (cx) => { await syncSounds(); cx.notify(); });
     cx.spawn(async () => loadExtensions());
     cx.timer.every(60000, () => { loadExtensions(); });
-    cx.timer.every(10000, () => this.publishToday());
     this.forwardedAt = Date.now();
     cx.timer.every(250, (cx) => {
       const job = shared("sessions.forward");
@@ -780,10 +762,6 @@ export default class Sessions extends View {
       const before = this.statuses[s.id];
       if (s.status !== before && s.status === "blocked" && snoozed(s.id)) wakeForYou(s.id);
       else if (s.status !== before && s.status === "blocked" && shared("focus.on") && !hidden(s.id) && !s.active) playSound("blocked");
-      if (s.status === "working" && before !== "working") {
-        const row = this.info(s, panes());
-        logActivity(s.id, { name: row.name, pr: row.pr, folder: base(JSON.parse(row.folderKey)[1]) }, "worked");
-      }
       if (before === "working" && s.status !== "working") {
         const k = this.where(s, panes());
         delete this.checked[k];
@@ -1441,14 +1419,7 @@ export default class Sessions extends View {
     const ps = panes();
     for (const s of spaces()) {
       const row = this.info(s, ps);
-      if (row.pr?.state === "OPEN" && seen[s.id] !== row.pr.number) {
-        setShared("sessions.prOpenSeen", { ...map("sessions.prOpenSeen"), [s.id]: row.pr.number });
-        if (row.pr.createdAt && dayKey(new Date(row.pr.createdAt)) === dayKey()) logActivity(s.id, { name: row.name, pr: row.pr, folder: base(JSON.parse(row.folderKey)[1]) }, "opened");
-      }
-      this.decisions ??= {};
-      if (row.pr && row.pr.reviewDecision === "APPROVED" && this.decisions[s.id] !== undefined && this.decisions[s.id] !== "APPROVED") logActivity(s.id, { name: row.name, pr: row.pr, folder: base(JSON.parse(row.folderKey)[1]) }, "approved");
-      if (row.pr) this.decisions[s.id] = row.pr.reviewDecision;
-      if (row.pr?.state === "MERGED" && seen[s.id] === row.pr.number) logActivity(s.id, { name: row.name, pr: row.pr, folder: base(JSON.parse(row.folderKey)[1]) }, "merged");
+      if (row.pr?.state === "OPEN" && seen[s.id] !== row.pr.number) setShared("sessions.prOpenSeen", { ...map("sessions.prOpenSeen"), [s.id]: row.pr.number });
       if (!conf().autoSettle || off[s.id] || this.settling.has(s.id) || s.status === "working" || s.status === "blocked") continue;
       if (!["MERGED", "CLOSED"].includes(row.pr?.state) || seen[s.id] !== row.pr.number) continue;
       this.settling.add(s.id);
@@ -1534,7 +1505,6 @@ export default class Sessions extends View {
       if (!space) return true;
       if (p.chat) { setShared("chats.space", { ...map("chats.space"), [p.chat]: space.id }); return false; }
       if (p.dev) setShared("sessions.dev", space.id);
-      else logActivity(space.id, { name: p.name, pr: null }, "started");
       if (p.section) moveTo(space.id, p.section);
       if (p.focus && !p.dev) star(space.id, true);
       if (p.claude) setShared("sessions.claude", { ...map("sessions.claude"), [space.id]: p.claude });
@@ -1855,17 +1825,6 @@ export default class Sessions extends View {
         .children(this.archiveList(t)));
   }
 
-  publishToday() {
-    const ps = panes();
-    const todayLog = (shared("standup.log") ?? {})[dayKey()] ?? {};
-    const item = (sp) => {
-      const row = this.info(sp, ps);
-      return { name: row.name, pr: row.pr ? { number: row.pr.number, url: row.pr.url, title: row.pr.title, state: row.pr.state } : null };
-    };
-    const list = spaces().filter((sp) => sp.id !== shared("sessions.dev") && !isChatSpace(sp));
-    const today = { focus: list.filter((sp) => map("focus.starred")[sp.id]).map(item), worked: list.filter((sp) => todayLog[sp.id]).map(item) };
-    if (JSON.stringify(today) !== JSON.stringify(shared("sessions.today"))) setShared("sessions.today", today);
-  }
 
   renderHeader() {
     const t = theme();
