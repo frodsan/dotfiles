@@ -2044,7 +2044,7 @@ export default class Sessions extends View {
     const onOff = (key) => chips(key, [[true, "On"], [false, "Off"]]);
     return v_flex().id("firehouse-settings").size_full().min_h(0).bg(t.popover).text_color(t.foreground)
       .on_key_down((e, cx) => { if (e.key === "escape") { closeOverlay(props().overlay); cx.stop_propagation(); } })
-      .child(h_flex().flex_none().px(22).pt(22).pb(12).items_center().child(div().flex_1().text_size(16).font_semibold().child("Firehouse settings")).child(div().text_size(11).text_color(t.dim).child("Esc")))
+      .child(h_flex().flex_none().px(22).pt(22).pb(12).items_center().child(div().flex_1().text_size(16).font_semibold().child("Custom settings")).child(div().text_size(11).text_color(t.dim).child("Esc")))
       .child(v_flex().id("settings-body").flex_1().min_h(0).px(22).pb(22).gap(20).overflow_y_scrollbar()
         .child(group("New sessions",
           row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b.", input(this.fields.branchPrefix)),
@@ -2337,7 +2337,7 @@ export default class Sessions extends View {
         ["layout.toggle", "Show or hide the sidebar"],
         ["tab.close", "Close the tab"],
         ["app.settings", "Herdr settings"],
-        ["sessions.settings", "Firehouse settings"],
+        ["sessions.settings", "Custom settings"],
         ["app.help", "All of Herdr's keys"],
       ]],
     ];

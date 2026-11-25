@@ -74,7 +74,7 @@ const FIREHOUSE = [
   ["sessions.files", "Firehouse", "Files panel", "explorer tree editor"],
   ["sessions.rails", "Firehouse", "Rails console", "ruby irb"],
   ["sessions.dev", "Tools", "Edit Herdr config with Claude", "develop herdr config mods settings dev"],
-  ["sessions.settings", "Firehouse", "Firehouse settings", "preferences settled days options"],
+  ["sessions.settings", "Firehouse", "Custom settings", "preferences settled days options commands"],
   ["sessions.shortcuts", "Firehouse", "Firehouse shortcuts", "keys help"],
   ["sessions.welcome", "Firehouse", "Welcome and setup", "welcome setup onboarding getting started install tools skills"],
 ];

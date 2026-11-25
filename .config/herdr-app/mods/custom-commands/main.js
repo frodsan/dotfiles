@@ -9,7 +9,7 @@ function currentFolder() {
 }
 
 async function start(entry) {
-  if (!entry?.command?.trim()) return notify({ title: `${entry?.title || "This command"} has no command`, body: "Open Firehouse settings (⇧⌘,) and fill it in under Commands.", level: "warning" });
+  if (!entry?.command?.trim()) return notify({ title: `${entry?.title || "This command"} has no command`, body: "Open custom settings (⇧⌘,) and fill it in under Commands.", level: "warning" });
   const shell = await exec("sh", ["-c", 'dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk \'{print $2}\'']).catch(() => null);
   run("terminal.open", { argv: [shell?.stdout.trim() || "/bin/zsh", "-ilc", entry.command], folder: currentFolder(), place: "right" });
 }
