@@ -2080,7 +2080,7 @@ export default class Sessions extends View {
       .when(starred, (el) => el.child(line()))
       .when(starred, (el) => el.child(item("snooze", isSnoozed ? `Snoozed until ${snoozeLabel(id)}…` : "Snooze…", () => openOverlay({ mod: "sessions", kind: "popup", width: 280, height: 300, props: { menu: { id, snoozeOnly: true, prOpen: open } } }), ICON("clock"))))
       .when(starred, (el) => el.child(item("pin", pinned(id) ? "Unpin" : "Pin", () => setPinned(id, !pinned(id)), `mods/workspace-chrome/${pinned(id) ? "pin-off" : "pin"}.svg`)))
-      .when(Boolean(updateFrom), (el) => el.child(line()).child(item("update-base", `Update from ${updateFrom}`, () => {
+      .when(Boolean(updateFrom), (el) => el.child(line()).child(item("update-base", "Update branch", () => {
         const space = spaces().find((s) => s.id === id);
         if (space) this.sendToClaude(space, `Merge the latest ${updateFrom} into this branch: git fetch origin ${updateFrom}, then git merge origin/${updateFrom}. Fix the conflicts. Use the repo's generators for generated files. Run the specs of the files that had conflicts, then commit the merge. If a conflict is not clear, stop and ask me.`);
       }, "mods/workspace-chrome/branch.svg")))
