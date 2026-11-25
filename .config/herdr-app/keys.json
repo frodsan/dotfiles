@@ -16,7 +16,7 @@
     "cmd-shift-l": "layout.switch",
     "cmd-n": "space.new",
     "cmd-p": "mod.open:picker",
-    "cmd-shift-p": "mod.open:command-palette",
+    "cmd-shift-p": "app.palette",
     "cmd-,": "sessions.dev",
     "cmd-d": "pane.split:right",
     "cmd-shift-d": "pane.split:down",

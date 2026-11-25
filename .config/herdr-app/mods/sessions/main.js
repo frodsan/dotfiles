@@ -2298,14 +2298,14 @@ export default class Sessions extends View {
             shortcut("sessions.new-session", "New session"),
             shortcut("sessions.focus", "Focus mode"),
             shortcut("sessions.pull-request", "Pull request panel"),
-            shortcut("mod.open:command-palette", "Command palette"),
+            shortcut("app.palette", "Command palette"),
             shortcut("sessions.settings", "Settings"),
             shortcut("sessions.dev", "Ask Claude to change this setup"),
             shortcut("sessions.shortcuts", "All shortcuts"),
           ))
           .child(div().text_size(11.5).text_color(t.dim).child("Right-click a session for focus, snooze and the automatic actions. Right-click a folder to set its setup command."))))
       .child(h_flex().flex_none().px(22).py(14).gap(8).border_t_1().border_color(t.border).items_center()
-        .child(div().flex_1().text_size(11.5).text_color(t.dim).child("Open this again from the command palette: Welcome."))
+        .child(div().flex_1())
         .child(action("welcome-recheck", "Check again", (cx) => this.checkWelcome(cx)))
         .child(div().id("welcome-done").px(14).py(5).rounded(7).text_size(12.5).bg(t.solid).text_color(t.solid_foreground).cursor_pointer().hover((st) => st.opacity(0.88)).on_click(close).child("Done")));
   }
@@ -2333,7 +2333,7 @@ export default class Sessions extends View {
       ["From Herdr", [
         ["tab.new", "New terminal tab"],
         ["terminal.search", "Find in the terminal"],
-        ["mod.open:command-palette", "Command palette"],
+        ["app.palette", "Command palette"],
         ["layout.toggle", "Show or hide the sidebar"],
         ["tab.close", "Close the tab"],
         ["app.settings", "Herdr settings"],
