@@ -169,7 +169,7 @@ export function toolPane(kind, s, ps = panes()) {
   const id = (shared("tools.panes") ?? {})[`${s?.id}|${kind}`];
   return id ? ps.find((p) => p.pane === id) ?? null : null;
 }
-const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", setup: {}, autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, nextWeekDay: 1, branchNames: "claude", autoToasts: false };
+const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", setup: {}, autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, nextWeekDay: 1, autoToasts: false };
 const conf = () => ({ ...DEFAULT_SETTINGS, ...(shared("firehouse.settings") ?? {}) });
 const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 const autoNotify = (n) => (conf().autoToasts ? notify(n) : null);
@@ -296,7 +296,6 @@ const WELCOME_TOOLS = [
 const WELCOME_SKILLS = ["pr-autofix", "spin-off"];
 
 async function branchSlug(text, folder) {
-  if (conf().branchNames === "words") return fallbackSlug(text);
   const repo = base(folder).toLowerCase().split(/[^a-z0-9]+/);
   try {
     const r = await shellRun('claude -p --model haiku "$1" < /dev/null', [`${BRANCH_PROMPT}\n\n<request>\n${text.slice(0, 1600)}\n</request>\n\nBranch:`]);
