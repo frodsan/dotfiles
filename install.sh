@@ -21,6 +21,8 @@ FILES=(
   .config/herdr-app/mods/sessions
   .config/herdr-app/mods/chats
   .config/herdr-app/mods/custom-commands
+  .config/herdr-app/mods/custom-settings
+  .config/herdr-app/mods/shortcuts
   .config/herdr-app/themes/firehouse.json
   .config/nvim
   .gemrc

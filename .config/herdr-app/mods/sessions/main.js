@@ -371,7 +371,6 @@ async function latestConversation(cwd) {
   return file ? base(file).replace(/\.jsonl$/, "") : null;
 }
 
-const SETTLED_DAYS = [1, 3, 7, 14, 30];
 const settledDays = () => conf().settledDays;
 
 const allSettled = () => shared("sessions.archive") ?? [];
@@ -645,9 +644,8 @@ export default class Sessions extends View {
     if (props()?.composer) return this.initComposer(cx);
     if (props()?.menu?.snoozeOnly) return this.initSnooze(cx);
     if (props()?.menu?.folderMenu) return this.initFolderMenu(cx);
-    if (props()?.settings) return this.initSettings(cx);
     if (props()?.welcome) return this.initWelcome(cx);
-    if (props()?.menu || props()?.shortcuts) return;
+    if (props()?.menu) return;
     this.git = {};
     this.checked = {};
     this.collapsed = new Set(JSON.parse(localStorage.getItem("folders.collapsed") ?? "[]"));
@@ -657,6 +655,8 @@ export default class Sessions extends View {
     this.over = null;
     this.editing = null;
     cx.spawn(async (cx) => { await syncSounds(); cx.notify(); });
+    if (JSON.stringify(shared("settings.defaults")) !== JSON.stringify(DEFAULT_SETTINGS)) setShared("settings.defaults", DEFAULT_SETTINGS);
+    this.focusMute = conf().focusMute;
     cx.spawn(async () => loadExtensions());
     cx.timer.every(60000, () => { loadExtensions(); });
     this.forwardedAt = Date.now();
@@ -670,6 +670,7 @@ export default class Sessions extends View {
     if (!shared("sessions.welcomed")) cx.timer.after(1500, () => { setShared("sessions.welcomed", true); openWelcome(); });
     this.refreshGit(cx);
     cx.timer.every(2000, (cx) => {
+      if (conf().focusMute !== this.focusMute) { this.focusMute = conf().focusMute; syncSounds(); }
       this.refreshGit(cx);
       this.autoSettle(cx);
       this.runRequests(cx);
@@ -948,9 +949,9 @@ export default class Sessions extends View {
     if (command === "chats") return this.toggleChats();
     if (command === "new-session") return this.openComposer();
     if (command === "dev") return this.openDev(cx);
-    if (command === "settings") return openOverlay({ mod: "sessions", kind: "dialog", width: 620, height: 680, props: { settings: true } });
+    if (command === "settings") return openOverlay({ mod: "custom-settings", kind: "dialog", width: 620, height: 680 });
     if (command === "welcome") return openWelcome();
-    if (command === "shortcuts") return openOverlay({ mod: "sessions", kind: "dialog", width: 880, height: 420, props: { shortcuts: true } });
+    if (command === "shortcuts") return openOverlay({ mod: "shortcuts", kind: "dialog", width: 880, height: 420 });
     const s = this.active();
     if (command === "next" || command === "prev") {
       const order = this.visibleOrder ?? [];
@@ -1619,9 +1620,7 @@ export default class Sessions extends View {
     if (props()?.bar) return renderBar(this, isChatSpace(spaces().find((s) => s.active) ?? {}));
     if (props()?.header) return this.renderHeader();
     if (props()?.composer) return this.renderComposer();
-    if (props()?.settings) return this.renderSettings();
     if (props()?.welcome) return this.renderWelcome();
-    if (props()?.shortcuts) return this.renderShortcuts();
     if (props()?.menu) return this.renderMenu();
     const t = theme();
     const sp = spaces().filter((s) => !isChatSpace(s));
@@ -1797,114 +1796,6 @@ export default class Sessions extends View {
 
   initMenu(_cx) {
     this.menuItems = [];
-  }
-
-  initSettings(_cx) {
-    const c = conf();
-    const field = (key, placeholder) => {
-      const state = InputState.new({ value: c[key] ?? "", placeholder });
-      state.on("change", () => setConf({ [key]: state.value().trim() }));
-      return state;
-    };
-    this.fields = {
-      branchPrefix: field("branchPrefix", "e.g. fr/"),
-      reviewBot: field("reviewBot", "e.g. review-bot"),
-    };
-    this.commandFields = {};
-    for (const command of c.commands ?? []) this.makeCommandFields(command);
-  }
-
-  makeCommandFields(command) {
-    const field = (key, placeholder) => {
-      const state = InputState.new({ value: command[key] ?? "", placeholder });
-      state.on("change", () => this.updateCommand(command.id, { [key]: state.value() }));
-      return state;
-    };
-    this.commandFields[command.id] = { title: field("title", "Title, e.g. Refresh login"), command: field("command", "Shell command, e.g. cd ~/Code/app && bin/login") };
-  }
-
-  updateCommand(id, change) {
-    setConf({ commands: (conf().commands ?? []).map((c) => (c.id === id ? { ...c, ...change } : c)) });
-  }
-
-  renderCommands(t, input, choice) {
-    const list = conf().commands ?? [];
-    const add = () => {
-      const command = { id: Math.random().toString(36).slice(2, 10), title: "", command: "" };
-      this.makeCommandFields(command);
-      setConf({ commands: [...list, command] });
-    };
-    const remove = (id) => { delete this.commandFields[id]; setConf({ commands: list.filter((c) => c.id !== id) }); };
-    return v_flex().gap(10)
-      .children(list.filter((c) => this.commandFields[c.id]).map((c) => v_flex().gap(6).p(10).rounded(8).border_1().border_color(t.border)
-        .child(h_flex().gap(6).items_center()
-          .child(div().flex_1().child(input(this.commandFields[c.id].title)))
-          .child(div().id(`command-remove-${c.id}`).flex_none().px(8).py(5).rounded(6).text_size(12).text_color(t.dim).cursor_pointer()
-            .hover((st) => st.bg(t.hover).text_color(t.foreground)).on_click((_e, cx) => { remove(c.id); cx.notify(); }).child("Remove")))
-        .child(input(this.commandFields[c.id].command))))
-      .child(h_flex().child(choice("command-add", "Add command", false, add)));
-  }
-
-  renderRate() {
-    const t = theme();
-    const rate = shared("github.rateLimit");
-    if (!rate) return div().text_size(12.5).text_color(t.dim).child("No data yet.");
-    const reset = new Date(rate.resetAt);
-    const pct = Math.min(1, rate.used / rate.limit);
-    const every = prInterval() / 1000;
-    return v_flex().gap(6)
-      .child(h_flex().gap(8).items_center().text_size(12.5)
-        .child(div().child(`${rate.used.toLocaleString()} of ${rate.limit.toLocaleString()} points used`))
-        .child(div().text_color(t.dim).child(`· resets at ${String(reset.getHours()).padStart(2, "0")}:${String(reset.getMinutes()).padStart(2, "0")} · PR status every ${every < 60 ? `${every} s` : `${every / 60} min`}`)))
-      .child(div().h(6).w_full().rounded(3).bg(t.raised)
-        .child(div().h_full().rounded(3).w(`${Math.round(pct * 100)}%`).bg(rate.remaining < 500 ? t.blocked : t.accent)));
-  }
-
-  renderSettings() {
-    const t = theme();
-    const c = conf();
-    const choice = (id, label, on, onClick) => div().id(id).px(10).py(5).rounded(7).text_size(12.5).cursor_pointer()
-      .when(on, (el) => el.bg(t.selected).text_color(t.foreground)).when(!on, (el) => el.text_color(t.muted).hover((st) => st.bg(t.hover).text_color(t.foreground)))
-      .on_click((_e, cx) => { onClick(cx); cx.notify(); }).child(label);
-    const chips = (key, options) => h_flex().gap(4).flex_wrap().children(options.map(([value, label]) => choice(`${key}-${value}`, label, c[key] === value, () => setConf({ [key]: value }))));
-    const input = (state) => Input.new(state).h(28).px(8).rounded(6).border_1().border_color(t.input).bg(t.background).text_size(12.5).text_color(t.foreground);
-    const row = (label, hint, control) => v_flex().gap(6)
-      .child(div().text_size(12.5).font_medium().child(label))
-      .child(control)
-      .when(Boolean(hint), (el) => el.child(div().text_size(11.5).text_color(t.dim).child(hint ?? "")));
-    const group = (title, ...rows) => v_flex().gap(10)
-      .child(div().text_size(11).font_semibold().text_color(t.muted).child(title.toUpperCase()))
-      .child(v_flex().gap(14).p(14).rounded(10).border_1().border_color(t.border).bg(t.background).children(rows));
-    const onOff = (key) => chips(key, [[true, "On"], [false, "Off"]]);
-    return v_flex().id("firehouse-settings").size_full().min_h(0).bg(t.popover).text_color(t.foreground)
-      .on_key_down((e, cx) => { if (e.key === "escape") { closeOverlay(props().overlay); cx.stop_propagation(); } })
-      .child(h_flex().flex_none().px(22).pt(22).pb(12).items_center().child(div().flex_1().text_size(16).font_semibold().child("Custom settings")).child(div().text_size(11).text_color(t.dim).child("Esc")))
-      .child(v_flex().id("settings-body").flex_1().min_h(0).px(22).pb(22).gap(20).overflow_y_scrollbar()
-        .child(group("New sessions",
-          row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b.", input(this.fields.branchPrefix)),
-          row("Branch names come from", "Claude asks Sonnet for a short slug. Message words uses the first words you type.", chips("branchNames", [["claude", "Claude"], ["words", "Message words"]])),
-          div().text_size(11.5).text_color(t.dim).child("To run a setup command in new worktrees, right-click a folder in Sessions.")))
-        .child(group("Pull requests",
-          row("GitHub API", "Herdr checks the PR of every session in one query. It slows down to every 30 seconds when fewer than 500 points are left, and to every 2 minutes below 100. The budget is shared with everything that uses your gh login, including Claude.", this.renderRate()),
-          row("Mark drafts ready for review", "When a draft's required checks pass, the review bot reviewed it, and every thread is resolved, Herdr marks it ready for review. Turn it off for one session from its right-click menu.", chips("autoReady", [[true, "On"], [false, "Off"]])),
-          row("Mark ready from", null, chips("readyFrom", [6, 7, 8, 9, 10].map((h) => [h, `${h}:00`]))),
-          row("Mark ready until", "Outside these hours, drafts stay drafts. Herdr marks them ready at the next start time.", chips("readyUntil", [16, 17, 18, 19, 20].map((h) => [h, `${h}:00`]))),
-          row("Review bot", "Part of the GitHub login of the bot that reviews your pull requests. Auto-fix treats its comments as bot comments, and Ready for review waits for its review. Empty means no bot.", input(this.fields.reviewBot))))
-        .child(group("Settling",
-          row("Auto-settle", "Settle a session when its pull request merges or closes. You can still turn it off per session.", onOff("autoSettle")),
-          row("Keep settled sessions for", "After that, Herdr deletes its worktree and Claude conversation. A worktree with uncommitted changes or commits that are not on GitHub stays, with a warning in Settled. The branch always stays.", h_flex().gap(4).children(SETTLED_DAYS.map((d) => choice(`settled-${d}`, d === 1 ? "1 day" : `${d} days`, c.settledDays === d, () => setConf({ settledDays: d })))))))
-        .child(group("Focus mode",
-          row("Mute sounds", "When on, blocked sessions you can see still make a sound.", h_flex().gap(4).children([[true, "On"], [false, "Off"]].map(([value, text]) => choice(`focusMute-${value}`, text, c.focusMute === value, () => { setConf({ focusMute: value }); syncSounds(); })))),
-          row("Working group", "Shows the focus sessions where Claude is working in their own group.", onOff("focusWorking")),
-))
-        .child(group("Snooze",
-          row("Wake-up time for Tomorrow and Next week", null, chips("tomorrowHour", [7, 8, 9, 10].map((h) => [h, `${h}:00`]))),
-          row("Next week starts on", null, chips("nextWeekDay", [[1, "Monday"], [2, "Tuesday"], [5, "Friday"]]))))
-        .child(group("Notifications",
-          row("Toasts for automatic actions", "Auto-fix, merge when ready, auto-settle, snooze wake-ups and spin-offs. Off: the sidebar shows the change, and Herdr still plays its sounds. Errors from things you click always show.", chips("autoToasts", [[true, "On"], [false, "Off"]])))
-        .child(group("Commands",
-          row("Palette commands", "Each one shows in the command palette and opens a terminal on the right, in the folder of the focused terminal. Start it with cd to run it somewhere else. They stay on this machine.", this.renderCommands(t, input, choice)))))
-);
   }
 
   initFolderMenu(cx) {
@@ -2142,56 +2033,6 @@ export default class Sessions extends View {
         .child(div().flex_1())
         .child(action("welcome-recheck", "Check again", (cx) => this.checkWelcome(cx)))
         .child(div().id("welcome-done").px(14).py(5).rounded(7).text_size(12.5).bg(t.solid).text_color(t.solid_foreground).cursor_pointer().hover((st) => st.opacity(0.88)).on_click(close).child("Done")));
-  }
-
-  renderShortcuts() {
-    const t = theme();
-    const columns = [
-      ["Sessions", [
-        ["sessions.new-session", "New session"],
-        ["sessions.prev", "Previous session"],
-        ["sessions.next", "Next session"],
-        ["sessions.focus", "Focus mode"],
-        ["sessions.github", "Open the PR on GitHub"],
-        ["sessions.dev", "Edit Herdr config with Claude"],
-        ["sessions.shortcuts", "These shortcuts"],
-        ["sessions.welcome", "Welcome and setup"],
-      ]],
-      ["Panels & tools", [
-        ["sessions.files", "Files"],
-        ["sessions.changes", "Changes"],
-        ["sessions.pull-request", "Pull request"],
-        ["sessions.rails", "Rails console"],
-        ["sessions.chats", "Chats with Claude"],
-      ]],
-      ["From Herdr", [
-        ["tab.new", "New terminal tab"],
-        ["terminal.search", "Find in the terminal"],
-        ["app.palette", "Command palette"],
-        ["layout.toggle", "Show or hide the sidebar"],
-        ["tab.close", "Close the tab"],
-        ["app.settings", "Herdr settings"],
-        ["sessions.settings", "Custom settings"],
-        ["app.help", "All of Herdr's keys"],
-      ]],
-    ];
-    const missing = [["⌘L", "Dictation"]];
-    const chip = (text, dim) => div().flex_none().px(7).py(2).rounded(5).bg(t.raised).border_1().border_color(t.border).text_size(11.5).text_color(dim ? t.dim : t.foreground).child(text);
-    const line = (label, combo) => h_flex().h(30).gap(10).items_center().text_size(12.5)
-      .child(div().flex_1().min_w(0).truncate().text_color(t.foreground).child(label))
-      .child(combo ? chip(combo) : div().flex_none().text_size(11.5).text_color(t.dim).child("no key"));
-    const heading = (text) => div().pb(6).mb(4).border_b_1().border_color(t.border).text_size(11).font_medium().text_color(t.dim).child(text.toUpperCase());
-    return v_flex().id("sessions-shortcuts").size_full().p(22).gap(18).bg(t.popover).text_color(t.foreground)
-      .on_key_down((e, cx) => { if (e.key === "escape") { closeOverlay(props().overlay); cx.stop_propagation(); } })
-      .child(h_flex().items_center().child(div().flex_1().text_size(15).font_semibold().child("Keyboard shortcuts")).child(div().text_size(11).text_color(t.dim).child("Esc to close")))
-      .child(h_flex().gap(28).items_start()
-        .children(columns.map(([title, items]) => v_flex().flex_1().min_w(0)
-          .child(heading(title))
-          .children(items.map(([action, label]) => line(label, keyLabel(action)))))))
-      .child(v_flex().gap(8)
-        .child(heading("Not in Herdr yet"))
-        .child(h_flex().gap(18).flex_wrap().children(missing.map(([combo, label]) => h_flex().gap(6).items_center().text_size(12).text_color(t.dim).child(chip(combo, true)).child(label)))))
-      .child(div().text_size(11.5).text_color(t.dim).child("Change any key in ~/.config/herdr-app/keys.json. This list follows it."));
   }
 
   renderMenu() {

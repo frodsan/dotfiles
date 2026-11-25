@@ -1,1 +1,7 @@
-{ "place": "none", "title": "Custom commands" }
+{
+  "place": "none",
+  "title": "Custom commands",
+  "palette": [
+    { "title": "Edit custom commands…", "command": "custom-commands.edit", "group": "Commands", "words": "palette commands settings" }
+  ]
+}
