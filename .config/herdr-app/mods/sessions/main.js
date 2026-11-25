@@ -1823,8 +1823,8 @@ export default class Sessions extends View {
     if (!composerKeysBound) {
       composerKeysBound = true;
       cx.bind_keys([
-        { keystroke: "cmd-enter", action: "composer_start", context: "FirehouseComposer" },
-        { keystroke: "alt-cmd-enter", action: "composer_background", context: "FirehouseComposer" },
+        { keystroke: "cmd-enter", action: "composer_start", context: "SessionComposer" },
+        { keystroke: "alt-cmd-enter", action: "composer_background", context: "SessionComposer" },
       ]);
     }
     this.message.focus?.();
@@ -1916,7 +1916,7 @@ export default class Sessions extends View {
     }
     if (!link && c.where === "pr") c.where = "worktree";
     return v_flex().id("composer").size_full().min_h(0).p(22).gap(14).bg(t.popover).text_color(t.foreground)
-      .key_context("FirehouseComposer")
+      .key_context("SessionComposer")
       .on_action("composer_start", (_e, cx) => this.startSession(cx))
       .on_action("composer_background", (_e, cx) => this.startSession(cx, true))
       .on_key_down((e, cx) => {
