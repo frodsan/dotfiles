@@ -172,7 +172,7 @@ export function toolPane(kind, s, ps = panes()) {
   const id = (shared("tools.panes") ?? {})[`${s?.id}|${kind}`];
   return id ? ps.find((p) => p.pane === id) ?? null : null;
 }
-const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", setup: {}, autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, nextWeekDay: 1, branchNames: "claude", autoToasts: false, autoReady: true, readyFrom: 7, readyUntil: 18 };
+const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", setup: {}, autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, nextWeekDay: 1, branchNames: "claude", autoToasts: false };
 const conf = () => ({ ...DEFAULT_SETTINGS, ...(shared("firehouse.settings") ?? {}) });
 const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 const autoNotify = (n) => (conf().autoToasts ? notify(n) : null);
@@ -673,7 +673,7 @@ export default class Sessions extends View {
     });
     cx.timer.every(PR_FRESH_MS, (cx) => this.refreshPullRequests(cx));
     cx.timer.every(REVIEW_CHECK_MS, (cx) => this.checkReviews(cx));
-    cx.timer.every(AUTO_FIX_MS, (cx) => { this.runAutoFix(cx); this.runMergeWhenReady(cx); this.runAutoReady(cx); });
+    cx.timer.every(AUTO_FIX_MS, (cx) => { this.runAutoFix(cx); this.runMergeWhenReady(cx); });
     cx.timer.every(5000, (cx) => this.readAutoFixStatus(cx));
     cx.timer.after(20000, (cx) => this.purgeSettled(cx));
     cx.timer.every(10 * 60000, (cx) => this.purgeSettled(cx));
@@ -1038,32 +1038,16 @@ export default class Sessions extends View {
     }
   }
 
-  runAutoReady(cx) {
-    if (!conf().autoReady || this.readying) return;
-    const hour = new Date().getHours();
-    if (hour < conf().readyFrom || hour >= conf().readyUntil) return;
-    const ps = panes();
-    const off = map("pr.noAutoReady");
-    const rows = spaces().filter((sp) => !off[sp.id] && sp.status !== "working" && sp.status !== "blocked").map((sp) => this.info(sp, ps)).filter((row) => row.g && row.pr?.state === "OPEN" && row.pr.isDraft);
-    if (!rows.length) return;
-    this.readying = true;
-    cx.spawn(async (cx) => {
-      for (const row of rows) {
-        if (map("pr.autoFixStatus")[row.s.id]?.state === "needs_you") continue;
-        const state = await autoFixState(row.g.top, row.g.on).catch(() => null);
-        if (!state?.readyForReview || map("pr.readyFor")[row.s.id] === state.headRefOid) continue;
-        setShared("pr.readyFor", { ...map("pr.readyFor"), [row.s.id]: state.headRefOid });
-        const ready = await exec("gh", ["pr", "ready", state.url], { cwd: row.g.top, on: row.g.on }).catch(() => null);
-        if (ready?.code === 0) {
-          const prs = { ...map("sessions.prs") };
-          for (const [key, value] of Object.entries(prs)) if (value?.pr?.url === state.url) prs[key] = { ...value, pr: { ...value.pr, isDraft: false } };
-          setShared("sessions.prs", prs);
-          autoNotify({ title: `Ready for review: ${row.name}`, body: "CI is green, the review bot reviewed it, and every thread is resolved.", level: "success", timeout: 5000 });
-        } else autoNotify({ title: `Could not mark ready: ${row.name}`, body: ((ready?.stderr || ready?.stdout) ?? "").trim(), level: "error" });
-      }
-      this.readying = false;
-      cx.notify();
-    });
+  async markReady(row, state) {
+    if (!state.readyForReview || map("pr.readyFor")[row.s.id] === state.headRefOid) return;
+    setShared("pr.readyFor", { ...map("pr.readyFor"), [row.s.id]: state.headRefOid });
+    const ready = await exec("gh", ["pr", "ready", state.url], { cwd: row.g.top, on: row.g.on }).catch(() => null);
+    if (ready?.code === 0) {
+      const prs = { ...map("sessions.prs") };
+      for (const [key, value] of Object.entries(prs)) if (value?.pr?.url === state.url) prs[key] = { ...value, pr: { ...value.pr, isDraft: false } };
+      setShared("sessions.prs", prs);
+      autoNotify({ title: `Ready for review: ${row.name}`, body: "Auto-fix is done: CI is green and every thread is resolved.", level: "success", timeout: 5000 });
+    } else autoNotify({ title: `Could not mark ready: ${row.name}`, body: ((ready?.stderr || ready?.stdout) ?? "").trim(), level: "error" });
   }
 
   runMergeWhenReady(cx) {
@@ -1173,6 +1157,7 @@ export default class Sessions extends View {
         }
         if (!conflict && !checks.length && !threads.length) {
           if (config.number !== state.number) setShared("pr.autoFix", { ...map("pr.autoFix"), [id]: base });
+          await this.markReady(row, state);
           continue;
         }
         if (conflict) handled.add(`conflict:${state.headRefOid}`);
@@ -1197,7 +1182,7 @@ export default class Sessions extends View {
     if (config.paused || status?.state === "needs_you") return { color: t.blocked, tip: config.paused ? `Auto-fix paused: ${config.paused}` : `Auto-fix needs you: ${status.reason || "Claude asked a question"}` };
     const fresh = config.round && Date.now() - config.round.at < 3 * 60 * 60000;
     if (fresh && (s.status === "working" || Date.now() - config.round.at < 15000) && !status) return { color: t.working, tip: `Auto-fix is fixing ${config.round.kinds.join(", ")}` };
-    return { color: t.dim, tip: status?.reason ? `Auto-fix is on. Last round: ${status.reason}` : "Auto-fix is on: Claude gets failing CI, conflicts and review comments when this session is idle" };
+    return { color: t.dim, tip: status?.reason ? `Auto-fix is on. Last round: ${status.reason}` : "Auto-fix is on: Claude gets failing CI, conflicts and review comments when this session is idle. When all of it is fixed, Herdr marks the draft ready for review." };
   }
 
   sendToClaude(space, text) {
@@ -1346,7 +1331,7 @@ export default class Sessions extends View {
     this.adoptCreated(sp);
     if (machines().some((m) => m.layout !== "ready")) return;
     const ids = new Set(sp.map((s) => s.id));
-    for (const key of ["focus.starred", "focus.snoozed", "focus.untilReview", "focus.pinned", "sessions.membership", "sessions.noAutoSettle", "sessions.prOpenSeen", "pr.autoFix", "pr.autoFixStatus", "pr.mergeWhenReady", "pr.noAutoReady", "pr.readyFor"]) {
+    for (const key of ["focus.starred", "focus.snoozed", "focus.untilReview", "focus.pinned", "sessions.membership", "sessions.noAutoSettle", "sessions.prOpenSeen", "pr.autoFix", "pr.autoFixStatus", "pr.mergeWhenReady", "pr.readyFor"]) {
       const value = map(key);
       const kept = Object.fromEntries(Object.entries(value).filter(([id]) => ids.has(id)));
       if (Object.keys(kept).length !== Object.keys(value).length) setShared(key, kept);
@@ -2097,12 +2082,6 @@ export default class Sessions extends View {
       }, "mods/workspace-chrome/branch.svg")))
       .when(Boolean(url), (el) => el.child(line()).child(label("Automatically")))
       .when(open, (el) => el.child(toggle("autofix", "Fix", Boolean(map("pr.autoFix")[id]), () => setAutoFix(id, !map("pr.autoFix")[id]), ICON("wrench"))))
-      .when(open && Boolean(p.menu.entry?.pr?.isDraft) && conf().autoReady, (el) => el.child(toggle("auto-ready", "Ready for review", !map("pr.noAutoReady")[id], () => {
-        const all = { ...map("pr.noAutoReady") };
-        if (all[id]) delete all[id];
-        else all[id] = true;
-        setShared("pr.noAutoReady", all);
-      }, ICON("git-branch-check"))))
       .when(open && (!p.menu.entry?.pr?.stacked || autoMerge), (el) => el.child(toggle("auto-merge", "Merge", autoMerge, () => request({ kind: "automerge", entry: p.menu.entry, on: !autoMerge }), ICON("git-merge-queue"))))
       .when(Boolean(url), (el) => el.child(toggle("auto-settle", "Settle", !noAutoSettle, () => {
         const all = { ...map("sessions.noAutoSettle") };

@@ -67,10 +67,7 @@ export default class CustomSettings extends View {
           div().text_size(11.5).text_color(t.dim).child("To run a setup command in new worktrees, right-click a folder in Sessions.")))
         .child(group("Pull requests",
           row("GitHub API", "Herdr checks the PR of every session in one query. It slows down to every 30 seconds when fewer than 500 points are left, and to every 2 minutes below 100. The budget is shared with everything that uses your gh login, including Claude.", this.renderRate()),
-          row("Mark drafts ready for review", "When a draft's required checks pass, the review bot reviewed it, and every thread is resolved, Herdr marks it ready for review. Turn it off for one session from its right-click menu.", chips("autoReady", [[true, "On"], [false, "Off"]])),
-          row("Mark ready from", null, chips("readyFrom", [6, 7, 8, 9, 10].map((h) => [h, `${h}:00`]))),
-          row("Mark ready until", "Outside these hours, drafts stay drafts. Herdr marks them ready at the next start time.", chips("readyUntil", [16, 17, 18, 19, 20].map((h) => [h, `${h}:00`]))),
-          row("Review bot", "Part of the GitHub login of the bot that reviews your pull requests. Auto-fix treats its comments as bot comments, and Ready for review waits for its review. Empty: any GitHub bot account counts for auto-fix, and Ready for review does not wait.", input(this.fields.reviewBot))))
+          row("Review bot", "Part of the GitHub login of the bot that reviews your pull requests. Auto-fix treats its comments as bot comments, and marks a draft ready for review only after the bot reviewed it. Empty: any GitHub bot account counts, and auto-fix does not wait for a bot review.", input(this.fields.reviewBot))))
         .child(group("Settling",
           row("Auto-settle", "Settle a session when its pull request merges or closes. You can still turn it off per session.", onOff("autoSettle")),
           row("Keep settled sessions for", "After that, Herdr deletes its worktree and Claude conversation. A worktree with uncommitted changes or commits that are not on GitHub stays, with a warning in Settled. The branch always stays.", h_flex().gap(4).children(SETTLED_DAYS.map((d) => choice(`settled-${d}`, d === 1 ? "1 day" : `${d} days`, c.settledDays === d, () => setConf({ settledDays: d })))))))
