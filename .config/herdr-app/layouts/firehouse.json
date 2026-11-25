@@ -56,13 +56,13 @@
           }
         },
         {
-          "id": "commands",
+          "id": "custom-commands",
           "type": "block",
           "size": {
             "px": 0
           },
           "content": {
-            "mod": "commands"
+            "mod": "custom-commands"
           }
         },
         {

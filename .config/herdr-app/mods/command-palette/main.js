@@ -106,7 +106,7 @@ function entries() {
     for (const [name, group, title, words] of ext.palette ?? []) list.push({ name, args: {}, group, title, words });
   }
   for (const c of shared("firehouse.settings")?.commands ?? []) {
-    if (c.title?.trim() && c.command?.trim()) list.push({ name: `commands.run-${c.id}`, args: {}, group: "Commands", title: c.title.trim(), words: c.command });
+    if (c.title?.trim() && c.command?.trim()) list.push({ name: `custom-commands.run-${c.id}`, args: {}, group: "Commands", title: c.title.trim(), words: c.command });
   }
   for (const l of layouts()) {
     const t = { main: "Herdr", terminals: "Terminals", win98: "Herdr 98" }[l] ?? l.charAt(0).toUpperCase() + l.slice(1);
