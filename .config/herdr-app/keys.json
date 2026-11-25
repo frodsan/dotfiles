@@ -83,7 +83,6 @@
     "cmd-backspace": "send:\u0015"
   },
   "layout:work": {
-    "cmd-shift-b": "sessions.ext-database",
     "cmd-shift-s": "work-tools.standup"
   }
 }
