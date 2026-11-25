@@ -307,7 +307,7 @@ async function branchSlug(text, folder) {
   if (conf().branchNames === "words") return fallbackSlug(text);
   const repo = base(folder).toLowerCase().split(/[^a-z0-9]+/);
   try {
-    const r = await shellRun('claude -p --model sonnet "$1" < /dev/null', [`${BRANCH_PROMPT}\n\n<request>\n${text.slice(0, 1600)}\n</request>\n\nBranch:`]);
+    const r = await shellRun('claude -p --model haiku "$1" < /dev/null', [`${BRANCH_PROMPT}\n\n<request>\n${text.slice(0, 1600)}\n</request>\n\nBranch:`]);
     const slug = r.code === 0 ? r.stdout.trim().split("\n").pop().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") : "";
     const words = slug.split("-").filter((w) => w && !repo.includes(w));
     if (words.length && words.length <= 7 && slug.length <= 48) return words.join("-");
