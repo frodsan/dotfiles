@@ -10,6 +10,7 @@ if [[ -n "$SCRIPT" && -f "$SCRIPT" ]]; then
   DOTFILES="$(cd "$(dirname "$SCRIPT")" && pwd)"
 fi
 FORCE="${FORCE:-0}"
+LINKS_ONLY=0
 
 FILES=(
   .bundle/config
@@ -41,19 +42,21 @@ COPIES=(
 )
 
 usage() {
-  echo "Usage: install.sh [--force]"
+  echo "Usage: install.sh [--force] [--links]"
   echo
   echo "Run from curl, it installs the Xcode Command Line Tools, clones the repo into"
   echo "\$DOTFILES_DIR (default ~/Code/frodsan/dotfiles) and runs the clone's install.sh."
   echo "Installs Homebrew and the Brewfile packages, then links the dotfiles into \$HOME."
   echo "Existing files are left alone unless you pass --force or set FORCE=1."
   echo "With --force, each existing file is moved to <name>.bak before it is linked."
+  echo "With --links, it only links and copies the files, for example after adding one."
 }
 
 parse_args() {
   for arg in "$@"; do
     case "$arg" in
       --force) FORCE=1 ;;
+      --links) LINKS_ONLY=1 ;;
       -h | --help) usage; exit 0 ;;
       *) echo "Unknown option: $arg"; usage; exit 1 ;;
     esac
@@ -231,6 +234,10 @@ install_skills() {
 parse_args "$@"
 if [[ -z "$DOTFILES" || ! -f "$DOTFILES/Brewfile" ]]; then
   bootstrap "$@"
+  exit
+fi
+if [[ "$LINKS_ONLY" -eq 1 ]]; then
+  link_files
   exit
 fi
 install_homebrew
