@@ -2050,8 +2050,6 @@ export default class Sessions extends View {
           row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b.", input(this.fields.branchPrefix)),
           row("Branch names come from", "Claude asks Sonnet for a short slug. Message words uses the first words you type.", chips("branchNames", [["claude", "Claude"], ["words", "Message words"]])),
           div().text_size(11.5).text_color(t.dim).child("To run a setup command in new worktrees, right-click a folder in Sessions.")))
-        .child(group("Commands",
-          row("Palette commands", "Each one shows in the command palette and opens a terminal on the right, in the current session's folder or your home folder. Start it with cd to run it somewhere else. They stay on this machine.", this.renderCommands(t, input, choice))))
         .child(group("Pull requests",
           row("GitHub API", "Herdr checks the PR of every session in one query. It slows down to every 30 seconds when fewer than 500 points are left, and to every 2 minutes below 100. The budget is shared with everything that uses your gh login, including Claude.", this.renderRate()),
           row("Mark drafts ready for review", "When a draft's required checks pass, the review bot reviewed it, and every thread is resolved, Herdr marks it ready for review. Turn it off for one session from its right-click menu.", chips("autoReady", [[true, "On"], [false, "Off"]])),
@@ -2069,7 +2067,9 @@ export default class Sessions extends View {
           row("Wake-up time for Tomorrow and Next week", null, chips("tomorrowHour", [7, 8, 9, 10].map((h) => [h, `${h}:00`]))),
           row("Next week starts on", null, chips("nextWeekDay", [[1, "Monday"], [2, "Tuesday"], [5, "Friday"]]))))
         .child(group("Notifications",
-          row("Toasts for automatic actions", "Auto-fix, merge when ready, auto-settle, snooze wake-ups and spin-offs. Off: the sidebar shows the change, and Herdr still plays its sounds. Errors from things you click always show.", chips("autoToasts", [[true, "On"], [false, "Off"]]))))
+          row("Toasts for automatic actions", "Auto-fix, merge when ready, auto-settle, snooze wake-ups and spin-offs. Off: the sidebar shows the change, and Herdr still plays its sounds. Errors from things you click always show.", chips("autoToasts", [[true, "On"], [false, "Off"]])))
+        .child(group("Commands",
+          row("Palette commands", "Each one shows in the command palette and opens a terminal on the right, in the current session's folder or your home folder. Start it with cd to run it somewhere else. They stay on this machine.", this.renderCommands(t, input, choice)))))
 );
   }
 
