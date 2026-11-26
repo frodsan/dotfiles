@@ -20,7 +20,11 @@ Update the branch as `~/.claude/skills/herdr-app/skills/update-branch/SKILL.md` 
 
 ## 2. Failing CI
 
-Handle each failed check as the CI section of that pr-fix file says. Merge the base at most once per round.
+Handle each failed check as the CI section of `pr-fix/SKILL.md` says.
+
+If step 1 pushed a merge, CI runs again on the new commit. Do not rerun the old runs, and skip base-branch failures. Fix only failures that the branch itself causes. Herdr sends the new results in the next round.
+
+Otherwise, update the branch at most once for base-branch failures, however many checks fail that way.
 
 ## 3. Review comments
 
@@ -40,7 +44,7 @@ Decide each thread:
 5. Pre-existing findings (🟣) are about code the PR did not cause: ask. Offer **Fix it here**, **Spin it off** (a new session with the herdr-app:spin-off skill), **Ignore it**.
 6. The review bot left 3 or more reviews on this PR (`gh pr view --json reviews`) and only nits (💬) or pre-existing findings (🟣) are left: ask about all of them at once instead of fixing.
 
-Fix, reply, react and resolve as the Comments section of that pr-fix file says.
+Fix, reply, react and resolve as the Comments section of `pr-fix/SKILL.md` says.
 
 A review summary has no thread to resolve. When you have handled all its findings (fixed, or the user answered), add 👍 to the review itself (`subjectId` = the review id). When the user says to ignore it, add 👎 instead (`content:THUMBS_DOWN`). Herdr stops sending a review once you have reacted to it.
 
