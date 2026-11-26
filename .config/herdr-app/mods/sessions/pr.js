@@ -2,7 +2,7 @@ import { div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { spaces, panes, exec, hc, run, theme, shared, setShared, notify, home, window } from "herdr";
 
-export const updateBranchCommand = (base) => `/herdr-app:update-branch ${base}`;
+export const updateBranchCommand = (base) => `/herdr:update-branch ${base}`;
 const ICON = (name) => `mods/sessions/${name}.svg`;
 const REFRESH_MS = 60000;
 const MEMBER = ["OWNER", "MEMBER", "COLLABORATOR"];
@@ -77,10 +77,10 @@ const commentLines = (comments) => comments.flatMap((c) => [`- @${c.author}${c.p
 
 const pr = (s) => `Pull request #${s.number} (${s.url}).`;
 const PROMPTS = {
-  investigate: (s, checks) => [`/herdr-app:pr-fix why ${pr(s)} Failed checks:`, ...checks.map(checkLine)].join("\n"),
-  fix: (s, checks) => [`/herdr-app:pr-fix fix ${pr(s)} Failed checks:`, ...checks.map(checkLine)].join("\n"),
-  address: (s, comments) => [`/herdr-app:pr-fix address ${pr(s)} Comments:`, ...commentLines(comments)].join("\n"),
-  opinion: (s, comments) => [`/herdr-app:pr-fix ask ${pr(s)} Comments:`, ...commentLines(comments)].join("\n"),
+  investigate: (s, checks) => [`/herdr:pr-fix why ${pr(s)} Failed checks:`, ...checks.map(checkLine)].join("\n"),
+  fix: (s, checks) => [`/herdr:pr-fix fix ${pr(s)} Failed checks:`, ...checks.map(checkLine)].join("\n"),
+  address: (s, comments) => [`/herdr:pr-fix address ${pr(s)} Comments:`, ...commentLines(comments)].join("\n"),
+  opinion: (s, comments) => [`/herdr:pr-fix ask ${pr(s)} Comments:`, ...commentLines(comments)].join("\n"),
   updateBase: (s) => updateBranchCommand(s.baseRefName),
 };
 

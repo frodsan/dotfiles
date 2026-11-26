@@ -1,6 +1,6 @@
 ---
 name: update-branch
-description: Merge the latest base branch into the current branch, fix the conflicts, then commit and push. Herdr sends it as /herdr-app:update-branch from the session menu and the PR panel.
+description: Merge the latest base branch into the current branch, fix the conflicts, then commit and push. Herdr sends it as /herdr:update-branch from the session menu and the PR panel.
 disable-model-invocation: true
 ---
 

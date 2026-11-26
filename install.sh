@@ -16,7 +16,7 @@ FILES=(
   .bundle/config
   .claude/CLAUDE.md
   .claude/rules/ruby.md
-  .claude/skills/herdr-app
+  .claude/skills/herdr
   .config/herdr-app/keys.json
   .config/herdr-app/layouts/Firehouse.json
   .config/herdr-app/mods/sessions

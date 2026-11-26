@@ -1,0 +1,6 @@
+{
+  "name": "herdr",
+  "description": "Skills for the Herdr sessions setup: auto-fix rounds, PR fixes, branch updates and spin-off sessions.",
+  "version": "1.0.0",
+  "author": { "name": "Francesco Rodriguez" }
+}

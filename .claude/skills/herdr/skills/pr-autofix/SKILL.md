@@ -1,6 +1,6 @@
 ---
 name: pr-autofix
-description: Handle one auto-fix round on this session's pull request — failing CI, merge conflicts and review comments — then report the result to Herdr. Herdr sends it as /herdr-app:pr-autofix.
+description: Handle one auto-fix round on this session's pull request — failing CI, merge conflicts and review comments — then report the result to Herdr. Herdr sends it as /herdr:pr-autofix.
 disable-model-invocation: true
 ---
 
@@ -12,11 +12,11 @@ Work in this worktree, in this order: conflicts, then CI, then comments. A merge
 
 ## Rules
 
-Read `~/.claude/skills/herdr-app/skills/pr-fix/SKILL.md` and follow its Rules. Never reply in a thread that the author started (origin `author`).
+Read `~/.claude/skills/herdr/skills/pr-fix/SKILL.md` and follow its Rules. Never reply in a thread that the author started (origin `author`).
 
 ## 1. Conflicts
 
-Update the branch as `~/.claude/skills/herdr-app/skills/update-branch/SKILL.md` says.
+Update the branch as `~/.claude/skills/herdr/skills/update-branch/SKILL.md` says.
 
 ## 2. Failing CI
 
@@ -41,7 +41,7 @@ Decide each thread with these rules. The first rule that matches decides.
 2. The author's own comment, or the author's reply in the thread: do what it says. If it is unclear or is a question, ask. If it says to ignore the comment, reply in one sentence with why (unless the author started the thread), then resolve it. For the review bot, add 👎 first. Never react 👎 to a person's comment.
 3. The author's 👍: fix it.
 4. The review bot left 3 or more reviews on this PR (`gh pr view --json reviews`) and only nits (💬) or pre-existing findings (🟣) are left: ask about all of them at once instead of fixing.
-5. Pre-existing findings (🟣) are about code the PR did not cause: ask. Offer **Fix it here**, **Spin it off** (a new session with the herdr-app:spin-off skill), **Ignore it**.
+5. Pre-existing findings (🟣) are about code the PR did not cause: ask. Offer **Fix it here**, **Spin it off** (a new session with the herdr:spin-off skill), **Ignore it**.
 6. No signal: fix it when the fix is technical and simple. Ask when it changes behavior, or when the reviewer is unsure (the comment is a question or hedges).
 
 Fix, reply, react and resolve as the Comments section of `pr-fix/SKILL.md` says.
