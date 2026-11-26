@@ -49,3 +49,7 @@ Write the description as a briefing that a reviewer can read in under a minute. 
 - Do not paste raw output such as logs, commit lists or metric tables. Link to the source.
 - Start with the effect of the change that a reviewer would not see in the diff.
 - Do not describe how you checked the change. Report that in the chat reply.
+
+### Comments
+
+End every comment, reply or review you post on GitHub with a blank line and this marker: `<sub>🤖 Automated reply.</sub>`. When a skill gives its own marker, use the skill's marker instead.
