@@ -1283,8 +1283,14 @@ export default class Sessions extends View {
     }
   }
 
-  openDev(cx) {
-    const existing = spaces().find((space) => space.id === shared("sessions.dev"));
+  async devFolder() {
+    const r = await exec("sh", ["-c", 'cd "$(dirname "$(readlink -f "$1")")" 2>/dev/null && git rev-parse --show-toplevel', "sh", `${appHome()}/mods/sessions`]).catch(() => null);
+    return r?.code === 0 && r.stdout.trim() ? r.stdout.trim() : appHome();
+  }
+
+  async openDev(cx) {
+    const folder = await this.devFolder();
+    const existing = spaces().find((space) => space.id === shared("sessions.dev") && space.folder === folder);
     if (existing) {
       if (this.activeView() !== "work") this.showView("work");
       run("space.select", { id: existing.id });
@@ -1293,7 +1299,7 @@ export default class Sessions extends View {
     }
     setShared("sessions.pending", [...(shared("sessions.pending") ?? []), { name: "Herdr config", dev: true, at: Date.now() }]);
     if (this.activeView() !== "work") this.showView("work");
-    run("space.new", { name: "Herdr config", folder: appHome(), argv: [CLAUDE] });
+    run("space.new", { name: "Herdr config", folder, argv: [CLAUDE] });
   }
 
   openNewClaude(s) {
