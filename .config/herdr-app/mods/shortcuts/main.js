@@ -42,7 +42,7 @@ export default class Shortcuts extends View {
         ["layout.toggle", "Show or hide the sidebar"],
         ["tab.close", "Close the tab"],
         ["app.settings", "Herdr settings"],
-        ["sessions.settings", "Custom settings"],
+        ["sessions.settings", "Session settings"],
         ["app.help", "All of Herdr's keys"],
       ]],
     ];

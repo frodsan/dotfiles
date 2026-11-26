@@ -1,6 +1,7 @@
 import { View, div, svg } from "gpui-kit";
 import { initBar, renderBar } from "./bar.js";
 import { PullRequestPanel, updateBranchCommand } from "./pr.js";
+import { SettingsDialog, conf, setConf, openSettings } from "./settings.js";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea } from "gpui-base";
 import { hc, keys, spaces, panes, machines, layout, run, exec, theme, shared, setShared, openOverlay, closeOverlay, props, nextCommand, playSound, readTextFile, writeTextFile, appHome, home, window, pickFolder, notify } from "herdr";
 
@@ -174,9 +175,6 @@ export function toolPane(kind, s, ps = panes()) {
   const id = (shared("tools.panes") ?? {})[`${s?.id}|${kind}`];
   return id ? ps.find((p) => p.pane === id) ?? null : null;
 }
-const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", setup: {}, autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, nextWeekDay: 1, autoToasts: false };
-const conf = () => ({ ...DEFAULT_SETTINGS, ...(shared("firehouse.settings") ?? {}) });
-const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 const autoNotify = (n) => (conf().autoToasts ? notify(n) : null);
 const setupFor = (root) => (root ? (conf().setup?.[root] ?? "").trim() : "");
 const dayAt = (days, hour, minute = 0) => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days, hour, minute).getTime(); };
@@ -641,6 +639,7 @@ export default class Sessions extends View {
     if (props()?.menu?.snoozeOnly) return this.initSnooze(cx);
     if (props()?.menu?.folderMenu) return this.initFolderMenu(cx);
     if (props()?.welcome) return this.initWelcome(cx);
+    if (props()?.settings) { this.settings = new SettingsDialog(); return this.settings.init(); }
     if (props()?.menu) {
       const entry = props().menu.entry;
       if (entry?.branch && !entry.pr?.baseRefName && entry.cwd) cx.spawn(async (cx) => {
@@ -659,7 +658,6 @@ export default class Sessions extends View {
     this.over = null;
     this.editing = null;
     cx.spawn(async (cx) => { await syncSounds(); cx.notify(); });
-    if (JSON.stringify(shared("settings.defaults")) !== JSON.stringify(DEFAULT_SETTINGS)) setShared("settings.defaults", DEFAULT_SETTINGS);
     this.focusMute = conf().focusMute;
     cx.spawn(async () => loadExtensions());
     cx.timer.every(60000, () => { loadExtensions(); });
@@ -954,7 +952,7 @@ export default class Sessions extends View {
     if (command === "chats") return this.toggleChats();
     if (command === "new-session") return this.openComposer();
     if (command === "dev") return this.openDev(cx);
-    if (command === "settings") return openOverlay({ mod: "custom-settings", kind: "dialog", width: 620, height: 680 });
+    if (command === "settings") return openSettings();
     if (command === "welcome") return openWelcome();
     if (command === "shortcuts") return openOverlay({ mod: "shortcuts", kind: "dialog", width: 880, height: 420 });
     const s = this.active();
@@ -1647,6 +1645,7 @@ export default class Sessions extends View {
     if (props()?.header) return this.renderHeader();
     if (props()?.composer) return this.renderComposer();
     if (props()?.welcome) return this.renderWelcome();
+    if (props()?.settings) return this.settings.render();
     if (props()?.menu) return this.renderMenu();
     const t = theme();
     const sp = spaces().filter((s) => !isChatSpace(s));
@@ -1723,7 +1722,10 @@ export default class Sessions extends View {
         .child(svg(ICON("folder-plus")).size(14)))
       .child(div().id("session-new").p(5).rounded(6).hover((st) => st.bg(t.hover).text_color(t.foreground)).tooltip("New session (⌥⌘N)")
         .on_click(() => run("sessions.new-session"))
-        .child(svg(ICON("plus")).size(14)));;
+        .child(svg(ICON("plus")).size(14)))
+      .child(div().id("settings-open").p(5).rounded(6).hover((st) => st.bg(t.hover).text_color(t.foreground)).tooltip("Session settings (⇧⌘,)")
+        .on_click(() => openSettings())
+        .child(svg(ICON("settings")).size(14)));
   }
 
   workingList(rows, t) {

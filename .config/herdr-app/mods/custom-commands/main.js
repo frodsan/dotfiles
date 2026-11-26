@@ -2,8 +2,16 @@ import { View, div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { exec, shared, setShared, appHome, readTextFile, writeTextFile, checking, nextCommand, openOverlay, closeOverlay, props, theme } from "herdr";
 
-const conf = () => shared("firehouse.settings") ?? {};
-const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
+const OLD = () => shared("firehouse.settings") ?? {};
+const list = () => shared("commands.list") ?? OLD().commands ?? [];
+const setList = (commands) => setShared("commands.list", commands);
+
+function moveOldList() {
+  const { commands, ...rest } = OLD();
+  if (!commands) return;
+  if (shared("commands.list") === undefined) setList(commands);
+  setShared("firehouse.settings", rest);
+}
 const openEditor = () => openOverlay({ mod: "custom-commands", kind: "dialog", width: 620, height: 520, props: { editor: true } });
 
 const LOCAL = () => `${appHome()}/mods/custom-commands-local`;
@@ -33,13 +41,14 @@ export default class CustomCommands extends View {
   init(_props, cx) {
     if (props()?.editor) {
       this.commandFields = {};
-      for (const command of conf().commands ?? []) this.makeCommandFields(command);
+      for (const command of list()) this.makeCommandFields(command);
       return;
     }
     if (checking()) return;
+    moveOldList();
     let published = null;
     const sync = () => {
-      const commands = shared("firehouse.settings")?.commands ?? [];
+      const commands = list();
       const key = JSON.stringify(commands);
       if (key === published) return;
       published = key;
@@ -64,19 +73,19 @@ export default class CustomCommands extends View {
   }
 
   updateCommand(id, change) {
-    setConf({ commands: (conf().commands ?? []).map((c) => (c.id === id ? { ...c, ...change } : c)) });
+    setList(list().map((c) => (c.id === id ? { ...c, ...change } : c)));
   }
 
   renderCommands(t, input, choice) {
-    const list = conf().commands ?? [];
+    const commands = list();
     const add = () => {
       const command = { id: Math.random().toString(36).slice(2, 10), title: "", command: "" };
       this.makeCommandFields(command);
-      setConf({ commands: [...list, command] });
+      setList([...commands, command]);
     };
-    const remove = (id) => { delete this.commandFields[id]; setConf({ commands: list.filter((c) => c.id !== id) }); };
+    const remove = (id) => { delete this.commandFields[id]; setList(commands.filter((c) => c.id !== id)); };
     return v_flex().gap(10)
-      .children(list.filter((c) => this.commandFields[c.id]).map((c) => v_flex().gap(6).p(10).rounded(8).border_1().border_color(t.border)
+      .children(commands.filter((c) => this.commandFields[c.id]).map((c) => v_flex().gap(6).p(10).rounded(8).border_1().border_color(t.border)
         .child(h_flex().gap(6).items_center()
           .child(div().flex_1().child(input(this.commandFields[c.id].title)))
           .child(div().id(`command-remove-${c.id}`).flex_none().px(8).py(5).rounded(6).text_size(12).text_color(t.dim).cursor_pointer()
