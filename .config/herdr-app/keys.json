@@ -66,6 +66,7 @@
     "cmd-alt-c": "sessions.changes",
     "cmd-alt-p": "sessions.pull-request",
     "cmd-alt-n": "sessions.new-session",
+    "cmd-shift-n": "sessions.new-chat",
     "cmd-alt-,": "app.settings",
     "cmd-shift-,": "sessions.settings",
     "cmd-shift-c": "sessions.chats"

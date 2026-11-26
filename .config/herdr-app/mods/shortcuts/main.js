@@ -26,7 +26,6 @@ export default class Shortcuts extends View {
         ["sessions.github", "Open the PR on GitHub"],
         ["sessions.dev", "Edit Herdr config with Claude"],
         ["sessions.shortcuts", "These shortcuts"],
-        ["sessions.welcome", "Welcome and setup"],
       ]],
       ["Panels & tools", [
         ["sessions.files", "Files"],
@@ -34,6 +33,7 @@ export default class Shortcuts extends View {
         ["sessions.pull-request", "Pull request"],
         ["sessions.rails", "Rails console"],
         ["sessions.chats", "Chats with Claude"],
+        ["sessions.new-chat", "New chat"],
       ]],
       ["From Herdr", [
         ["tab.new", "New terminal tab"],
@@ -46,8 +46,7 @@ export default class Shortcuts extends View {
         ["app.help", "All of Herdr's keys"],
       ]],
     ];
-    const missing = [["⌘L", "Dictation"]];
-    const chip = (text, dim) => div().flex_none().px(7).py(2).rounded(5).bg(t.raised).border_1().border_color(t.border).text_size(11.5).text_color(dim ? t.dim : t.foreground).child(text);
+    const chip = (text) => div().flex_none().px(7).py(2).rounded(5).bg(t.raised).border_1().border_color(t.border).text_size(11.5).text_color(t.foreground).child(text);
     const line = (label, combo) => h_flex().h(30).gap(10).items_center().text_size(12.5)
       .child(div().flex_1().min_w(0).truncate().text_color(t.foreground).child(label))
       .child(combo ? chip(combo) : div().flex_none().text_size(11.5).text_color(t.dim).child("no key"));
@@ -59,9 +58,6 @@ export default class Shortcuts extends View {
         .children(columns.map(([title, items]) => v_flex().flex_1().min_w(0)
           .child(heading(title))
           .children(items.map(([action, label]) => line(label, keyLabel(action)))))))
-      .child(v_flex().gap(8)
-        .child(heading("Not in Herdr yet"))
-        .child(h_flex().gap(18).flex_wrap().children(missing.map(([combo, label]) => h_flex().gap(6).items_center().text_size(12).text_color(t.dim).child(chip(combo, true)).child(label)))))
       .child(div().text_size(11.5).text_color(t.dim).child("Change any key in ~/.config/herdr-app/keys.json. This list follows it."));
   }
 }
