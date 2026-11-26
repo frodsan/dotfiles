@@ -1,6 +1,6 @@
 import { div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings } from "herdr";
+import { spaces, panes, run, openOverlay, theme, window, shared, setShared, layout, settings } from "herdr";
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -73,6 +73,7 @@ export function renderBar(view, isChat) {
     : 10;
   const panel = find(root, "panel"), body = find(root, "panel-body");
   const enabled = isChat ? [] : ["pull-request"];
+  const offer = space ? (shared("pr.autoFixOffer") ?? {})[space.id] ?? null : null;
   const badge = shared("pr.badge");
   const pr = badge && badge.space === space?.id ? badge : null;
   syncPanel(view, space, panel, body, enabled);
@@ -99,6 +100,11 @@ export function renderBar(view, isChat) {
     .on_mouse_up("left", () => { view.pressed = null; })
     .on_scroll_wheel(e => { if (Math.abs(e.delta.y) >= 1) run(e.delta.y > 0 ? "tab.prev" : "tab.next"); })
     .child(h_flex().id("tab-scroll").flex_1().min_w(0).h_full().items_center().gap(3).overflow_x_scrollbar().children(shown.map(item)))
+    .when(!isChat && Boolean(offer), el => el.child(h_flex().id("autofix-offer").h(26).px(8).gap(5).flex_none().items_center().rounded(6)
+      .text_size(12).bg(t.selected).text_color(t.foreground).hover(s => s.bg(t.hover)).on_mouse_down("left", stop)
+      .tooltip("Auto-fix waits while you look at this session. Click to send it to Claude now.")
+      .on_click(() => setShared("sessions.forward", { command: "autofix-now", at: Date.now() }))
+      .child(svg("mods/sessions/wrench.svg").size(13).text_color(t.working)).child(`Auto-fix: ${offer.summary}`).child(div().text_color(t.accent).child("Run"))))
     .when(!isChat, el => el
       .child(toolButton("files", "Files", "mods/files/file.svg"))
       .child(toolButton("changes", "Changes", "mods/changes/changes.svg"))

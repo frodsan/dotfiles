@@ -42,7 +42,7 @@ function failedCheck(e) {
 
 const isReviewBot = (author) => author?.__typename === "Bot";
 const AUTOFIX_DIR = () => `${appHome()}/data/autofix`;
-const AUTOFIX_ROUNDS = 5;
+const AUTOFIX_ROUNDS = 3;
 
 const requiredCache = {};
 async function requiredChecks(repo, base, cwd, on) {
@@ -943,6 +943,7 @@ export default class Sessions extends View {
   command(command, cx) {
     if (command.startsWith("ext-")) return this.toggleExtension(command.slice(4));
     if (command === "requests") return this.runRequests(cx);
+    if (command === "autofix-now") { const space = this.active(); if (space) this.runAutoFix(cx, space.id); return; }
     if (command === "spinoff") return this.runSpinoffs(cx);
     if (command === "new-chat") return run("chats.new");
     if (command === "chats") return this.toggleChats();
@@ -1134,15 +1135,26 @@ export default class Sessions extends View {
     });
   }
 
-  runAutoFix(cx) {
+  setAutoFixOffer(id, offer) {
+    const all = { ...map("pr.autoFixOffer") };
+    if (JSON.stringify(all[id] ?? null) === JSON.stringify(offer)) return;
+    if (offer) all[id] = offer;
+    else delete all[id];
+    setShared("pr.autoFixOffer", all);
+  }
+
+  runAutoFix(cx, now = null) {
     const enabled = map("pr.autoFix");
-    if (!Object.keys(enabled).length || this.fixing) return;
+    if (!Object.keys(enabled).length) return;
+    if (this.fixing) { if (now) this.fixNow = now; return; }
     this.fixing = true;
     cx.spawn(async (cx) => {
       const ps = panes();
       for (const [id, config] of Object.entries(enabled)) {
         const space = spaces().find((sp) => sp.id === id);
-        if (!space || space.active || space.status === "working" || space.status === "blocked") continue;
+        if (now && id !== now) continue;
+        if (!space || space.status === "working" || space.status === "blocked") continue;
+        const offering = space.active && id !== now;
         if (map("pr.autoFixStatus")[id]?.state === "needs_you" || config.paused) continue;
         const row = this.info(space, ps);
         if (!row.g) continue;
@@ -1160,10 +1172,18 @@ export default class Sessions extends View {
           continue;
         }
         if (!conflict && !checks.length && !threads.length) {
+          this.setAutoFixOffer(id, null);
           if (config.number !== state.number) setShared("pr.autoFix", { ...map("pr.autoFix"), [id]: base });
           await this.markReady(row, state);
           continue;
         }
+        const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+        const summary = [conflict ? "conflicts" : "", checks.length ? count(checks.length, "failing check", "failing checks") : "", threads.length ? count(threads.length, "comment", "comments") : ""].filter(Boolean).join(", ");
+        if (offering) {
+          this.setAutoFixOffer(id, { summary, head: state.headRefOid });
+          continue;
+        }
+        this.setAutoFixOffer(id, null);
         if (conflict) handled.add(`conflict:${state.headRefOid}`);
         for (const x of checks) handled.add(x.key);
         for (const x of threads) handled.add(x.key);
@@ -1175,6 +1195,9 @@ export default class Sessions extends View {
         this.sendToClaude(space, autoFixPrompt(state, { conflict, checks, threads }));
       }
       this.fixing = false;
+      const next = this.fixNow;
+      this.fixNow = null;
+      if (next) this.runAutoFix(cx, next);
       cx.notify();
     });
   }
@@ -1335,7 +1358,7 @@ export default class Sessions extends View {
     this.adoptCreated(sp);
     if (machines().some((m) => m.layout !== "ready")) return;
     const ids = new Set(sp.map((s) => s.id));
-    for (const key of ["focus.starred", "focus.snoozed", "focus.untilReview", "focus.pinned", "sessions.membership", "sessions.noAutoSettle", "sessions.prOpenSeen", "pr.autoFix", "pr.autoFixStatus", "pr.mergeWhenReady", "pr.readyFor"]) {
+    for (const key of ["focus.starred", "focus.snoozed", "focus.untilReview", "focus.pinned", "sessions.membership", "sessions.noAutoSettle", "sessions.prOpenSeen", "pr.autoFix", "pr.autoFixStatus", "pr.autoFixOffer", "pr.mergeWhenReady", "pr.readyFor"]) {
       const value = map(key);
       const kept = Object.fromEntries(Object.entries(value).filter(([id]) => ids.has(id)));
       if (Object.keys(kept).length !== Object.keys(value).length) setShared(key, kept);
