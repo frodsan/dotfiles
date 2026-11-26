@@ -52,4 +52,4 @@ Write the description as a briefing that a reviewer can read in under a minute. 
 
 ### Comments
 
-End every comment, reply or review you post on GitHub with a blank line and this marker: `<sub>🤖 Automated reply.</sub>`. When a skill gives its own marker, use the skill's marker instead.
+Start every comment, reply or review you post on GitHub with this label and a blank line: `<sub>AI generated</sub>`. When a skill gives its own format, follow the skill.
