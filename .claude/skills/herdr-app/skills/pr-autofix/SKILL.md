@@ -25,7 +25,7 @@ Handle each failed check as the CI section of that pr-fix file says. Merge the b
 The message lists two kinds of items:
 
 - **Threads**: inline comments on a line. Each has its origin (`bot` for the review bot, `human` or `you`) and the PR author's signal, if any.
-- **Review summaries**: the text of a review, with no thread. The review bot can put findings there, often the pre-existing ones. Treat each finding in the summary like a thread.
+- **Review summaries**: the text of a review, with no thread, from a person (origin `human`) or the review bot (`bot`). The review bot often puts its pre-existing findings there. Treat each finding or request in the summary like a thread.
 
 Read an item in full with `gh api` when the excerpt is not enough.
 
