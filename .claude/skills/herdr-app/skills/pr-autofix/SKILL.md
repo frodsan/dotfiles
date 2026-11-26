@@ -6,11 +6,13 @@ disable-model-invocation: true
 
 # PR auto-fix round
 
-Herdr sends you a round when this session's PR needs work and the session is idle. The message lists what changed: failing checks, merge conflicts, review threads. Handle the round in this worktree, then report (step 5).
+Herdr sends you a round when this session's PR needs work. The message lists what changed: merge conflicts, failing checks, review comments. "The author" is the person who owns this PR and this session. Your replies post from the author's account.
+
+Work in this worktree, in this order: conflicts, then CI, then comments. A merge can fix a check or move the lines a comment is about. Skip an item that is already handled: a check that now passes, a resolved thread. Then report (step 5).
 
 ## Rules
 
-Read `~/.claude/skills/herdr-app/skills/pr-fix/SKILL.md` and follow its Rules. Threads from origin `you` are your own: never reply to them.
+Read `~/.claude/skills/herdr-app/skills/pr-fix/SKILL.md` and follow its Rules. Never reply in a thread that the author started (origin `author`).
 
 ## 1. Conflicts
 
@@ -24,7 +26,7 @@ Handle each failed check as the CI section of that pr-fix file says. Merge the b
 
 The message lists two kinds of items:
 
-- **Threads**: inline comments on a line. Each has its origin (`bot` for the review bot, `human` or `you`) and the PR author's signal, if any.
+- **Threads**: inline comments on a line. Each has its origin (`bot` for the review bot, `human` for a teammate, `author`) and the author's signal, if any. The signal is the author's 👍 on the first comment, or the author's latest reply in the thread.
 - **Review summaries**: the text of a review, with no thread, from a person (origin `human`) or the review bot (`bot`). The review bot often puts its pre-existing findings there. Treat each finding or request in the summary like a thread.
 
 Read an item in full with `gh api` when the excerpt is not enough.
@@ -32,11 +34,11 @@ Read an item in full with `gh api` when the excerpt is not enough.
 Decide each thread:
 
 1. Estimate the size first. More than about 50 changed lines, or files the PR does not touch yet: always ask.
-2. Your own comment, or your reply in the thread: do what it says. If it is unclear or is a question, ask. If it says to ignore the comment, reply in one sentence with why (unless it is your own thread), then resolve it. For the review bot, add 👎 first.
-3. Your 👍: fix it.
+2. The author's own comment, or the author's reply in the thread: do what it says. If it is unclear or is a question, ask. If it says to ignore the comment, reply in one sentence with why (unless the author started the thread), then resolve it. For the review bot, add 👎 first. Never react 👎 to a person's comment.
+3. The author's 👍: fix it.
 4. No signal: fix it when the fix is technical and simple. Ask when it changes behavior, or when the reviewer is unsure (the comment is a question or hedges).
 5. Pre-existing findings (🟣) are about code the PR did not cause: ask. Offer **Fix it here**, **Spin it off** (a new session with the herdr-app:spin-off skill), **Ignore it**.
-6. The review bot reviewed the PR 3 or more times and only nits or pre-existing findings are left: ask about all of them at once instead of fixing.
+6. The review bot left 3 or more reviews on this PR (`gh pr view --json reviews`) and only nits (💬) or pre-existing findings (🟣) are left: ask about all of them at once instead of fixing.
 
 Fix, reply, react and resolve as the Comments section of that pr-fix file says.
 
@@ -44,7 +46,7 @@ A review summary has no thread to resolve. When you have handled all its finding
 
 ## 4. Then
 
-Do not start other work. Do not mark the PR ready, merge it, or request reviews.
+Do not start other work. Herdr marks the PR ready for review when a round finds nothing left, so do not do it yourself. Do not merge it or request reviews.
 
 ## 5. Report to Herdr
 

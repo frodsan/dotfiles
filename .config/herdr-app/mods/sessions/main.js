@@ -90,14 +90,14 @@ async function autoFixState(cwd, on) {
       const first = all[0];
       if (thread.isResolved || !first) return [];
       const login = first.author?.login ?? "ghost";
-      const origin = login === me ? "you" : isReviewBot(first.author) ? "bot" : MEMBER.includes(first.authorAssociation) ? "human" : null;
+      const origin = login === me ? "author" : isReviewBot(first.author) ? "bot" : MEMBER.includes(first.authorAssociation) ? "human" : null;
       if (!origin) return [];
       const reactions = (first.reactions?.nodes ?? []).filter((x) => x.user?.login === me).map((x) => x.content);
       if (reactions.includes("THUMBS_DOWN") || reactions.includes("CONFUSED")) return [];
-      const reply = [...all.slice(1)].reverse().find((c) => c.author?.login === me) ?? null;
+      const reply = [...all.slice(1)].reverse().find((c) => c.author?.login === me && !AGENT_REPLY.test(c.body ?? "")) ?? null;
       const last = all[all.length - 1];
-      if (origin !== "you" && last.author?.login === me && !reply) return [];
-      const signal = origin === "you" ? "your own comment" : reply ? `your reply: ${reply.body.replace(/\s+/g, " ").slice(0, 300)}` : reactions.includes("THUMBS_UP") ? "your 👍" : null;
+      if (origin !== "author" && last.author?.login === me && (!reply || last.id !== reply.id)) return [];
+      const signal = origin === "author" ? "the author's own comment" : reply ? `the author's reply: ${reply.body.replace(/\s+/g, " ").slice(0, 300)}` : reactions.includes("THUMBS_UP") ? "the author's 👍" : null;
       return [{ key: `${thread.id}:${last.id}`, thread: thread.id, comment: first.id, origin, author: login, path: thread.path, line: thread.line, body: first.body, url: first.url, signal }];
     });
     for (const review of data.repository.pullRequest.reviews?.nodes ?? []) {
