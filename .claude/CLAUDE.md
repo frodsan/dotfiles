@@ -52,4 +52,4 @@ Write the description as a briefing that a reviewer can read in under a minute. 
 
 ### Comments
 
-Start every comment, reply or review you post on GitHub with this label and a blank line: `<sub>AI generated</sub>`. When a skill gives its own format, follow the skill.
+Start every comment, reply or review you post on GitHub with this label and a blank line: `<sub>[AI-generated]</sub>`. When a skill gives its own format, follow the skill.
