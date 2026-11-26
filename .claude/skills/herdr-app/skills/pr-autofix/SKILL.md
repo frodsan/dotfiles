@@ -1,6 +1,7 @@
 ---
 name: pr-autofix
-description: Handle one auto-fix round on this session's pull request — failing CI, merge conflicts and review comments — then report the result to Herdr. Use when a message starts with /herdr-app:pr-autofix or "Auto-fix round for PR".
+description: Handle one auto-fix round on this session's pull request — failing CI, merge conflicts and review comments — then report the result to Herdr. Herdr sends it as /herdr-app:pr-autofix.
+disable-model-invocation: true
 ---
 
 # PR auto-fix round
@@ -9,15 +10,15 @@ Herdr sends you a round when this session's PR needs work and the session is idl
 
 ## Rules
 
-Load the herdr-app:pr-fix skill and follow its Rules. Threads from origin `you` are your own: never reply to them.
+Read `~/.claude/skills/herdr-app/skills/pr-fix/SKILL.md` and follow its Rules. Threads from origin `you` are your own: never reply to them.
 
 ## 1. Conflicts
 
-Update the branch with the herdr-app:update-branch skill.
+Update the branch as `~/.claude/skills/herdr-app/skills/update-branch/SKILL.md` says.
 
 ## 2. Failing CI
 
-Handle each failed check as the CI section of herdr-app:pr-fix says. Merge the base at most once per round.
+Handle each failed check as the CI section of that pr-fix file says. Merge the base at most once per round.
 
 ## 3. Review comments
 
@@ -37,7 +38,7 @@ Decide each thread:
 5. Pre-existing findings (🟣) are about code the PR did not cause: ask. Offer **Fix it here**, **Spin it off** (a new session with the herdr-app:spin-off skill), **Ignore it**.
 6. The review bot reviewed the PR 3 or more times and only nits or pre-existing findings are left: ask about all of them at once instead of fixing.
 
-Fix, reply, react and resolve as the Comments section of herdr-app:pr-fix says.
+Fix, reply, react and resolve as the Comments section of that pr-fix file says.
 
 A review summary has no thread to resolve. When you have handled all its findings (fixed, or the user answered), add 👍 to the review itself (`subjectId` = the review id). When the user says to ignore it, add 👎 instead (`content:THUMBS_DOWN`). Herdr stops sending a review once you have reacted to it.
 
