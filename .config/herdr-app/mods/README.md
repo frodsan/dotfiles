@@ -39,3 +39,5 @@ Your own commands in the command palette. Each one opens a terminal on the right
 ## shortcuts
 
 The keyboard shortcuts dialog (`⇧⌘/`). It reads `keys.json`, so it shows the keys you set.
+
+![The keyboard shortcuts dialog](shortcuts/screenshot.png)
