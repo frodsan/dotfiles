@@ -42,7 +42,7 @@ function failedCheck(e) {
 
 const isReviewBot = (author) => author?.__typename === "Bot";
 const AUTOFIX_DIR = () => `${appHome()}/data/autofix`;
-const AUTOFIX_ROUNDS = 3;
+const AUTOFIX_ROUNDS = 5;
 
 const requiredCache = {};
 async function requiredChecks(repo, base, cwd, on) {
