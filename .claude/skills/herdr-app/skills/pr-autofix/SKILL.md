@@ -35,18 +35,18 @@ The message lists two kinds of items:
 
 Read an item in full with `gh api` when the excerpt is not enough.
 
-Decide each thread:
+Decide each thread with these rules. The first rule that matches decides.
 
 1. Estimate the size first. More than about 50 changed lines, or files the PR does not touch yet: always ask.
 2. The author's own comment, or the author's reply in the thread: do what it says. If it is unclear or is a question, ask. If it says to ignore the comment, reply in one sentence with why (unless the author started the thread), then resolve it. For the review bot, add 👎 first. Never react 👎 to a person's comment.
 3. The author's 👍: fix it.
-4. No signal: fix it when the fix is technical and simple. Ask when it changes behavior, or when the reviewer is unsure (the comment is a question or hedges).
+4. The review bot left 3 or more reviews on this PR (`gh pr view --json reviews`) and only nits (💬) or pre-existing findings (🟣) are left: ask about all of them at once instead of fixing.
 5. Pre-existing findings (🟣) are about code the PR did not cause: ask. Offer **Fix it here**, **Spin it off** (a new session with the herdr-app:spin-off skill), **Ignore it**.
-6. The review bot left 3 or more reviews on this PR (`gh pr view --json reviews`) and only nits (💬) or pre-existing findings (🟣) are left: ask about all of them at once instead of fixing.
+6. No signal: fix it when the fix is technical and simple. Ask when it changes behavior, or when the reviewer is unsure (the comment is a question or hedges).
 
 Fix, reply, react and resolve as the Comments section of `pr-fix/SKILL.md` says.
 
-A review summary has no thread to resolve. When you have handled all its findings (fixed, or the user answered), add 👍 to the review itself (`subjectId` = the review id). When the user says to ignore it, add 👎 instead (`content:THUMBS_DOWN`). Herdr stops sending a review once you have reacted to it.
+A review summary has no thread to resolve. When you have handled all its findings (fixed, or the author answered), add 👍 to the review itself (`subjectId` = the review id). When the author says to ignore it, add 👎 (`content:THUMBS_DOWN`) to the review bot's review, or 👀 (`content:EYES`) to a person's. Herdr stops sending a review once you have reacted to it.
 
 ## 4. Then
 
@@ -54,11 +54,11 @@ Do not start other work. Herdr marks the PR ready for review when a round finds 
 
 ## 5. Report to Herdr
 
-At the end of the round, and again each time you finish auto-fix work after the user answers you, write the status:
+At the end of the round, and again each time you finish auto-fix work after the author answers you, write the status:
 
 ```sh
 mkdir -p ~/.config/herdr-app/data/autofix
 printf '{"state":"%s","reason":"%s"}\n' <done|needs_you> "<one short line>" > ~/.config/herdr-app/data/autofix/<PR number>.json
 ```
 
-Use `needs_you` when you asked the user something or stopped at a limit, and `done` otherwise. Keep `reason` free of quotes and line breaks. Then reply with a short summary: what you fixed, what you pushed, and what you need from the user.
+Use `needs_you` when you asked the author something or stopped at a limit, and `done` otherwise. Keep `reason` free of quotes and line breaks. Then reply with a short summary: what you fixed, what you pushed, and what you need from the author.
