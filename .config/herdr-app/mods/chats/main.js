@@ -28,8 +28,10 @@ function claudePane(s, ps) {
 export default class Chats extends View {
   init(_props, cx) {
     this.hover = null;
+    this.ranClaude = new Set();
     cx.spawn(async (cx) => this.loadChats(cx));
     cx.timer.every(500, () => this.adoptCreated());
+    cx.timer.every(1000, () => this.closeExited());
     cx.timer.every(10000, (cx) => {
       this.nameChatSpaces();
       this.loadChats(cx);
@@ -41,6 +43,19 @@ export default class Chats extends View {
         cx.notify();
       }
     });
+  }
+
+  closeExited() {
+    const linked = new Set(Object.values(map("chats.space")));
+    const ps = panes();
+    for (const space of spaces().filter((s) => linked.has(s.id))) {
+      const tabs = new Set(space.tabs.map((tab) => tab.id));
+      const own = ps.filter((p) => tabs.has(p.tab));
+      if (own.some((p) => p.program?.key === "claude" || /claude/i.test(p.app ?? ""))) { this.ranClaude.add(space.id); continue; }
+      if (!this.ranClaude.has(space.id)) continue;
+      this.ranClaude.delete(space.id);
+      if (own.length === 1 && own[0].program?.key === "shell") run("space.close", { id: space.id, confirmed: true });
+    }
   }
 
   adoptCreated() {
