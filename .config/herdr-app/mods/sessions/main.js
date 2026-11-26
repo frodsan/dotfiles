@@ -40,6 +40,7 @@ function failedCheck(e) {
   return e.status === "COMPLETED" && !["SUCCESS", "NEUTRAL", "SKIPPED", "CANCELLED", "STALE"].includes(e.conclusion);
 }
 
+const AGENT_REPLY = /Automated reply|Replied by (Claude|an agent)/;
 const isReviewBot = (author) => author?.__typename === "Bot";
 const AUTOFIX_DIR = () => `${appHome()}/data/autofix`;
 const AUTOFIX_ROUNDS = 5;
@@ -75,11 +76,15 @@ async function autoFixState(cwd, on) {
   const pending = [...latest.values()].some((e) => (e.__typename === "StatusContext" ? e.state === "PENDING" || e.state === "EXPECTED" : e.status !== "COMPLETED"));
   let threads = [];
   let unresolved = null;
+  let disliked = [];
   const g = await exec("gh", ["api", "graphql", "-f", `query=${THREADS}`, "-f", `owner=${owner}`, "-f", `name=${name}`, "-F", `number=${number}`], { cwd, on }).catch(() => null);
   if (g?.code === 0) {
     const data = JSON.parse(g.stdout).data;
     const me = data.viewer.login;
     unresolved = data.repository.pullRequest.reviewThreads.nodes.filter((thread) => !thread.isResolved).length;
+    disliked = data.repository.pullRequest.reviewThreads.nodes.flatMap((thread) => thread.comments.nodes
+      .filter((c) => c.author?.login === me && AGENT_REPLY.test(c.body ?? ""))
+      .flatMap((c) => (c.reactions?.nodes ?? []).filter((x) => x.content === "THUMBS_DOWN" && x.user?.login && x.user.login !== me).map((x) => ({ key: `dislike:${c.id}:${x.user.login}`, by: x.user.login, url: c.url }))));
     threads = data.repository.pullRequest.reviewThreads.nodes.flatMap((thread) => {
       const all = thread.comments.nodes;
       const first = all[0];
@@ -109,7 +114,7 @@ async function autoFixState(cwd, on) {
   }
   const conflict = view.mergeable === "CONFLICTING";
   const readyForReview = view.isDraft && !conflict && !failing.length && !(requiredPending ?? pending) && latest.size > 0 && unresolved === 0;
-  return { ...view, failing, requiredFailing, threads, conflict, readyForReview };
+  return { ...view, failing, requiredFailing, threads, disliked, conflict, readyForReview };
 }
 
 function autoFixPrompt(state, parts) {
@@ -1161,11 +1166,19 @@ export default class Sessions extends View {
         const state = await autoFixState(row.g.top, row.g.on).catch(() => null);
         if (!state || state.state !== "OPEN") continue;
         const handled = new Set(config.handled ?? []);
+        const dislikes = (state.disliked ?? []).filter((x) => !handled.has(x.key));
+        if (dislikes.length) {
+          for (const x of dislikes) handled.add(x.key);
+          setShared("pr.autoFix", { ...map("pr.autoFix"), [id]: { ...map("pr.autoFix")[id], handled: [...handled].slice(-500) } });
+          const who = [...new Set(dislikes.map((x) => `@${x.by}`))].join(", ");
+          notify({ title: `👎 on an automated reply: ${row.name}`, body: `${who} disliked ${dislikes.length === 1 ? "a reply" : `${dislikes.length} replies`} from Claude. ${dislikes[0].url}`, level: "warning", action: { name: "space.select", args: { id } } });
+          wakeForYou(id);
+        }
         const conflict = state.conflict && !handled.has(`conflict:${state.headRefOid}`);
         const checks = state.failing.filter((x) => !handled.has(x.key));
         const threads = state.threads.filter((x) => !handled.has(x.key));
         const rounds = (config.rounds ?? 0) + (threads.length ? 1 : 0);
-        const base = { ...config, number: state.number };
+        const base = { ...config, handled: [...handled].slice(-500), number: state.number };
         if (threads.length && rounds > AUTOFIX_ROUNDS) {
           setShared("pr.autoFix", { ...map("pr.autoFix"), [id]: { ...base, paused: `${AUTOFIX_ROUNDS} rounds on review comments` } });
           autoNotify({ title: `Auto-fix paused: ${row.name}`, body: `It handled review comments ${AUTOFIX_ROUNDS} times. Look at the PR, then turn auto-fix off and on to continue.`, level: "warning" });
