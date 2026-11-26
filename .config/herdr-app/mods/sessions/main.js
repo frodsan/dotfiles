@@ -5,7 +5,7 @@ import { SettingsDialog, conf, setConf, openSettings } from "./settings.js";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea } from "gpui-base";
 import { hc, keys, spaces, panes, machines, layout, run, exec, theme, shared, setShared, openOverlay, closeOverlay, props, nextCommand, playSound, readTextFile, writeTextFile, appHome, home, window, pickFolder, notify } from "herdr";
 
-const ICON = (name) => `mods/sessions/${name}.svg`;
+const ICON = (name) => `mods/sessions/assets/${name}.svg`;
 const GIT_REFRESH_MS = 60000;
 const PR_FRESH_MS = 5000;
 const CHATS_DIR = () => `${appHome()}/data/chats`;

@@ -222,7 +222,7 @@ export default class Chats extends View {
         .child(div().flex_1().text_size(12.5).font_medium().child("Chats"))
         .child(div().id("chat-new").p(4).rounded(6).text_color(t.dim).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground)).tooltip("New chat")
           .on_click((_e, cx) => this.newChat(cx))
-          .child(svg("mods/chats/plus.svg").size(13))))
+          .child(svg("mods/chats/assets/plus.svg").size(13))))
       .child(v_flex().id("chats-list").flex_1().min_h(0).px(8).pb(14).gap(2).overflow_y_scrollbar()
         .when(Boolean(this.chats) && chats.length === 0, (el) => el.child(div().px(8).py(8).text_size(12.5).text_color(t.dim).child("No chats yet. Press + to start one.")))
         .children(chats.map(row)));

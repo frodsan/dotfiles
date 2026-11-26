@@ -104,13 +104,13 @@ export function renderBar(view, isChat) {
       .text_size(12).bg(t.selected).text_color(t.foreground).hover(s => s.bg(t.hover)).on_mouse_down("left", stop)
       .tooltip("Auto-fix waits while you look at this session. Click to send it to Claude now.")
       .on_click(() => setShared("sessions.forward", { command: "autofix-now", at: Date.now() }))
-      .child(svg("mods/sessions/wrench.svg").size(13).text_color(t.working)).child(`Auto-fix: ${offer.summary}`).child(div().text_color(t.accent).child("Run"))))
+      .child(svg("mods/sessions/assets/wrench.svg").size(13).text_color(t.working)).child(`Auto-fix: ${offer.summary}`).child(div().text_color(t.accent).child("Run"))))
     .when(!isChat, el => el
       .child(toolButton("files", "Files", "mods/files/file.svg"))
       .child(toolButton("changes", "Changes", "mods/changes/changes.svg"))
-      .child(panelButton("pull-request", pr ? `#${pr.number}` : "Pull request", "mods/sessions/pr-open.svg")
+      .child(panelButton("pull-request", pr ? `#${pr.number}` : "Pull request", "mods/sessions/assets/pr-open.svg")
         .when(Boolean(pr?.ci), el => el.child(div().size(7).rounded(4).flex_none().bg(pr.ci === "failed" ? t.ansi1 : pr.ci === "running" ? t.working : t.done)))))
-    .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/sessions/win-min.svg").size(16) : "−", () => run("window.minimize")))
-      .child(button("maximize", w.platform === "windows" ? svg(`mods/sessions/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
-      .child(button("close-window", w.platform === "windows" ? svg("mods/sessions/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));
+    .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/sessions/assets/win-min.svg").size(16) : "−", () => run("window.minimize")))
+      .child(button("maximize", w.platform === "windows" ? svg(`mods/sessions/assets/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
+      .child(button("close-window", w.platform === "windows" ? svg("mods/sessions/assets/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));
 }

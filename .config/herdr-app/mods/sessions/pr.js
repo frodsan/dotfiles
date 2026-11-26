@@ -3,7 +3,7 @@ import { v_flex, h_flex } from "gpui-base";
 import { spaces, panes, exec, hc, run, theme, shared, setShared, notify, home, window } from "herdr";
 
 export const updateBranchCommand = (base) => `/herdr:update-branch ${base}`;
-const ICON = (name) => `mods/sessions/${name}.svg`;
+const ICON = (name) => `mods/sessions/assets/${name}.svg`;
 const REFRESH_MS = 60000;
 const MEMBER = ["OWNER", "MEMBER", "COLLABORATOR"];
 const COMMENT_PREVIEW = 400;
@@ -211,7 +211,7 @@ export class PullRequestPanel {
       h_flex().h(38).px(14).flex_none().items_center().border_b_1().border_color(t.border).gap(8)
         .child(svg(ICON("pr-open")).size(14).text_color(t.dim))
         .child(div().flex_1().text_size(12.5).font_medium().text_color(t.foreground).child("Pull request"))
-        .when(Boolean(c && this.loading.has(c.path)), (el) => el.child(svg("mods/sessions/spinner.svg").size(12).spin(900).text_color(t.dim)))
+        .when(Boolean(c && this.loading.has(c.path)), (el) => el.child(svg("mods/sessions/assets/spinner.svg").size(12).spin(900).text_color(t.dim)))
         .child(div().id("pr-refresh").p(4).rounded(5).text_size(11.5).text_color(t.dim).cursor_pointer().hover((s) => s.bg(t.hover).text_color(t.foreground)).tooltip("Refresh")
           .on_click((_e, cx) => this.refresh(cx, true)).child("↻")),
     ).child(v_flex().id("pr-body").flex_1().min_h(0).px(14).pb(18).overflow_y_scrollbar().child(child));
@@ -254,7 +254,7 @@ export class PullRequestPanel {
         .child(h_flex().id(`open-${i}`).px(6).py(2).gap(4).items_center().rounded(5).text_size(11.5).text_color(t.accent).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground))
           .tooltip("Open the thread on GitHub")
           .on_click((_e, cx) => { cx.stop_propagation(); exec("open", [k.url]); })
-          .child("GitHub").child(svg("mods/sessions/external-link.svg").size(11))));
+          .child("GitHub").child(svg("mods/sessions/assets/external-link.svg").size(11))));
     const busy = Boolean(this.busy);
     return frame(v_flex()
       .child(h_flex().pt(14).gap(6).items_center()
