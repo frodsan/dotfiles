@@ -40,7 +40,7 @@ export class SettingsDialog {
           div().text_size(11.5).text_color(t.dim).child("To run a setup command in new worktrees, right-click a folder in Sessions.")))
         .child(group("Settling",
           row("Auto-settle", "Settle a session when its pull request merges or closes. You can still turn it off per session.", onOff("autoSettle")),
-          row("Keep settled sessions for", "After that, Herdr deletes its worktree and Claude conversation. A worktree with uncommitted changes or commits that are not on GitHub stays, with a warning in Settled. The branch always stays.", h_flex().gap(4).children(SETTLED_DAYS.map((d) => choice(`settled-${d}`, d === 1 ? "1 day" : `${d} days`, c.settledDays === d, () => setConf({ settledDays: d })))))))
+          row("Keep settled sessions and archived chats for", "After that, Herdr deletes a settled session's worktree and Claude conversation. A worktree with uncommitted changes or commits that are not on GitHub stays, with a warning in Settled. The branch always stays. An archived chat moves to the Trash.", h_flex().gap(4).children(SETTLED_DAYS.map((d) => choice(`settled-${d}`, d === 1 ? "1 day" : `${d} days`, c.settledDays === d, () => setConf({ settledDays: d })))))))
         .child(group("Focus mode",
           row("Mute sounds", "When on, blocked sessions you can see still make a sound.", onOff("focusMute")),
           row("Working group", "Shows the focus sessions where Claude is working in their own group.", onOff("focusWorking"))))

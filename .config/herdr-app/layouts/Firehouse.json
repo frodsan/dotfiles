@@ -67,6 +67,19 @@
           }
         },
         {
+          "id": "chats-watch",
+          "type": "block",
+          "size": {
+            "px": 0
+          },
+          "content": {
+            "mod": "chats",
+            "props": {
+              "watch": true
+            }
+          }
+        },
+        {
           "id": "custom-commands",
           "type": "block",
           "size": {

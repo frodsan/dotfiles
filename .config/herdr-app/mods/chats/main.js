@@ -1,6 +1,6 @@
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, run, exec, theme, shared, setShared, nextCommand, readTextFile, writeTextFile, appHome, home } from "herdr";
+import { spaces, panes, run, exec, theme, shared, setShared, nextCommand, readTextFile, writeTextFile, appHome, home, props } from "herdr";
 
 const CLAUDE = "claude";
 const CHATS_DIR = () => `${appHome()}/data/chats`;
@@ -25,36 +25,69 @@ function claudePane(s, ps) {
   return ps.find((p) => tabs.has(p.tab) && p.terminal && (p.program?.key === "claude" || /claude/i.test(p.app ?? "")));
 }
 
+const DAY = 86400000;
+const keepDays = () => (shared("firehouse.settings") ?? {}).settledDays ?? 7;
+const claudeRunning = (p) => p.program?.key === "claude" || p.status != null;
+
+async function trashChat(id) {
+  const script = 'mkdir -p "$HOME/.Trash" && for p in "$1/$2.jsonl" "$1/$2"; do [ -e "$p" ] && mv "$p" "$HOME/.Trash/chat-$(basename "$p")-$3"; done; true';
+  await exec("sh", ["-c", script, "sh", CHATS_PROJECT(), id, String(Date.now())]).catch(() => null);
+  await updateChatsMeta((m) => { delete m[id]; });
+  const live = { ...map("chats.space") };
+  delete live[id];
+  setShared("chats.space", live);
+}
+
+const setArchived = (id, on) => updateChatsMeta((m) => {
+  m[id] = { ...(m[id] ?? {}) };
+  if (on) m[id].archivedAt = Date.now();
+  else delete m[id].archivedAt;
+});
+
 export default class Chats extends View {
   init(_props, cx) {
+    if (props()?.watch) return this.initWatch(cx);
     this.hover = null;
-    this.ranClaude = new Set();
     cx.spawn(async (cx) => this.loadChats(cx));
+    cx.timer.every(10000, (cx) => this.loadChats(cx));
+  }
+
+  initWatch(cx) {
+    this.ranClaude = new Set();
     cx.timer.every(500, () => this.adoptCreated());
     cx.timer.every(1000, () => this.closeExited());
-    cx.timer.every(10000, (cx) => {
-      this.nameChatSpaces();
-      this.loadChats(cx);
-    });
+    cx.timer.every(10000, () => this.nameChatSpaces());
+    cx.spawn(async () => this.purgeArchived());
+    cx.timer.every(600000, () => { this.purgeArchived(); });
     cx.spawn(async (cx) => {
       for (;;) {
         const command = await nextCommand();
         if (command === "new") this.newChat(cx);
-        cx.notify();
       }
     });
   }
 
   closeExited() {
-    const linked = new Set(Object.values(map("chats.space")));
+    const links = Object.entries(map("chats.space"));
     const ps = panes();
-    for (const space of spaces().filter((s) => linked.has(s.id))) {
+    for (const [chat, spaceId] of links) {
+      const space = spaces().find((s) => s.id === spaceId);
+      if (!space) { this.ranClaude.delete(spaceId); continue; }
       const tabs = new Set(space.tabs.map((tab) => tab.id));
       const own = ps.filter((p) => tabs.has(p.tab));
-      if (own.some((p) => p.program?.key === "claude" || /claude/i.test(p.app ?? ""))) { this.ranClaude.add(space.id); continue; }
-      if (!this.ranClaude.has(space.id)) continue;
+      if (own.some(claudeRunning)) { this.ranClaude.add(space.id); continue; }
+      if (!this.ranClaude.has(space.id) || own.length !== 1 || !own[0].terminal) continue;
       this.ranClaude.delete(space.id);
-      if (own.length === 1 && own[0].program?.key === "shell") run("space.close", { id: space.id, confirmed: true });
+      run("space.close", { id: space.id, confirmed: true });
+      setArchived(chat, true).catch(() => null);
+    }
+  }
+
+  async purgeArchived() {
+    const meta = JSON.parse((await readTextFile(CHATS_META()).catch(() => null)) ?? "{}");
+    const cutoff = Date.now() - keepDays() * DAY;
+    for (const [id, m] of Object.entries(meta)) {
+      if (m.archivedAt && m.archivedAt < cutoff) await trashChat(id);
     }
   }
 
@@ -148,7 +181,7 @@ export default class Chats extends View {
       }
       const ids = new Set(files.map((x) => x.id));
       const fresh = Object.entries(meta).filter(([id]) => !ids.has(id)).map(([id, m]) => ({ id, at: m.createdAt ?? 0 }));
-      this.chats = [...files, ...fresh].map((x) => ({ id: x.id, at: x.at, name: meta[x.id]?.name ?? "New chat" })).sort((a, b) => b.at - a.at);
+      this.chats = [...files, ...fresh].map((x) => ({ id: x.id, at: x.at, name: meta[x.id]?.name ?? "New chat", archivedAt: meta[x.id]?.archivedAt ?? null })).sort((a, b) => b.at - a.at);
     } finally {
       this.chatsLoading = false;
       cx.notify();
@@ -156,6 +189,7 @@ export default class Chats extends View {
   }
 
   async openChat(chat) {
+    if (chat.archivedAt) { chat.archivedAt = null; await setArchived(chat.id, false); }
     const spaceId = map("chats.space")[chat.id];
     const existing = spaces().find((sp) => sp.id === spaceId);
     if (existing) return run("space.select", { id: existing.id });
@@ -169,14 +203,17 @@ export default class Chats extends View {
     cx.spawn(async (cx) => {
       const spaceId = map("chats.space")[chat.id];
       if (spaces().some((sp) => sp.id === spaceId)) run("space.close", { id: spaceId });
-      const stamp = Date.now();
-      const script = 'mkdir -p "$HOME/.Trash" && for p in "$1/$2.jsonl" "$1/$2"; do [ -e "$p" ] && mv "$p" "$HOME/.Trash/chat-$(basename "$p")-$3"; done; true';
-      await exec("sh", ["-c", script, "sh", CHATS_PROJECT(), chat.id, String(stamp)]).catch(() => null);
-      await updateChatsMeta((m) => { delete m[chat.id]; });
-      const live = { ...map("chats.space") };
-      delete live[chat.id];
-      setShared("chats.space", live);
+      await trashChat(chat.id);
       this.confirmChat = null;
+      await this.loadChats(cx);
+    });
+  }
+
+  archiveChat(chat, cx) {
+    cx.spawn(async (cx) => {
+      const spaceId = map("chats.space")[chat.id];
+      if (spaces().some((sp) => sp.id === spaceId)) run("space.close", { id: spaceId });
+      await setArchived(chat.id, true);
       await this.loadChats(cx);
     });
   }
@@ -194,6 +231,8 @@ export default class Chats extends View {
   chatsList(t, cx) {
     if (!this.chats && !this.chatsLoading) cx.spawn(async (cx) => this.loadChats(cx));
     const chats = this.chats ?? [];
+    const active = chats.filter((c) => !c.archivedAt);
+    const archived = chats.filter((c) => c.archivedAt).sort((a, b) => b.archivedAt - a.archivedAt);
     const live = map("chats.space");
     const activeId = spaces().find((sp) => sp.active)?.id;
     const age = (at) => {
@@ -215,7 +254,13 @@ export default class Chats extends View {
         .child(div().flex_none().size(6).rounded(3).bg(space?.status === "working" ? t.working : space?.status === "blocked" ? t.blocked : space ? t.done : t.chrome))
         .child(v_flex().flex_1().min_w(0)
           .child(div().truncate().text_size(13).text_color(t.foreground).child(chat.name))
-          .child(div().truncate().text_size(11).text_color(t.dim).child(chat.at ? `${age(chat.at)} ago` : "not started")))
+          .child(div().truncate().text_size(11).text_color(t.dim).child(chat.archivedAt ? `archived ${age(chat.archivedAt)} ago` : chat.at ? `${age(chat.at)} ago` : "not started")))
+        .when(!chat.archivedAt && !confirming, (el) => el.child(div().id(`${key}-archive`).flex_none().p(3).rounded(4).text_color(t.dim)
+          .map(this.reveal(key))
+          .hover((st) => st.bg(t.raised).text_color(t.foreground))
+          .tooltip(`Archive this chat. It moves to the Trash after ${keepDays()} days.`)
+          .on_click((_e, cx) => { cx.stop_propagation(); this.archiveChat(chat, cx); })
+          .child(svg("mods/chats/assets/archive.svg").size(11))))
         .child(div().id(`${key}-remove`).flex_none().px(confirming ? 6 : 3).py(3).rounded(4).text_size(11)
           .text_color(confirming ? t.blocked : t.dim)
           .when(!confirming, (el) => el.map(this.reveal(key)))
@@ -239,11 +284,24 @@ export default class Chats extends View {
           .on_click((_e, cx) => this.newChat(cx))
           .child(svg("mods/chats/assets/plus.svg").size(13))))
       .child(v_flex().id("chats-list").flex_1().min_h(0).px(8).pb(14).gap(2).overflow_y_scrollbar()
-        .when(Boolean(this.chats) && chats.length === 0, (el) => el.child(div().px(8).py(8).text_size(12.5).text_color(t.dim).child("No chats yet. Press + to start one.")))
-        .children(chats.map(row)));
+        .when(Boolean(this.chats) && active.length === 0, (el) => el.child(div().px(8).py(8).text_size(12.5).text_color(t.dim).child("No chats yet. Press + to start one.")))
+        .children(active.map(row))
+        .children(this.archivedList(archived, row, t)));
+  }
+
+  archivedList(archived, row, t) {
+    if (!archived.length) return [];
+    const open = localStorage.getItem("chats.archived.open") === "1";
+    const head = h_flex().id("chats-archived").mt(12).px(6).py(4).gap(6).items_center().rounded(6).text_size(12).text_color(t.dim).cursor_pointer().hover((st) => st.bg(t.hover))
+      .tooltip(`Archived chats move to the Trash after ${keepDays()} days, as set in Session settings`)
+      .on_click((_e, cx) => { localStorage.setItem("chats.archived.open", open ? "0" : "1"); cx.notify(); })
+      .child(svg(`mods/chats/assets/${open ? "chevron-down" : "chevron-right"}.svg`).size(12).flex_none())
+      .child(div().flex_1().font_medium().child(`Archived · ${archived.length}`));
+    return open ? [head, ...archived.map(row)] : [head];
   }
 
   render(cx) {
+    if (props()?.watch) return div();
     const t = theme();
     return v_flex().size_full().min_h(0).bg(t.chrome).child(this.chatsList(t, cx));
   }
