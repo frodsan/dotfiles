@@ -40,7 +40,7 @@ function failedCheck(e) {
   return e.status === "COMPLETED" && !["SUCCESS", "NEUTRAL", "SKIPPED", "CANCELLED", "STALE"].includes(e.conclusion);
 }
 
-const AGENT_REPLY = /\[AI-generated\]|Automated reply|Replied by (Claude|an agent)/;
+const AGENT_REPLY = /\[AI-generated\]/;
 const isReviewBot = (author) => author?.__typename === "Bot";
 const AUTOFIX_DIR = () => `${appHome()}/data/autofix`;
 const AUTOFIX_ROUNDS = 5;
