@@ -1,6 +1,6 @@
-# Herdr mods
+# Herdr config
 
-The Firehouse layout uses these mods. `install.sh` links each folder into `~/.config/herdr-app/mods/`. Keys come from `../keys.json`.
+The Firehouse layout, `layouts/Firehouse.json`, uses the mods below. `install.sh` links each mod folder into `~/.config/herdr-app/mods/`. Keys come from `keys.json`. Screenshots are in `docs/`.
 
 ## sessions
 
@@ -26,6 +26,8 @@ Claude conversations that belong to no repo. They run in `~/.config/herdr-app/da
 
 - Chats list (`⇧⌘C`, or the chat icon in the sidebar header). Swaps the session list for the chats list.
 - New chat (`⇧⌘N`). Starts a chat in its own space and names it after the conversation.
+- Archive. Exiting Claude closes the chat's space and archives the chat. The archive button on a row does the same. Archived chats are in the folded Archived group, and opening one restores it. After the "Keep settled sessions and archived chats for" setting, 7 days by default, an archived chat moves to the Trash.
+- The layout has a 0px `chats` block with `"watch": true`. That copy always runs, even while the chats list is hidden. It closes and archives exited chats, names new chats, moves old archived chats to the Trash and handles `chats.new`.
 
 ## custom-commands
 
@@ -40,4 +42,4 @@ Your own commands in the command palette. Each one opens a terminal on the right
 
 The keyboard shortcuts dialog (`⇧⌘/`). It reads `keys.json`, so it shows the keys you set.
 
-![The keyboard shortcuts dialog](shortcuts/assets/screenshot.png)
+![The keyboard shortcuts dialog](docs/shortcuts.png)
