@@ -62,7 +62,7 @@ Type is Herdr's UI font. Sidebar rows are 13px, meta lines 11px to 12px.
 
 **Merge when ready.** Herdr adds the pull request to GitHub's merge queue once it is approved, mergeable and not a draft, and its merge state is clean, unstable or has hooks. It takes the pull request out of the queue while auto-fix works on it, and queues it again afterwards.
 
-**Settle.** A merged or closed pull request moves its session to Settled. After the keep setting, 7 days by default, Herdr removes the worktree and the Claude conversation. A worktree with uncommitted changes or unpushed commits stays, with a warning. The branch always stays. Restore brings Claude back on the same conversation.
+**Settle.** A merged or closed pull request moves its session to Settled. After the keep setting, 7 days by default, Herdr removes the worktree, uncommitted changes included, and the Claude conversation, with `git worktree remove --force`. The branch always stays, with its commits. "Remove now" before then keeps a worktree with uncommitted changes or unpushed commits, marks it kept, and offers to remove it anyway. The Settled heading has "Remove kept · N" to remove every kept one. Restore brings Claude back on the same conversation.
 
 **Snooze.** It hides a session until a time, such as tomorrow at 9:00 or next Monday at 9:00. The settings set the hour. Auto-fix wakes a snoozed session early when it needs you. In focus mode, that plays the blocked sound.
 

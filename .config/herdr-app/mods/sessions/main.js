@@ -367,7 +367,7 @@ function archived() {
   return allSettled().filter((entry) => !expired(entry) || entry.kept);
 }
 
-async function cleanUpSettled(entry) {
+async function cleanUpSettled(entry, force = false) {
   const cwd = (entry.cwd ?? "").replace(/\/+$/, "");
   const exists = cwd ? (await exec("test", ["-d", cwd]).catch(() => null))?.code === 0 : false;
   if (exists) {
@@ -375,9 +375,9 @@ async function cleanUpSettled(entry) {
     if (dirs?.code === 0) {
       const [dir, common] = dirs.stdout.trim().split("\n");
       if (dir !== common) {
-        if ((await exec("git", ["-C", cwd, "status", "--porcelain"])).stdout.trim()) return "uncommitted changes";
-        if ((await exec("git", ["-C", cwd, "log", "--oneline", "-n", "1", "HEAD", "--not", "--remotes"])).stdout.trim()) return "commits that are not on GitHub";
-        const removed = await exec("git", ["-C", common.replace(/\/\.git\/?$/, ""), "worktree", "remove", cwd]);
+        if (!force && (await exec("git", ["-C", cwd, "status", "--porcelain"])).stdout.trim()) return "uncommitted changes";
+        if (!force && (await exec("git", ["-C", cwd, "log", "--oneline", "-n", "1", "HEAD", "--not", "--remotes"])).stdout.trim()) return "commits that are not on GitHub";
+        const removed = await exec("git", ["-C", common.replace(/\/\.git\/?$/, ""), "worktree", "remove", ...(force ? ["--force", "--force"] : []), cwd]);
         if (removed.code !== 0) return (removed.stderr || removed.stdout).trim().split("\n")[0] || "git worktree remove failed";
       }
     }
@@ -394,8 +394,8 @@ async function cleanUpSettled(entry) {
   return null;
 }
 
-async function forgetSettled(entry) {
-  const kept = await cleanUpSettled(entry);
+async function forgetSettled(entry, force = false) {
+  const kept = await cleanUpSettled(entry, force);
   if (kept) {
     setShared("sessions.archive", allSettled().map((other) => (other.key === entry.key ? { ...other, kept } : other)));
     return kept;
@@ -870,13 +870,17 @@ export default class Sessions extends View {
   }
 
   async forgetPending(cx) {
-    const key = shared("sessions.removing")?.settled;
-    if (!key) return;
+    const job = shared("sessions.removing");
+    if (!job?.settled && !job?.keptAll) return;
     setShared("sessions.removing", null);
-    const entry = allSettled().find((e) => e.key === key);
-    if (!entry) return;
-    const kept = await forgetSettled(entry).catch((e) => e.message);
-    if (kept) notify({ title: `Kept the worktree of “${entry.name}”`, body: `It has ${kept}. Push or discard them, then remove it again.`, level: "warning" });
+    const entries = job.keptAll ? allSettled().filter((e) => e.kept) : allSettled().filter((e) => e.key === job.settled);
+    const failed = [];
+    for (const entry of entries) {
+      const kept = await forgetSettled(entry, job.keptAll || Boolean(job.force)).catch((e) => e.message);
+      if (kept) failed.push(`${entry.name}: ${kept}`);
+    }
+    if (failed.length === 1 && !job.keptAll) notify({ title: `Kept the worktree of “${entries[0].name}”`, body: `It has ${failed[0].split(": ").slice(1).join(": ")}. Push or discard them, then remove it again.`, level: "warning" });
+    else if (failed.length) notify({ title: `Could not remove ${failed.length} of ${entries.length} settled sessions`, body: failed.slice(0, 3).join("\n"), level: "warning" });
     cx.notify();
   }
 
@@ -1136,7 +1140,7 @@ export default class Sessions extends View {
     if (!due.length) return;
     this.purging = true;
     cx.spawn(async (cx) => {
-      for (const entry of due) await forgetSettled(entry).catch(() => null);
+      for (const entry of due) await forgetSettled(entry, true).catch(() => null);
       this.purging = false;
       cx.notify();
     });
@@ -1821,7 +1825,20 @@ export default class Sessions extends View {
       .on_click((_e, cx) => { localStorage.setItem("archive.open", open ? "0" : "1"); cx.notify(); })
       .child(svg(ICON(open ? "chevron-down" : "chevron-right")).size(12).flex_none())
       .child(svg(ICON("check")).size(12).flex_none())
-      .child(div().flex_1().font_medium().child(`Settled · ${entries.length}`));
+      .child(div().flex_1().font_medium().child(`Settled · ${entries.length}`))
+      .map((el) => {
+        const kept = entries.filter((e) => e.kept).length;
+        if (!kept) return el;
+        return el.child(div().id("archive-remove-kept").flex_none().px(6).py(2).rounded(4).text_size(11.5).text_color(t.dim)
+          .hover((st) => st.bg(t.raised).text_color(t.foreground))
+          .tooltip("Remove the settled sessions whose worktrees Herdr kept, with their changes")
+          .on_click((_e, cx) => {
+            cx.stop_propagation();
+            setShared("sessions.removing", { keptAll: true });
+            confirmRemove(`Remove ${kept} kept ${kept === 1 ? "session" : "sessions"}?`, `Herdr deletes ${kept === 1 ? "its worktree" : "their worktrees"} with any uncommitted changes, and the Claude conversations. The branches stay, with their commits.`, "sessions.forget-settled");
+          })
+          .child(`Remove kept · ${kept}`));
+      });
     if (!open) return [head];
     return [head, ...entries.map((entry) => h_flex().id(`archived-${entry.key}`).px(8).py(5).gap(8).items_center().rounded(6).hover((st) => st.bg(t.hover))
       .child(svg(ICON("archive")).size(12).flex_none().text_color(t.dim))
@@ -1839,8 +1856,9 @@ export default class Sessions extends View {
       .child(div().id(`forget-${entry.key}`).flex_none().p(3).rounded(4).text_color(t.dim).tooltip("Remove now: deletes its worktree and Claude conversation")
         .hover((st) => st.bg(t.raised).text_color(t.foreground))
         .on_click(() => {
-          setShared("sessions.removing", { settled: entry.key });
-          confirmRemove(`Remove “${entry.name}” now?`, "Herdr deletes its worktree and Claude conversation. A worktree with uncommitted changes or unpushed commits stays. The branch stays.", "sessions.forget-settled");
+          setShared("sessions.removing", { settled: entry.key, force: Boolean(entry.kept) });
+          if (entry.kept) confirmRemove(`Remove “${entry.name}” and its ${entry.kept}?`, `Herdr deletes its worktree with its ${entry.kept}, and its Claude conversation. The branch stays, with its commits.`, "sessions.forget-settled");
+          else confirmRemove(`Remove “${entry.name}” now?`, "Herdr deletes its worktree and Claude conversation. A worktree with uncommitted changes or unpushed commits stays. The branch stays.", "sessions.forget-settled");
         })
         .child(svg("mods/workspace-chrome/x.svg").size(11))))];
   }

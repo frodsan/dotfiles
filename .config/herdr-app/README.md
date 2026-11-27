@@ -20,7 +20,7 @@ The Pull request panel (`⌥⌘P`) shows the checks and reviews of the session's
 
 - **Fix.** Every 2 minutes, Firehouse checks for failed CI, merge conflicts and new review comments, and hands them to Claude. Claude reruns flaky jobs, fixes real failures, replies to reviewers and resolves their threads. After 5 rounds of review comments, it stops and asks you. Each reply starts with `[AI-generated]` and asks the reviewer to react 👎 if it's wrong. A 👎 sends you a notification.
 - **Merge.** Firehouse puts the pull request in the merge queue once it's ready. If auto-fix starts on it again, Firehouse takes it out of the queue and puts it back when the fix is done.
-- **Settle.** When the pull request merges or closes, the session moves to Settled. After 7 days, Firehouse deletes its worktree and Claude conversation. A worktree with uncommitted changes or unpushed commits stays, with a warning.
+- **Settle.** When the pull request merges or closes, the session moves to Settled. After 7 days, Firehouse deletes its worktree and Claude conversation, uncommitted changes included. The branch stays, with its commits.
 
 ## Every tool one key away
 
