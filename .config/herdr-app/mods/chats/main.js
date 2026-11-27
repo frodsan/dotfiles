@@ -38,6 +38,13 @@ async function trashChat(id) {
   setShared("chats.space", live);
 }
 
+const TITLE_PROMPT = "You name chat conversations. Reply with only a title of 3 to 6 words, in sentence case, that says what this first message asks about. No quotes, no trailing period, nothing else.";
+
+async function shellRun(script, args) {
+  const shell = await exec("sh", ["-c", 'dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk \'{print $2}\'']).catch(() => null);
+  return exec(shell?.stdout.trim() || "/bin/zsh", ["-ilc", script, "sh", ...args]);
+}
+
 async function firstStartSinceBoot(key) {
   const r = await exec("sysctl", ["-n", "kern.boottime"]).catch(() => null);
   const boot = r?.stdout.match(/sec = (\d+)/)?.[1];
@@ -72,15 +79,17 @@ export default class Chats extends View {
     this.ranClaude = new Set();
     cx.timer.every(500, () => this.adoptCreated());
     cx.timer.every(1000, () => this.closeExited());
-    cx.timer.every(10000, () => this.nameChatSpaces());
+    cx.timer.every(10000, (cx) => { this.nameChatSpaces(); cx.spawn(async () => { await this.titleChats().catch(() => null); }); });
     cx.spawn(async () => this.purgeArchived());
     cx.timer.every(600000, () => { this.purgeArchived(); });
     cx.timer.after(8000, () => { this.resumeAfterBoot().catch(() => null); });
     cx.spawn(async (cx) => {
       for (;;) {
         const command = await nextCommand();
-        if (command === "new") this.newChat(cx);
-        else if (command === "remove") await this.removePending();
+        try {
+          if (command === "new") this.newChat(cx);
+          else if (command === "remove") await this.removePending();
+        } catch {}
       }
     });
   }
@@ -96,6 +105,31 @@ export default class Chats extends View {
       if (own.some(claudeRunning) || own.length !== 1 || !own[0].terminal) continue;
       const stored = await exec("test", ["-f", `${CHATS_PROJECT()}/${chat}.jsonl`]).then((r) => r.code === 0).catch(() => false);
       if (stored) hc(["send", own[0].terminal, `${CLAUDE} --resume ${chat}`]);
+    }
+  }
+
+  async titleChats() {
+    if (this.titling) return;
+    this.titling = true;
+    try {
+      const meta = JSON.parse((await readTextFile(CHATS_META()).catch(() => null)) ?? "{}");
+      for (const [id, m] of Object.entries(meta)) {
+        if (m.titled || m.archivedAt) continue;
+        const first = await exec("sh", ["-c", 'head -c 400000 "$1" 2>/dev/null | grep -m1 -F "$2"', "sh", `${CHATS_PROJECT()}/${id}.jsonl`, '"type":"user"']).catch(() => null);
+        let text = "";
+        try { const c = JSON.parse(first?.stdout ?? "").message?.content; text = typeof c === "string" ? c : (c ?? []).map((x) => x.text ?? "").join(" "); } catch {}
+        text = text.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, "").replace(/\s+/g, " ").trim();
+        if (!text) continue;
+        const r = await shellRun('claude -p --model haiku "$1" < /dev/null', [`${TITLE_PROMPT}\n\n<message>\n${text.slice(0, 2000)}\n</message>`]).catch(() => null);
+        const title = (r?.code === 0 ? r.stdout : "").split("\n").map((l) => l.trim()).find(Boolean)?.replace(/^["'“]+|["'”.]+$/g, "").slice(0, 60);
+        if (!title) continue;
+        await updateChatsMeta((all) => { all[id] = { ...(all[id] ?? {}), name: title, titled: true }; });
+        const spaceId = map("chats.space")[id];
+        if (spaces().some((sp) => sp.id === spaceId)) run("space.rename", { id: spaceId, name: title });
+        setShared("chats.changed", Date.now());
+      }
+    } finally {
+      this.titling = false;
     }
   }
 
@@ -193,11 +227,11 @@ export default class Chats extends View {
       for (const file of files) {
         if (meta[file.id]?.name && meta[file.id].name !== "New chat") continue;
         const path = `${CHATS_PROJECT()}/${file.id}.jsonl`;
-        const title = await exec("sh", ["-c", 'grep "\"type\":\"ai-title\"" "$1" | tail -1', "sh", path]).catch(() => null);
+        const title = await exec("sh", ["-c", 'grep -F "$2" "$1" | tail -1', "sh", path, '"type":"ai-title"']).catch(() => null);
         let text = "";
         try { text = JSON.parse(title?.stdout ?? "").aiTitle ?? ""; } catch {}
         if (!text) {
-          const first = await exec("sh", ["-c", 'head -c 400000 "$1" | grep -m1 "\"type\":\"user\""', "sh", path]).catch(() => null);
+          const first = await exec("sh", ["-c", 'head -c 400000 "$1" | grep -m1 -F "$2"', "sh", path, '"type":"user"']).catch(() => null);
           try { const c = JSON.parse(first?.stdout ?? "").message?.content; text = typeof c === "string" ? c : (c ?? []).map((x) => x.text ?? "").join(" "); } catch {}
         }
         text = text.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, "").replace(/\s+/g, " ").trim();
