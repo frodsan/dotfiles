@@ -14,6 +14,8 @@ Work in this worktree, in this order: conflicts, then CI, then comments. A merge
 
 Read `~/.claude/skills/herdr/skills/pr-fix/SKILL.md` and follow its Rules. Never reply in a thread that the author started (origin `author`).
 
+Reply only in threads that the review bot started (origin `bot`). In a teammate's thread (origin `human`), never reply, react or resolve, because the author answers teammates in person. Fix it and push when the rules below say to, then leave the thread open and list it in the report.
+
 ## 1. Conflicts
 
 Update the branch as `~/.claude/skills/herdr/skills/update-branch/SKILL.md` says.
@@ -38,13 +40,13 @@ Read an item in full with `gh api` when the excerpt is not enough.
 Decide each thread with these rules. The first rule that matches decides.
 
 1. Estimate the size first. More than about 50 changed lines, or files the PR does not touch yet: always ask.
-2. The author's own comment, or the author's reply in the thread: do what it says. If it is unclear or is a question, ask. If it says to ignore the comment, reply in one sentence with why (unless the author started the thread), then resolve it. For the review bot, add 👎 first. Never react 👎 to a person's comment.
+2. The author's own comment, or the author's reply in the thread: do what it says. If it is unclear or is a question, ask. If it says to ignore a review bot comment, add 👎, reply in one sentence with why, then resolve it. If it says to ignore a teammate's comment, leave the thread as it is. Never react 👎 to a person's comment.
 3. The author's 👍: fix it.
 4. The review bot left 3 or more reviews on this PR (`gh pr view --json reviews`) and only nits (💬) or pre-existing findings (🟣) are left: ask about all of them at once instead of fixing.
 5. Pre-existing findings (🟣) are about code the PR did not cause: ask. Offer **Fix it here**, **Spin it off** (a new session with the herdr:spin-off skill), **Ignore it**.
 6. No signal: fix it when the fix is technical and simple. Ask when it changes behavior, or when the reviewer is unsure (the comment is a question or hedges).
 
-Fix, reply, react and resolve as the Comments section of `pr-fix/SKILL.md` says.
+Fix, reply, react and resolve review bot threads as the Comments section of `pr-fix/SKILL.md` says. For a teammate's thread, only fix and push.
 
 A review summary has no thread to resolve. When you have handled all its findings (fixed, or the author answered), add 👍 to the review itself (`subjectId` = the review id). When the author says to ignore it, add 👎 (`content:THUMBS_DOWN`) to the review bot's review, or 👀 (`content:EYES`) to a person's. Herdr stops sending a review once you have reacted to it.
 
@@ -61,4 +63,4 @@ mkdir -p ~/.config/herdr-app/data/autofix
 printf '{"state":"%s","reason":"%s"}\n' <done|needs_you> "<one short line>" > ~/.config/herdr-app/data/autofix/<PR number>.json
 ```
 
-Use `needs_you` when you asked the author something or stopped at a limit, and `done` otherwise. Keep `reason` free of quotes and line breaks. Then reply with a short summary: what you fixed, what you pushed, and what you need from the author.
+Use `needs_you` when you asked the author something, stopped at a limit, or fixed a teammate's thread that the author still has to answer. Use `done` otherwise. Keep `reason` free of quotes and line breaks. Then reply with a short summary: what you fixed, what you pushed, and what you need from the author. List each teammate thread you fixed with its link and the short commit SHA, so the author can answer it.
