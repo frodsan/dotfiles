@@ -9,7 +9,7 @@ const setList = (commands) => setShared("commands.list", commands);
 function moveOldList() {
   const { commands, ...rest } = OLD();
   if (!commands) return;
-  if (shared("commands.list") === undefined) setList(commands);
+  if (shared("commands.list") == null) setList(commands);
   setShared("firehouse.settings", rest);
 }
 const openEditor = () => openOverlay({ mod: "custom-commands", kind: "dialog", width: 620, height: 520, props: { editor: true } });
