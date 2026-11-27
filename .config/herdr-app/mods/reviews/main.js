@@ -609,93 +609,109 @@ export default class Reviews extends View {
       .when(Boolean(report), (el) => el.child(div().text_size(12.5).child(TextView.markdown(`claude-${pr.number}-${e.finishedAt}`, report).selectable(true))));
   }
 
-ruleFor(pr, cx) {
-  this.rulesets ??= {};
-  const key = `${pr.repo}@${pr.baseRefName}`;
-  const cached = this.rulesets[key];
-  if (cached && (cached.loading || Date.now() - cached.at < DAY_MS)) return cached;
-  this.rulesets[key] = { loading: true, at: Date.now() };
-  cx.spawn(async (cx) => {
-    const r = await exec("gh", ["api", `repos/${pr.repo}/rules/branches/${encodeURIComponent(pr.baseRefName)}`]).catch(() => null);
-    const rules = r?.code === 0 ? JSON.parse(r.stdout).filter((x) => x.type === "pull_request").map((x) => x.parameters ?? {}) : [];
-    this.rulesets[key] = { approvals: Math.max(0, ...rules.map((x) => x.required_approving_review_count ?? 0)), at: Date.now() };
-    cx.notify();
-  });
-  return this.rulesets[key];
-}
+  ruleFor(pr, cx) {
+    this.rulesets ??= {};
+    const key = `${pr.repo}@${pr.baseRefName}`;
+    const cached = this.rulesets[key];
+    if (cached && (cached.loading || Date.now() - cached.at < DAY_MS)) return cached;
+    this.rulesets[key] = { loading: true, at: Date.now() };
+    cx.spawn(async (cx) => {
+      const r = await exec("gh", ["api", `repos/${pr.repo}/rules/branches/${encodeURIComponent(pr.baseRefName)}`]).catch(() => null);
+      const rules = r?.code === 0 ? JSON.parse(r.stdout).filter((x) => x.type === "pull_request").map((x) => x.parameters ?? {}) : [];
+      this.rulesets[key] = { approvals: Math.max(0, ...rules.map((x) => x.required_approving_review_count ?? 0)), at: Date.now() };
+      cx.notify();
+    });
+    return this.rulesets[key];
+  }
 
-statusBar(t, pr, details, cx) {
-  const segments = (parts) => {
-    const total = parts.reduce((sum, [n]) => sum + n, 0);
-    if (!total) return div().w_full().h(6).rounded(3).border_1().border_color(t.border);
-    return h_flex().w_full().h(6).gap(2).rounded(3).overflow_hidden()
-      .children(parts.filter(([n]) => n > 0).map(([n, color]) => div().h_full().bg(color).w(`${(n / total) * 100}%`)));
-  };
-  const card = (id, title, note, noteColor, bar, onClick) => v_flex().id(`status-${id}`).flex_1().min_w(0).gap(10).px(14).py(12).cursor_pointer().hover((st) => st.bg(t.hover))
-    .on_click((_e, cx) => { onClick(); cx.notify(); })
-    .child(h_flex().gap(6).items_center()
-      .child(div().flex_none().text_size(13).font_semibold().text_color(t.foreground).child(title))
-      .child(div().flex_1().min_w(0).truncate().text_size(12).text_color(noteColor ?? t.dim).child(note))
-      .child(svg(ICON("chevron-right")).size(12).flex_none().text_color(t.dim)))
-    .child(bar);
-  const ready = details && !details.loading && !details.error;
-  const c = ready ? details.checks : { passed: 0, pending: 0, failing: 0 };
-  const checkNote = !ready ? "Loading…" : c.failing ? `${c.failing} failing` : c.pending ? `${c.pending} running` : c.passed ? "All passed" : "None";
-  const threads = ready ? details.threads ?? [] : [];
-  const open = threads.filter((th) => !th.resolved).length;
-  const threadNote = !ready ? "Loading…" : !threads.length ? "None" : open ? `${open} unresolved` : "All resolved";
-  const rule = this.ruleFor(pr, cx);
-  const people = (pr.reviews ?? []).filter((r) => !r.bot);
-  const approved = people.filter((r) => r.state === "APPROVED").length;
-  const changes = people.filter((r) => r.state === "CHANGES_REQUESTED").length;
-  const need = rule.approvals ?? 0;
-  const missing = Math.max(0, need - approved);
-  const approvalNote = rule.loading ? "Loading…" : changes ? "Changes requested" : missing ? `${missing} still required` : approved ? "Approved" : "None required";
-  return h_flex().rounded(10).border_1().border_color(t.border).overflow_hidden()
-    .child(card("checks", "Checks", checkNote, c.failing ? t.ansi1 : null, segments([[c.passed, t.done], [c.pending, t.working], [c.failing, t.ansi1]]), () => { this.tab = "checks"; localStorage.setItem("tab", "checks"); }))
-    .child(div().w(1).h_full().flex_none().bg(t.border))
-    .child(card("comments", "Comments", threadNote, open ? t.working : null, segments([[threads.length - open, t.done], [open, t.working]]), () => { this.tab = "files"; localStorage.setItem("tab", "files"); }))
-    .child(div().w(1).h_full().flex_none().bg(t.border))
-    .child(card("approvals", "Approvals", approvalNote, changes ? t.blocked : null, segments([[approved, t.done], [changes, t.blocked], [missing, t.dim]]), () => exec("open", [pr.url])));
-}
+  statusBar(t, pr, details, cx) {
+    const segments = (parts) => {
+      const total = parts.reduce((sum, [n]) => sum + n, 0);
+      if (!total) return div().w_full().h(6).rounded(3).border_1().border_color(t.border);
+      return h_flex().w_full().h(6).gap(2).rounded(3).overflow_hidden()
+        .children(parts.filter(([n]) => n > 0).map(([n, color]) => div().h_full().bg(color).w(`${(n / total) * 100}%`)));
+    };
+    const card = (id, title, note, noteColor, bar, onClick) => v_flex().id(`status-${id}`).flex_1().min_w(0).gap(10).px(14).py(12).cursor_pointer().hover((st) => st.bg(t.hover))
+      .on_click((_e, cx) => { onClick(); cx.notify(); })
+      .child(h_flex().gap(6).items_center()
+        .child(div().flex_none().text_size(13).font_semibold().text_color(t.foreground).child(title))
+        .child(div().flex_1().min_w(0).truncate().text_size(12).text_color(noteColor ?? t.dim).child(note))
+        .child(svg(ICON("chevron-right")).size(12).flex_none().text_color(t.dim)))
+      .child(bar);
+    const ready = details && !details.loading && !details.error;
+    const c = ready ? details.checks : { passed: 0, pending: 0, failing: 0 };
+    const checkNote = !ready ? "Loading…" : c.failing ? `${c.failing} failing` : c.pending ? `${c.pending} running` : c.passed ? "All passed" : "None";
+    const threads = ready ? details.threads ?? [] : [];
+    const open = threads.filter((th) => !th.resolved).length;
+    const threadNote = !ready ? "Loading…" : !threads.length ? "None" : open ? `${open} unresolved` : "All resolved";
+    const rule = this.ruleFor(pr, cx);
+    const people = (pr.reviews ?? []).filter((r) => !r.bot);
+    const approved = people.filter((r) => r.state === "APPROVED").length;
+    const changes = people.filter((r) => r.state === "CHANGES_REQUESTED").length;
+    const need = rule.approvals ?? 0;
+    const missing = Math.max(0, need - approved);
+    const approvalNote = rule.loading ? "Loading…" : changes ? "Changes requested" : missing ? `${missing} still required` : approved ? "Approved" : "None required";
+    const bar = h_flex()
+      .child(card("checks", "Checks", checkNote, c.failing ? t.ansi1 : null, segments([[c.passed, t.done], [c.pending, t.working], [c.failing, t.ansi1]]), () => { this.tab = "checks"; localStorage.setItem("tab", "checks"); }))
+      .child(div().w(1).h_full().flex_none().bg(t.border))
+      .child(card("comments", "Comments", threadNote, open ? t.working : null, segments([[threads.length - open, t.done], [open, t.working]]), () => { this.tab = "files"; localStorage.setItem("tab", "files"); }))
+      .child(div().w(1).h_full().flex_none().bg(t.border))
+      .child(card("approvals", "Approvals", approvalNote, changes ? t.blocked : null, segments([[approved, t.done], [changes, t.blocked], [missing, t.dim]]), () => { this.approvalsOpen = !this.approvalsOpen; }));
+    const label = { APPROVED: ["approved", t.done, "check"], CHANGES_REQUESTED: ["requested changes", t.blocked, "x"], COMMENTED: ["left a comment", t.dim, "overview"], DISMISSED: ["had a review dismissed", t.dim, null] };
+    const person = (id, name, text, color, icon, note) => h_flex().id(`approval-${id}`).px(14).py(7).gap(10).items_center().text_size(12.5)
+      .child(div().flex_none().font_semibold().text_color(t.foreground).child(name))
+      .child(div().flex_1().min_w(0).truncate().text_color(t.dim).child(text))
+      .when(Boolean(note), (el) => el.child(div().flex_none().px(6).rounded(8).bg(t.raised).text_size(11).text_color(t.muted).child(note ?? "")))
+      .child(icon ? svg(ICON(icon)).size(13).flex_none().text_color(color) : div().size(8).flex_none().rounded(4).bg(color));
+    const waiting = (pr.requested ?? []).filter((q) => !people.some((r) => r.author === q.name));
+    const bots = (pr.reviews ?? []).filter((r) => r.bot);
+    const panel = v_flex().py(4)
+      .children(waiting.map((q, i) => person(`req-${i}`, q.name, "has been requested to review", t.working, null, q.owner ? "owner" : null)))
+      .children(people.map((r, i) => person(`rev-${i}`, r.author, (label[r.state] ?? ["reviewed"])[0], (label[r.state] ?? [null, t.dim])[1], (label[r.state] ?? [])[2] ?? null, null)))
+      .children(bots.map((r, i) => person(`bot-${i}`, r.author, (label[r.state] ?? ["reviewed"])[0], t.dim, (label[r.state] ?? [])[2] ?? null, "bot")))
+      .when(!waiting.length && !people.length && !bots.length, (el) => el.child(div().px(14).py(8).text_size(12.5).text_color(t.dim).child("No reviewers yet.")));
+    return v_flex().rounded(10).border_1().border_color(t.border).overflow_hidden()
+      .child(bar)
+      .when(Boolean(this.approvalsOpen), (el) => el.child(div().h(1).bg(t.border)).child(panel));
+  }
 
-checkCount(pr) {
-  const d = this.details?.[`${pr.url}@${pr.headRefOid}`];
-  return d?.checks?.list ? d.checks.list.length : null;
-}
+  checkCount(pr) {
+    const d = this.details?.[`${pr.url}@${pr.headRefOid}`];
+    return d?.checks?.list ? d.checks.list.length : null;
+  }
 
-checksTab(t, details) {
-  if (!details || details.loading) return div().text_size(12.5).text_color(t.dim).child("Loading checks…");
-  if (details.error) return div().text_size(12.5).text_color(t.blocked).child(details.error);
-  const list = details.checks?.list ?? [];
-  if (!list.length) return div().text_size(12.5).text_color(t.dim).child("No checks on the latest commit.");
-  const color = { failing: t.ansi1, pending: t.working, passed: t.done, skipped: t.dim };
-  const duration = (s) => (s == null ? "" : s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`);
-  const row = (c, i) => h_flex().id(`check-${i}`).px(12).py(7).gap(10).items_center().text_size(12.5)
-    .when(Boolean(c.url), (el) => el.cursor_pointer().hover((st) => st.bg(t.hover)).on_click(() => exec("open", [c.url])))
-    .child(div().size(8).flex_none().rounded(4).bg(color[c.kind]))
-    .child(div().flex_1().min_w(0).truncate().text_color(c.kind === "skipped" ? t.dim : t.foreground).child(c.workflow ? `${c.workflow} / ${c.name}` : c.name))
-    .when(c.kind === "pending", (el) => el.child(div().flex_none().text_size(11.5).text_color(t.working).child("running")))
-    .child(div().flex_none().text_size(11.5).text_color(t.dim).child(duration(c.seconds)))
-    .when(Boolean(c.url), (el) => el.child(svg(ICON("external-link")).size(11).flex_none().text_color(t.dim)));
-  const group = (kind, title, foldedByDefault) => {
-    const rows = list.map((c, i) => [c, i]).filter(([c]) => c.kind === kind);
-    if (!rows.length) return [];
-    const key = `checks.${kind}.open`;
-    const open = localStorage.getItem(key) == null ? !foldedByDefault : localStorage.getItem(key) === "1";
-    return [v_flex().gap(6)
-      .child(h_flex().id(`checks-${kind}`).gap(6).items_center().cursor_pointer()
-        .on_click((_e, cx) => { localStorage.setItem(key, open ? "0" : "1"); cx.notify(); })
-        .child(div().text_size(11).text_color(t.dim).child(open ? "▾" : "▸"))
-        .child(div().text_size(11).font_semibold().text_color(t.muted).child(`${title.toUpperCase()} (${rows.length})`)))
-      .when(open, (el) => el.child(v_flex().rounded(10).border_1().border_color(t.border).overflow_hidden().children(rows.map(([c, i]) => row(c, i)))))];
-  };
-  return v_flex().gap(18)
-    .children(group("failing", "Failing", false))
-    .children(group("pending", "Running", false))
-    .children(group("passed", "Passed", true))
-    .children(group("skipped", "Skipped", true));
-}
+  checksTab(t, details) {
+    if (!details || details.loading) return div().text_size(12.5).text_color(t.dim).child("Loading checks…");
+    if (details.error) return div().text_size(12.5).text_color(t.blocked).child(details.error);
+    const list = details.checks?.list ?? [];
+    if (!list.length) return div().text_size(12.5).text_color(t.dim).child("No checks on the latest commit.");
+    const color = { failing: t.ansi1, pending: t.working, passed: t.done, skipped: t.dim };
+    const duration = (s) => (s == null ? "" : s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`);
+    const row = (c, i) => h_flex().id(`check-${i}`).px(12).py(7).gap(10).items_center().text_size(12.5)
+      .when(Boolean(c.url), (el) => el.cursor_pointer().hover((st) => st.bg(t.hover)).on_click(() => exec("open", [c.url])))
+      .child(div().size(8).flex_none().rounded(4).bg(color[c.kind]))
+      .child(div().flex_1().min_w(0).truncate().text_color(c.kind === "skipped" ? t.dim : t.foreground).child(c.workflow ? `${c.workflow} / ${c.name}` : c.name))
+      .when(c.kind === "pending", (el) => el.child(div().flex_none().text_size(11.5).text_color(t.working).child("running")))
+      .child(div().flex_none().text_size(11.5).text_color(t.dim).child(duration(c.seconds)))
+      .when(Boolean(c.url), (el) => el.child(svg(ICON("external-link")).size(11).flex_none().text_color(t.dim)));
+    const group = (kind, title, foldedByDefault) => {
+      const rows = list.map((c, i) => [c, i]).filter(([c]) => c.kind === kind);
+      if (!rows.length) return [];
+      const key = `checks.${kind}.open`;
+      const open = localStorage.getItem(key) == null ? !foldedByDefault : localStorage.getItem(key) === "1";
+      return [v_flex().gap(6)
+        .child(h_flex().id(`checks-${kind}`).gap(6).items_center().cursor_pointer()
+          .on_click((_e, cx) => { localStorage.setItem(key, open ? "0" : "1"); cx.notify(); })
+          .child(div().text_size(11).text_color(t.dim).child(open ? "▾" : "▸"))
+          .child(div().text_size(11).font_semibold().text_color(t.muted).child(`${title.toUpperCase()} (${rows.length})`)))
+        .when(open, (el) => el.child(v_flex().rounded(10).border_1().border_color(t.border).overflow_hidden().children(rows.map(([c, i]) => row(c, i)))))];
+    };
+    return v_flex().gap(18)
+      .children(group("failing", "Failing", false))
+      .children(group("pending", "Running", false))
+      .children(group("passed", "Passed", true))
+      .children(group("skipped", "Skipped", true));
+  }
 
   activity(t, details) {
     const heading = (text) => div().text_size(11).font_semibold().text_color(t.muted).child(text.toUpperCase());
