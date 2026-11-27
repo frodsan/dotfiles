@@ -209,8 +209,8 @@ export default class Chats extends View {
   confirmRemove(chat) {
     setShared("chats.removing", chat.id);
     openOverlay({ mod: "confirm", kind: "dialog", width: 420, height: 180, props: {
-      title: `Remove “${chat.name}”?`,
-      detail: "Herdr closes the chat and moves its Claude conversation to the Trash.",
+      title: "Remove chat?",
+      detail: `Herdr closes “${chat.name}” and moves its Claude conversation to the Trash.`,
       command: { name: "chats.remove", args: {} },
     } });
   }

@@ -1857,8 +1857,8 @@ export default class Sessions extends View {
         .hover((st) => st.bg(t.raised).text_color(t.foreground))
         .on_click(() => {
           setShared("sessions.removing", { settled: entry.key, force: Boolean(entry.kept) });
-          if (entry.kept) confirmRemove(`Remove “${entry.name}” and its ${entry.kept}?`, `Herdr deletes its worktree with its ${entry.kept}, and its Claude conversation. The branch stays, with its commits.`, "sessions.forget-settled");
-          else confirmRemove(`Remove “${entry.name}” now?`, "Herdr deletes its worktree and Claude conversation. A worktree with uncommitted changes or unpushed commits stays. The branch stays.", "sessions.forget-settled");
+          if (entry.kept) confirmRemove("Remove settled session?", `“${entry.name}” has ${entry.kept}. Herdr deletes its worktree with them, and its Claude conversation. The branch stays, with its commits.`, "sessions.forget-settled");
+          else confirmRemove("Remove settled session now?", `Herdr deletes the worktree and Claude conversation of “${entry.name}”. A worktree with uncommitted changes or unpushed commits stays. The branch stays.`, "sessions.forget-settled");
         })
         .child(svg("mods/workspace-chrome/x.svg").size(11))))];
   }
@@ -2160,7 +2160,7 @@ export default class Sessions extends View {
         setShared("sessions.noAutoSettle", all);
       }, ICON("check-check"))))
       .child(line())
-      .child(item("remove", "Remove", () => confirmRemove(`Remove “${spaces().find((sp) => sp.id === id)?.name ?? "this session"}”?`, "Herdr closes the session and its terminals. The worktree, the branch and the Claude conversation stay.", "space.close", { id, confirmed: true }), "mods/workspace-chrome/x.svg"))
+      .child(item("remove", "Remove", () => confirmRemove("Remove session?", `Herdr closes “${spaces().find((sp) => sp.id === id)?.name ?? "this session"}” and its terminals. The worktree, the branch and the Claude conversation stay.`, "space.close", { id, confirmed: true }), "mods/workspace-chrome/x.svg"))
       .child(line())
       .when(Boolean(url), (el) => el.child(item("github", "Open pull request on GitHub", () => exec("open", [url]), ICON("external-link"))))
       .child(item("rename", "Rename", () => run("space.rename", { id }), "mods/workspace-chrome/square-pen.svg"))
