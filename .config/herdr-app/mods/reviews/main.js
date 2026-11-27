@@ -103,6 +103,7 @@ function plainBody(body) {
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
     .replace(/<img[^>]*>/gi, "")
+    .replace(/<a\s[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (_m, href, text) => `[${text.replace(/<[^>]+>/g, "").trim() || href}](${href})`)
     .replace(/<br\s*\/?>/gi, ", ")
     .replace(/<\/?[a-z][^>]*>/gi, "")
     .replace(/\n{3,}/g, "\n\n")
@@ -403,7 +404,7 @@ export default class Reviews extends View {
         .when(Boolean(data) && waiting.length === 0, (el) => el.child(div().px(8).py(8).text_size(12.5).text_color(t.dim).child("No reviews waiting for you.")))
         .children(this.repoGroups(waiting, row, t))
         .children(this.folded("snoozed", ICON("clock"), "Snoozed", sleeping.map((pr) => row(pr)), t))
-        .children(this.folded("settled", SICON("check"), "Settled", done.map(settledRow), t)));
+        .children(this.folded("settled", SICON("check"), "Recently reviewed", done.map(settledRow), t)));
   }
 
   async identity(org) {
@@ -473,7 +474,7 @@ export default class Reviews extends View {
         .when(Boolean(c.bot), (el) => el.child(div().child("bot")))
         .when(Boolean(c.state) && c.state !== "COMMENTED", (el) => el.child(div().text_color(c.state === "APPROVED" ? t.done : c.state === "CHANGES_REQUESTED" ? t.blocked : t.dim).child((c.state ?? "").toLowerCase().replace(/_/g, " "))))
         .child(div().child(`${ago(c.at)} ago`)))
-      .child(div().text_size(12.5).child(TextView.markdown(`comment-${c.id}`, plainBody(c.body).slice(0, 8000) || "_(empty)_").selectable(true).on_link_click((url) => { exec("open", [url]).catch(() => null); })));
+      .child(div().text_size(12.5).child(TextView.markdown(`comment-${c.id}`, plainBody(c.body).slice(0, 8000) || "_(empty)_").selectable(true)));
   }
 
   thread(t, th) {
@@ -625,7 +626,7 @@ export default class Reviews extends View {
           .child(div().text_size(13.5).font_semibold().text_color(color).child(text))
           .child(div().text_size(11.5).text_color(t.dim).child(`Reviewed ${ago(new Date(e.finishedAt).toISOString())} ago on ${e.head.slice(0, 7)}${stale ? " · new commits since this review" : ""}`)))
         .child(button(stale ? "Review the new commits" : "Re-run")))
-      .when(Boolean(report), (el) => el.child(div().text_size(12.5).child(TextView.markdown(`claude-${pr.number}-${e.finishedAt}`, report).selectable(true).on_link_click((url) => { exec("open", [url]).catch(() => null); }))));
+      .when(Boolean(report), (el) => el.child(div().text_size(12.5).child(TextView.markdown(`claude-${pr.number}-${e.finishedAt}`, report).selectable(true))));
   }
 
   conversation(t, details) {
@@ -765,7 +766,7 @@ export default class Reviews extends View {
       .child(this.tab === "claude" ? this.claudeTab(t, pr, cx) : this.tab === "reviews" ? this.reviewsTab(t, pr, cx) : this.tab === "description"
         ? v_flex().gap(22)
           .child(div().text_size(12.5).text_color(body ? t.foreground : t.dim)
-            .child(body ? TextView.markdown(`review-body-${pr.number}`, body.slice(0, 20000)).selectable(true).on_link_click((url) => { exec("open", [url]).catch(() => null); }) : "No description."))
+            .child(body ? TextView.markdown(`review-body-${pr.number}`, body.slice(0, 20000)).selectable(true) : "No description."))
           .child(this.conversation(t, details))
         : this.filesSection(t, pr, details));
   }
