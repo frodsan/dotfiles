@@ -11,9 +11,12 @@ const PR_FRESH_MS = 5000;
 const CHATS_DIR = () => `${appHome()}/data/chats`;
 const CHATS_CWD = () => `${CHATS_DIR()}/workspace`;
 const isChatSpace = (s) => s.folder === CHATS_CWD() || Object.values(map("chats.space")).includes(s.id);
-const isReviewSpace = (s) => s.folder === `${appHome()}/data/reviews/workspace`;
-const isSideSpace = (s) => isChatSpace(s) || isReviewSpace(s);
-const reviewsWaiting = () => (shared("reviews.list") ?? []).filter((pr) => !((map("reviews.snoozed")[pr.url]?.until ?? 0) > Date.now())).length;
+const isSideSpace = (s) => isChatSpace(s);
+const reviewsWaiting = () => {
+  const settled = map("reviews.settled");
+  const snoozed = map("reviews.snoozed");
+  return (shared("reviews.list")?.items ?? []).filter((pr) => !settled[pr.url] && !((snoozed[pr.url]?.until ?? 0) > Date.now() && (!snoozed[pr.url]?.head || snoozed[pr.url].head === pr.headRefOid))).length;
+};
 function snoozeStore(menu, until) {
   const all = { ...map(menu.store) };
   delete all[menu.id];
@@ -917,9 +920,9 @@ export default class Sessions extends View {
   }
 
   toggleReviews() {
-    const on = !(this.reviewsMode && this.activeView() === "work");
-    if (this.activeView() !== "work") this.showView("work");
-    run("layout.select", { stack: "sidebar-lists", child: on ? "reviews" : "sessions" });
+    if (this.reviewsMode || this.activeView() === "reviews-view") return this.showView("work");
+    run("layout.select", { stack: "sidebar-lists", child: "reviews" });
+    if (shared("reviews.selected")) run("layout.select", { stack: "views", child: "reviews-view" });
   }
 
   setChatsMode(on) {
@@ -992,6 +995,11 @@ export default class Sessions extends View {
 
   command(command, cx) {
     if (command.startsWith("ext-")) return this.toggleExtension(command.slice(4));
+    if (command === "github" && this.activeView() === "reviews-view") {
+      const url = shared("reviews.selected");
+      if (url) exec("open", [url]);
+      return;
+    }
     if (command === "requests") return this.runRequests(cx);
     if (command === "autofix-now") { const space = this.active(); if (space) this.runAutoFix(cx, space.id); return; }
     if (command === "spinoff") return this.runSpinoffs(cx);
@@ -1019,17 +1027,6 @@ export default class Sessions extends View {
       return;
     }
     if (!s) return;
-    if (command === "github" && isReviewSpace(s)) {
-      const tab = s.tabs.find((t) => t.active)?.id;
-      const terminal = panes().find((p) => p.tab === tab && p.terminal)?.terminal;
-      if (!terminal) return;
-      cx.spawn(async () => {
-        const r = await exec("hc", ["get", terminal]).catch(() => null);
-        const url = (r?.stdout ?? "").match(/https:\/\/github\.com\/[^"\s]+\/pull\/\d+/)?.[0];
-        if (url) exec("open", [url]);
-      });
-      return;
-    }
     const ps = panes();
     const info = this.info(s, ps);
     const viewExt = command === "github" ? extensions().find((e) => e.view === this.activeView() && e.github) : null;

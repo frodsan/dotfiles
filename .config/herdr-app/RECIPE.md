@@ -96,6 +96,7 @@ root row
         panel column, 368px, hidden
           panel-body stack: pull-request block: sessions {pr: true}
       status block, 28px: workspace-status
+    reviews-view block: reviews {view: true}
 ```
 
 Theme `themes/firehouse.json`. Shortcuts `keys.json`.
@@ -108,7 +109,7 @@ Mods:
 - `firehouse-settings`. The Firehouse settings dialog. It holds its own copy of the defaults and writes the shared key `firehouse.settings`. Its last group, GitHub API, runs `gh api rate_limit` when it opens and every 10 seconds, and shows the GraphQL, REST and search limits with bars and reset times.
 - `shortcuts`. The shortcuts dialog. It reads `keys()`.
 
-- `reviews`. With `watch` it runs `gh search prs user-review-requested:@me --state=open` every 2 minutes, or as Firehouse settings says. That query skips requests sent to your teams. It saves the result in the shared key `reviews.list`, and drops snoozes of pull requests that left it. With no props it draws that list, with snoozed ones folded under Snoozed. With `menu` it is the right-click menu: Spin off a session, Snooze…, and Open on GitHub. Snooze… opens the sessions snooze menu with `store: "reviews.snoozed"`. A click opens the pull request with `tuicr pr <URL>` in the Reviews space, whose folder is `data/reviews/workspace`, one named tab per pull request. Spin off a session puts the link in `sessions.composerText` and runs `sessions.new-session`, so the new session dialog opens in pull request mode.
+- `reviews`. With `watch` it runs a GraphQL search for `is:pr is:open user-review-requested:@me` every 2 minutes, or as Firehouse settings says, and saves `{ items, at, error }` in the shared key `reviews.list`. Pull requests that leave the list move to `reviews.settled` for a day, with the reason: approved, merged, closed or no longer requested. The same copy runs Check with Claude, at most 3 at a time, as `claude -p` with read-only tools in the repo's main checkout, and saves the state in `reviews.claude` and the reports in `data/reviews/`. With no props it draws the list, grouped by repo, with folded Snoozed and Settled groups. With `menu` it is the right-click menu: Spin off a session, Snooze…, and Open on GitHub. Snooze… opens the sessions snooze menu with `store: "reviews.snoozed"` and the head commit, so new commits wake it. With `view` it is the main panel view in the `reviews-view` block of the `views` stack: Description, Files, Reviews and Findings tabs, and Approve with a confirmation. Files reads CODEOWNERS and your teams through `gh`, and shows only your files until you pick Show all. Comments from bot accounts are hidden. Spin off a session puts the link in `sessions.composerText` and runs `sessions.new-session`, so the new session dialog opens in pull request mode.
 
 Shipped mods it uses: `workspace-chrome`, `workspace-status`, `pane`, `menu`, `files` and `changes` for their icons.
 
@@ -116,7 +117,7 @@ Shipped mods it uses: `workspace-chrome`, `workspace-status`, `pane`, `menu`, `f
 
 App commands: `space.new`, `space.select`, `space.close`, `space.rename`, `tab.new`, `tab.select`, `tab.close`, `tab.move`, `tab.rename`, `pane.focus`, `pane.close`, `terminal.open`, `layout.select`, `layout.show`, `layout.hide` and `window.minimize`, `window.maximize` and `window.close`.
 
-Programs: `gh`, `git`, `wt`, `claude`, `nvim`, `lazygit`, `tuicr`, `bin/rails`, `sh`, `open`, `dscl`, `mkdir`, `test`, `rm` and `rmdir`.
+Programs: `gh`, `git`, `wt`, `claude`, `nvim`, `lazygit`, `bin/rails`, `sh`, `open`, `dscl`, `mkdir`, `test`, `rm` and `rmdir`.
 
 Shared keys: `firehouse.settings` holds the settings, `commands.list` the custom commands, and `chats.space` the chat to space links. Files go under `~/.config/herdr-app/data/`: `new-session/`, `spinoff/`, `autofix/` and `chats/`.
 
@@ -140,6 +141,6 @@ Shared keys: `firehouse.settings` holds the settings, `commands.list` the custom
 - `⌥⌘N` with a prompt creates a worktree on a new branch with the settings prefix, and the space shows Claude working with a pulsing dot.
 - A session with an open pull request shows its number, review state and CI dot, and `⌥⌘P` opens the panel with its checks.
 - `herdr-app do chats.new` works while the chats list is hidden, and pressing `ctrl+d` twice in that chat closes its space within 2 seconds and moves the chat to Archived.
-- `⇧⌘R` shows the pull requests waiting for your review, and a click opens one in tuicr in the Reviews space.
+- `⇧⌘R` shows the pull requests waiting for your review, and a click shows one in the main panel with only your files under Files.
 - `⇧⌘/` lists every key from `keys.json`, and `⇧⌘,` opens Firehouse settings.
 - A custom command added in the editor shows in the command palette and opens a terminal on the right.

@@ -236,6 +236,16 @@
             }
           ],
           "resizable": false
+        },
+        {
+          "id": "reviews-view",
+          "type": "block",
+          "content": {
+            "mod": "reviews",
+            "props": {
+              "view": true
+            }
+          }
         }
       ]
     }
