@@ -1,45 +1,61 @@
-# Herdr config
+# Firehouse
 
-The Firehouse layout, `layouts/Firehouse.json`, uses the mods below. `install.sh` links each mod folder into `~/.config/herdr-app/mods/`. Keys come from `keys.json`. Screenshots are in `docs/`.
+Firehouse is a Herdr setup for running many Claude Code sessions on one repo at the same time. Each task gets its own git worktree and its own Claude. The sidebar shows which session needs you. Claude fixes the CI failures, conflicts and review comments on its own pull requests, and a session cleans itself up after its pull request merges.
 
-## sessions
+## Start a task in one keystroke
 
-The sidebar and most of the workflow. One session is one Herdr space, usually a git worktree with Claude running in it.
+Press `⌥⌘N` and type what you want. Firehouse creates a worktree and a branch, such as `fr/fix-login-1a2b`, runs the repo's setup command and starts Claude with your prompt. You never stash, switch branches or wait for another task to finish.
 
-- Session list. Groups sessions by folder, with Working, Snoozed and Settled groups. Right-click a session for its menu, or a folder to set the setup command for its new worktrees.
-- New session (`⌥⌘N`). Creates a worktree and a branch, runs the folder's setup command and starts Claude with your prompt.
-- Focus mode (`⇧⌘F`). Shows only the sessions you starred or pinned, and mutes sounds. Snooze a session until a set time.
-- Previous and next session (`⌘↑`, `⌘↓`).
-- Tab bar. Opens Files (`⌘E`, nvim), Changes (`⌥⌘C`, lazygit), Rails console (`⇧⌘T`) and the Pull request panel (`⌥⌘P`) for the session. `⇧⌘G` opens the pull request on GitHub.
-- Pull request panel. Shows checks and reviews, updates the branch, and has three toggles. Merge turns on auto-merge. Fix runs auto-fix, where Claude fixes CI failures, conflicts and review comments. Settle archives the session when the pull request merges or closes.
-- Auto-fix also notifies you when someone reacts 👎 to a reply labeled `[AI-generated]`.
-- Settling. Archives a finished session, and deletes its worktree and Claude conversation after the number of days set in the settings.
-- Spin-offs. Starts a side task as a new session from a brief that the `herdr:spin-off` skill writes.
-- Session settings (`⇧⌘,`, or the gear in the sidebar header). Branch prefix, settling, focus mode, snooze times and toasts. The code is in `sessions/settings.js`.
-- Edit Herdr config with Claude (`⌘,`). Opens a Claude session in the dotfiles repo.
-- Welcome. A dialog on first start that checks the tools and skills the mods need.
-- Sidebar extensions. Another mod can add a sidebar icon and view with a `sidebar.json` file in its folder.
+When a task turns up a side task, spin it off. The `herdr:spin-off` skill writes a brief, and Firehouse starts the side task as a new session on its own branch. The first session keeps going.
 
-## chats
+## See what needs you
 
-Claude conversations that belong to no repo. They run in `~/.config/herdr-app/data/chats/workspace`.
+The sidebar groups sessions by repo and shows each one's state: working, blocked on you, or done. `⌘↑` and `⌘↓` move between sessions.
 
-- Chats list (`⇧⌘C`, or the chat icon in the sidebar header). Swaps the session list for the chats list.
-- New chat (`⇧⌘N`). Starts a chat in its own space and names it after the conversation.
-- Archive. Exiting Claude closes the chat's space and archives the chat. The archive button on a row does the same. Archived chats are in the folded Archived group, and opening one restores it. After the "Keep settled sessions and archived chats for" setting, 7 days by default, an archived chat moves to the Trash.
-- The layout has a 0px `chats` block with `"watch": true`. That copy always runs, even while the chats list is hidden. It closes and archives exited chats, names new chats, moves old archived chats to the Trash and handles `chats.new`.
+Focus mode (`⇧⌘F`) shows only the sessions you starred and turns sounds off. Snooze a session until tomorrow morning or next week, and it comes back on its own.
 
-## custom-commands
+## Pull requests that finish themselves
 
-Your own commands in the command palette. Each one opens a terminal on the right that runs a shell command.
+The Pull request panel (`⌥⌘P`) shows the checks and reviews of the session's pull request. It has three toggles.
 
-- Edit them from the palette with "Edit custom commands…".
-- The list is in the shared key `commands.list`, so it stays on this machine.
-- The mod writes the palette entries into a generated mod, `custom-commands-local`.
-- The layout needs a block for this mod, even a 0px one, so that it runs and publishes the entries.
+- **Fix.** Every 2 minutes, Firehouse checks for failed CI, merge conflicts and new review comments, and hands them to Claude. Claude reruns flaky jobs, fixes real failures, replies to reviewers and resolves their threads. After 5 rounds of review comments, it stops and asks you. Each reply starts with `[AI-generated]` and asks the reviewer to react 👎 if it's wrong. A 👎 sends you a notification.
+- **Merge.** Firehouse puts the pull request in the merge queue once it's ready. If auto-fix starts on it again, Firehouse takes it out of the queue and puts it back when the fix is done.
+- **Settle.** When the pull request merges or closes, the session moves to Settled. After 7 days, Firehouse deletes its worktree and Claude conversation. A worktree with uncommitted changes or unpushed commits stays, with a warning.
 
-## shortcuts
+## Every tool one key away
 
-The keyboard shortcuts dialog (`⇧⌘/`). It reads `keys.json`, so it shows the keys you set.
+The tab bar opens tools beside Claude, in the session's worktree: Files in Neovim (`⌘E`), Changes in lazygit (`⌥⌘C`) and a Rails console (`⇧⌘T`). `⇧⌘G` opens the pull request on GitHub.
+
+`⇧⌘/` shows every shortcut. The list reads `keys.json`, so it shows the keys you set.
 
 ![The keyboard shortcuts dialog](docs/shortcuts.png)
+
+## Chats for everything else
+
+Some questions belong to no repo. `⇧⌘C` swaps the session list for your chats with Claude, and `⇧⌘N` starts a new one. Each chat names itself after the conversation. Exiting Claude archives the chat, and opening it again resumes the conversation. Archived chats go to the Trash after 7 days.
+
+## Your own commands
+
+Add shell commands to the command palette with "Edit custom commands…", such as an AWS login or `claude /mcp`. Each one opens a terminal on the right. They stay on your machine and out of this repo.
+
+## Change it with Claude
+
+`⌘,` opens a Claude session in this repo to change the setup itself. `⇧⌘,`, or the gear in the sidebar header, opens the session settings: branch prefix, settling, focus mode, snooze times and toasts.
+
+## Install
+
+`install.sh` at the root of this repo links these files into `~/.config/herdr-app` and switches Herdr to the Firehouse layout. On first start, a welcome dialog checks for the tools Firehouse needs: `wt`, `gh`, `claude`, `nvim` and `lazygit`. It also checks for the `herdr` Claude Code skills in `.claude/skills/herdr`.
+
+Herdr may not reload a linked mod when its files change. Restart Herdr after you edit one. Your terminals keep running.
+
+## What's inside
+
+| Path | What it does |
+|---|---|
+| `layouts/Firehouse.json` | The window: the sidebar, the tab bar, the panes and the Pull request panel. |
+| `themes/firehouse.json` | The colors. |
+| `keys.json` | Every shortcut. |
+| `mods/sessions` | The sidebar, new sessions, focus mode, the tab bar, the Pull request panel, auto-fix, settling and the settings. |
+| `mods/chats` | The chats list. A 0px block in the layout runs its background work, so exited chats close even while the list is hidden. |
+| `mods/custom-commands` | Your palette commands, kept in the shared key `commands.list`. It writes the palette entries into a generated mod, `custom-commands-local`. |
+| `mods/shortcuts` | The shortcuts dialog. |
