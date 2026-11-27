@@ -48,7 +48,7 @@ Decide each thread with these rules. The first rule that matches decides.
 
 Fix, reply, react and resolve review bot threads as the Comments section of `pr-fix/SKILL.md` says. For a teammate's thread, only fix and push.
 
-A review summary has no thread to resolve. When you have handled all its findings (fixed, or the author answered), add 👍 to the review itself (`subjectId` = the review id). When the author says to ignore it, add 👎 (`content:THUMBS_DOWN`) to the review bot's review, or 👀 (`content:EYES`) to a person's. Herdr stops sending a review once you have reacted to it.
+A review summary has no thread to resolve. When you have handled all the findings in the review bot's review (fixed, or the author answered), add 👍 to the review itself (`subjectId` = the review id). When the author says to ignore it, add 👎 (`content:THUMBS_DOWN`). Herdr stops sending a review once you have reacted to it. Never react to a teammate's review: fix its findings when the rules say to, and list it in the report.
 
 ## 4. Then
 
