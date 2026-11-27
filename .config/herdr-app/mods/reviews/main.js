@@ -9,7 +9,7 @@ const tabName = (pr) => `#${pr.number} ${pr.repository?.name ?? ""}`.trim();
 const reviewSpace = () => spaces().find((s) => s.folder === CWD());
 
 async function fetchReviews() {
-  const r = await exec("gh", ["search", "prs", "--review-requested=@me", "--state=open", "--json", "number,title,url,repository,author,updatedAt,isDraft", "--limit", "50"]).catch(() => null);
+  const r = await exec("gh", ["search", "prs", "user-review-requested:@me", "--state=open", "--json", "number,title,url,repository,author,updatedAt,isDraft", "--limit", "50"]).catch(() => null);
   if (r?.code !== 0) return null;
   try {
     return JSON.parse(r.stdout).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));

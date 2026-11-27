@@ -36,7 +36,7 @@ Some questions belong to no repo. `⇧⌘C` swaps the session list for your chat
 
 ## Reviews without leaving Herdr
 
-`⇧⌘R` swaps the session list for the pull requests that wait for your review, refreshed every 2 minutes. A dot on its icon says some are waiting. Click one, and it opens in tuicr in a Reviews space, one tab per pull request. Read the diff, comment, then approve or request changes, and tuicr sends the review to GitHub. To change the code yourself, the pen button checks the pull request out in a new session.
+`⇧⌘R` swaps the session list for the pull requests that list you as a reviewer, not through a team, refreshed every 2 minutes. A dot on its icon says some are waiting. Click one, and it opens in tuicr in a Reviews space, one tab per pull request. Read the diff, comment, then approve or request changes, and tuicr sends the review to GitHub. To change the code yourself, the pen button checks the pull request out in a new session.
 
 ## Your own commands
 

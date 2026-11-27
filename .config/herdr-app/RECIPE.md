@@ -107,7 +107,7 @@ Mods:
 - `custom-commands`. With no props it publishes the palette entries into a generated mod, `mods/custom-commands-local`. With `editor` it is the editor dialog.
 - `shortcuts`. The shortcuts dialog. It reads `keys()`.
 
-- `reviews`. With `watch` it runs `gh search prs --review-requested=@me --state=open` every 2 minutes and saves the result in the shared key `reviews.list`. With no props it draws that list. A click opens the pull request with `tuicr pr <URL>` in the Reviews space, whose folder is `data/reviews/workspace`, one named tab per pull request. The pen button puts the link in `sessions.composerText` and runs `sessions.new-session`, so the new session dialog opens in pull request mode.
+- `reviews`. With `watch` it runs `gh search prs user-review-requested:@me --state=open` every 2 minutes. That query skips requests sent to your teams and saves the result in the shared key `reviews.list`. With no props it draws that list. A click opens the pull request with `tuicr pr <URL>` in the Reviews space, whose folder is `data/reviews/workspace`, one named tab per pull request. The pen button puts the link in `sessions.composerText` and runs `sessions.new-session`, so the new session dialog opens in pull request mode.
 
 Shipped mods it uses: `workspace-chrome`, `workspace-status`, `pane`, `menu`, `files` and `changes` for their icons.
 
