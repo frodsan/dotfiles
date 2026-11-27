@@ -25,19 +25,11 @@ const REVIEWS_QUERY = `query {
 const COMMENTS_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) { pullRequest(number: $number) {
     reviewThreads(first: 100) { nodes { id isResolved isOutdated path line diffSide comments(first: 50) { nodes { id author { __typename login } body createdAt } } } }
-    timelineItems(last: 60, itemTypes: [PULL_REQUEST_REVIEW, ISSUE_COMMENT, PULL_REQUEST_COMMIT, HEAD_REF_FORCE_PUSHED_EVENT, REVIEW_REQUESTED_EVENT, READY_FOR_REVIEW_EVENT, CONVERT_TO_DRAFT_EVENT, MERGED_EVENT, CLOSED_EVENT, REOPENED_EVENT]) {
+    timelineItems(last: 60, itemTypes: [PULL_REQUEST_REVIEW, ISSUE_COMMENT]) {
       nodes {
         __typename
         ... on PullRequestReview { id state body createdAt author { __typename login } comments { totalCount } }
         ... on IssueComment { id body createdAt author { __typename login } }
-        ... on PullRequestCommit { id commit { oid messageHeadline committedDate author { name user { login } } } }
-        ... on HeadRefForcePushedEvent { id createdAt actor { login } }
-        ... on ReviewRequestedEvent { id createdAt actor { login } requestedReviewer { __typename ... on User { login } ... on Team { slug } } }
-        ... on ReadyForReviewEvent { id createdAt actor { login } }
-        ... on ConvertToDraftEvent { id createdAt actor { login } }
-        ... on MergedEvent { id createdAt actor { login } }
-        ... on ClosedEvent { id createdAt actor { login } }
-        ... on ReopenedEvent { id createdAt actor { login } }
       }
     }
   } }
@@ -170,41 +162,21 @@ function ownersOf(rules, path) {
 function buildActivity(nodes) {
   const out = [];
   for (const n of nodes) {
-    const who = (a) => a?.login ?? "ghost";
-    if (n.__typename === "PullRequestCommit") {
-      const c = n.commit;
-      const author = c.author?.user?.login ?? c.author?.name ?? "someone";
-      const last = out[out.length - 1];
-      if (last?.type === "commits" && last.actor === author) {
-        last.commits.push({ oid: c.oid, message: c.messageHeadline });
-        last.at = c.committedDate;
-      } else out.push({ id: n.id, type: "commits", actor: author, at: c.committedDate, commits: [{ oid: c.oid, message: c.messageHeadline }] });
-      continue;
-    }
-    if (n.__typename === "PullRequestReview") {
-      if (isBot(n.author)) continue;
-      if (n.state === "PENDING") continue;
-      const body = (n.body ?? "").trim();
-      const inline = n.comments?.totalCount ?? 0;
-      if (n.state === "COMMENTED" && !body && !inline) continue;
-      out.push({ id: n.id, type: "review", state: n.state, actor: who(n.author), at: n.createdAt, body, inline });
-      continue;
-    }
-    if (n.__typename === "IssueComment") {
-      if (isBot(n.author)) continue;
-      out.push({ id: n.id, type: "comment", actor: who(n.author), at: n.createdAt, body: n.body ?? "" });
-      continue;
-    }
-    const verbs = { HeadRefForcePushedEvent: "force-pushed", ReadyForReviewEvent: "marked it ready for review", ConvertToDraftEvent: "moved it back to draft", MergedEvent: "merged it", ClosedEvent: "closed it", ReopenedEvent: "reopened it" };
-    if (n.__typename === "ReviewRequestedEvent") {
-      const r = n.requestedReviewer;
-      const name = r?.login ?? (r?.slug ? `team ${r.slug}` : null);
-      if (name) out.push({ id: n.id, type: "event", kind: "request", actor: who(n.actor), at: n.createdAt, text: `asked ${name} for a review` });
-      continue;
-    }
-    if (verbs[n.__typename]) out.push({ id: n.id, type: "event", kind: n.__typename, actor: who(n.actor), at: n.createdAt, text: verbs[n.__typename] });
+    if (isBot(n.author)) continue;
+    const actor = n.author?.login ?? "ghost";
+    if (n.__typename === "IssueComment") { out.push({ id: n.id, type: "comment", actor, at: n.createdAt, body: n.body ?? "" }); continue; }
+    if (n.__typename !== "PullRequestReview" || n.state === "PENDING" || n.state === "DISMISSED") continue;
+    const body = (n.body ?? "").trim();
+    const inline = n.comments?.totalCount ?? 0;
+    if (n.state === "COMMENTED" && !body && !inline) continue;
+    out.push({ id: n.id, type: "review", state: n.state, actor, at: n.createdAt, body, inline });
   }
   return out.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+}
+
+function linkRefs(markdown, repo) {
+  return markdown.split(/(```[\s\S]*?```|`[^`\n]*`)/).map((part, i) => (i % 2 ? part : part.replace(/(^|[^\w/[\]#&`])(?:([\w.-]+\/[\w.-]+))?#(\d+)\b(?!\])/g,
+    (_m, before, other, number) => `${before}[${other ? `${other}#` : "#"}${number}](https://github.com/${other ?? repo}/pull/${number})`))).join("");
 }
 
 function selectReview(url) {
@@ -222,7 +194,7 @@ export default class Reviews extends View {
       this.me = {};
       this.toggled = new Set();
       this.showAll = false;
-      this.tab = localStorage.getItem("tab") || "description";
+      this.tab = ["files", "claude"].includes(localStorage.getItem("tab")) ? localStorage.getItem("tab") : "description";
       this.shown = null;
       cx.timer.every(2000, (cx) => cx.notify());
       return;
@@ -524,7 +496,7 @@ export default class Reviews extends View {
         .when(Boolean(c.bot), (el) => el.child(div().child("bot")))
         .when(Boolean(c.state) && c.state !== "COMMENTED", (el) => el.child(div().text_color(c.state === "APPROVED" ? t.done : c.state === "CHANGES_REQUESTED" ? t.blocked : t.dim).child((c.state ?? "").toLowerCase().replace(/_/g, " "))))
         .child(div().child(`${ago(c.at)} ago`)))
-      .child(div().text_size(12.5).child(TextView.markdown(`comment-${c.id}`, plainBody(c.body).slice(0, 8000) || "_(empty)_").selectable(true)));
+      .child(div().text_size(12.5).child(TextView.markdown(`comment-${c.id}`, linkRefs(plainBody(c.body).slice(0, 8000), this.repo) || "_(empty)_").selectable(true)));
   }
 
   thread(t, th) {
@@ -585,57 +557,6 @@ export default class Reviews extends View {
       .when(lines.length > shown.length, (el) => el.child(div().px(14).py(4).text_size(12).text_color(t.dim).child(`${lines.length - shown.length} more lines on GitHub`)));
   }
 
-  ruleFor(pr, cx) {
-    this.rulesets ??= {};
-    const key = `${pr.repo}@${pr.baseRefName}`;
-    const cached = this.rulesets[key];
-    if (cached && (cached.loading || Date.now() - cached.at < DAY_MS)) return cached;
-    this.rulesets[key] = { loading: true, at: Date.now() };
-    cx.spawn(async (cx) => {
-      const r = await exec("gh", ["api", `repos/${pr.repo}/rules/branches/${encodeURIComponent(pr.baseRefName)}`]).catch(() => null);
-      const rules = r?.code === 0 ? JSON.parse(r.stdout).filter((x) => x.type === "pull_request").map((x) => x.parameters ?? {}) : [];
-      this.rulesets[key] = {
-        approvals: Math.max(0, ...rules.map((x) => x.required_approving_review_count ?? 0)),
-        owners: rules.some((x) => x.require_code_owner_review),
-        at: Date.now(),
-      };
-      cx.notify();
-    });
-    return this.rulesets[key];
-  }
-
-  reviewers(pr, cx) {
-    const rule = this.ruleFor(pr, cx);
-    const done = (pr.reviews ?? []).filter((r) => !r.bot);
-    const requested = (pr.requested ?? []).filter((q) => !done.some((r) => r.author === q.name));
-    const approved = done.filter((r) => r.state === "APPROVED").length;
-    return { rule, done, owners: requested.filter((q) => q.owner), others: requested.filter((q) => !q.owner), approved, need: rule.approvals ?? 0 };
-  }
-
-  reviewsTab(t, pr, cx) {
-    const { rule, done, owners, others, approved, need } = this.reviewers(pr, cx);
-    const bots = (pr.reviews ?? []).filter((r) => r.bot);
-    const label = { APPROVED: "Approved", CHANGES_REQUESTED: "Changes requested", COMMENTED: "Commented", DISMISSED: "Dismissed", PENDING: "Pending" };
-    const color = (state) => (state === "APPROVED" ? t.done : state === "CHANGES_REQUESTED" ? t.blocked : t.muted);
-    const heading = (text) => div().text_size(11).font_semibold().text_color(t.muted).child(text.toUpperCase());
-    const line = (name, text, c) => h_flex().px(12).py(7).gap(10).items_center().text_size(12.5)
-      .child(div().flex_1().min_w(0).truncate().child(name))
-      .child(div().flex_none().text_color(c).child(text));
-    const box = (rows) => v_flex().rounded(10).border_1().border_color(t.border).py(2).children(rows);
-    const required = [
-      ...(need ? [line(`${need} approval${need === 1 ? "" : "s"}`, `${Math.min(approved, need)} of ${need}`, approved >= need ? t.done : t.working)] : []),
-      ...owners.map((q) => line(q.name, "Waiting", t.working)),
-    ];
-    const reviewed = [...done.map((r) => line(r.author, label[r.state] ?? r.state, color(r.state))), ...bots.map((r) => line(r.author, `${label[r.state] ?? r.state} · bot`, t.dim))];
-    return v_flex().gap(18)
-      .child(v_flex().gap(8).child(heading("Required"))
-        .child(rule.loading ? div().text_size(12.5).text_color(t.dim).child("Loading the branch rules…")
-          : required.length ? box(required) : div().text_size(12.5).text_color(t.done).child(rule.owners ? "Nothing required is missing." : "This branch requires no reviews.")))
-      .when(reviewed.length > 0, (el) => el.child(v_flex().gap(8).child(heading("Reviewed")).child(box(reviewed))))
-      .when(others.length > 0, (el) => el.child(v_flex().gap(8).child(heading("Also requested"))
-        .child(div().text_size(12.5).text_color(t.dim).child(others.map((q) => q.name).join(", ")))));
-  }
-
   claudeEntry(pr) {
     return (shared("reviews.claude") ?? {})[pr.url] ?? null;
   }
@@ -679,54 +600,50 @@ export default class Reviews extends View {
       .when(Boolean(report), (el) => el.child(div().text_size(12.5).child(TextView.markdown(`claude-${pr.number}-${e.finishedAt}`, report).selectable(true))));
   }
 
-activity(t, details) {
-  const heading = (text) => div().text_size(11).font_semibold().text_color(t.muted).child(text.toUpperCase());
-  if (!details || details.loading) return div();
-  if (!details.loadedComments) return v_flex().gap(8).child(heading("Activity")).child(div().text_size(12.5).text_color(t.dim).child("Could not load the activity."));
-  const list = details.activity ?? [];
-  const open = localStorage.getItem("activity.open") !== "0";
-  this.openBodies ??= new Set();
-  const label = { APPROVED: "approved", CHANGES_REQUESTED: "requested changes", COMMENTED: "reviewed", DISMISSED: "had a review dismissed" };
-  const color = (e) => e.type === "review" ? (e.state === "APPROVED" ? t.done : e.state === "CHANGES_REQUESTED" ? t.blocked : t.muted)
-    : e.type === "commits" ? t.accent : e.kind === "MergedEvent" ? t.ansi5 : e.kind === "ClosedEvent" ? t.blocked : t.dim;
-  const what = (e) => e.type === "commits" ? `pushed ${e.commits.length === 1 ? "a commit" : `${e.commits.length} commits`}`
-    : e.type === "review" ? `${label[e.state] ?? "reviewed"}${e.inline ? ` · ${e.inline} inline comment${e.inline === 1 ? "" : "s"}` : ""}`
-    : e.type === "comment" ? "commented" : e.text;
-  const body = (e) => {
-    const text = plainBody(e.body);
-    if (!text) return null;
-    const long = text.length > 700 && !this.openBodies.has(e.id);
-    return v_flex().gap(4)
-      .child(div().text_size(12.5).child(TextView.markdown(`activity-${e.id}-${long ? "short" : "full"}`, long ? `${text.slice(0, 700)}…` : text.slice(0, 8000)).selectable(true)))
-      .when(text.length > 700, (el) => el.child(div().id(`activity-more-${e.id}`).text_size(11.5).text_color(t.accent).cursor_pointer()
-        .on_click((_e, cx) => { if (this.openBodies.has(e.id)) this.openBodies.delete(e.id); else this.openBodies.add(e.id); cx.notify(); })
-        .child(long ? "Show all" : "Show less")));
-  };
-  const row = (e) => {
-    const text = e.type === "review" || e.type === "comment" ? body(e) : null;
-    return h_flex().gap(10).items_start()
-      .child(div().mt(5).size(8).flex_none().rounded(4).bg(color(e)))
-      .child(v_flex().flex_1().min_w(0).gap(6)
-        .child(h_flex().gap(6).items_center().text_size(12.5)
-          .child(div().flex_none().font_semibold().text_color(t.foreground).child(e.actor))
-          .child(div().flex_1().min_w(0).truncate().text_color(t.muted).child(what(e)))
-          .child(div().flex_none().text_size(11.5).text_color(t.dim).child(`${ago(e.at)} ago`)))
-        .when(e.type === "commits", (el) => el.child(v_flex().gap(2).children(e.commits.slice(-5).reverse().map((c) =>
-          h_flex().gap(8).text_size(12).child(div().flex_none().text_color(t.dim).child(c.oid.slice(0, 7))).child(div().flex_1().min_w(0).truncate().text_color(t.muted).child(c.message))))))
-        .when(Boolean(text), (el) => el.child(div().px(12).py(8).rounded(8).border_1().border_color(t.border).child(text))));
-  };
-  return v_flex().gap(12)
-    .child(h_flex().id("activity-toggle").gap(6).items_center().cursor_pointer()
-      .on_click((_e, cx) => { localStorage.setItem("activity.open", open ? "0" : "1"); cx.notify(); })
-      .child(div().text_size(11).text_color(t.dim).child(open ? "▾" : "▸"))
-      .child(heading(list.length ? `Activity (${list.length})` : "Activity")))
-    .when(open && list.length === 0, (el) => el.child(div().text_size(12.5).text_color(t.dim).child("Nothing yet.")))
-    .children(open ? list.map(row) : []);
-}
+  activity(t, details) {
+    const heading = (text) => div().text_size(11).font_semibold().text_color(t.muted).child(text.toUpperCase());
+    if (!details || details.loading) return div();
+    if (!details.loadedComments) return v_flex().gap(8).child(heading("Activity")).child(div().text_size(12.5).text_color(t.dim).child("Could not load the activity."));
+    const list = details.activity ?? [];
+    const open = localStorage.getItem("activity.open") !== "0";
+    this.openBodies ??= new Set();
+    const label = { APPROVED: "approved", CHANGES_REQUESTED: "requested changes", COMMENTED: "commented" };
+    const color = (e) => e.state === "APPROVED" ? t.done : e.state === "CHANGES_REQUESTED" ? t.blocked : t.muted;
+    const what = (e) => e.type === "review" ? `${label[e.state] ?? "reviewed"}${e.inline ? ` · ${e.inline} inline comment${e.inline === 1 ? "" : "s"}` : ""}` : "commented";
+    const body = (e) => {
+      const text = plainBody(e.body);
+      if (!text) return null;
+      const long = text.length > 700 && !this.openBodies.has(e.id);
+      return v_flex().gap(4)
+        .child(div().text_size(12.5).child(TextView.markdown(`activity-${e.id}-${long ? "short" : "full"}`, linkRefs(long ? `${text.slice(0, 700)}…` : text.slice(0, 8000), this.repo)).selectable(true)))
+        .when(text.length > 700, (el) => el.child(div().id(`activity-more-${e.id}`).text_size(11.5).text_color(t.accent).cursor_pointer()
+          .on_click((_e, cx) => { if (this.openBodies.has(e.id)) this.openBodies.delete(e.id); else this.openBodies.add(e.id); cx.notify(); })
+          .child(long ? "Show all" : "Show less")));
+    };
+    const row = (e, i) => {
+      const text = body(e);
+      const last = i === list.length - 1;
+      return h_flex().gap(12).items_start()
+        .child(v_flex().w(11).flex_none().h_full().items_center()
+          .child(div().mt(4).size(11).flex_none().rounded(6).bg(color(e)))
+          .when(!last, (el) => el.child(div().w(1).flex_1().mt(4).bg(t.border))))
+        .child(v_flex().flex_1().min_w(0).gap(8).pb(last ? 0 : 18)
+          .child(h_flex().gap(6).items_center().text_size(12.5)
+            .child(div().flex_none().font_semibold().text_color(t.foreground).child(e.actor))
+            .child(div().flex_1().min_w(0).truncate().text_color(t.muted).child(what(e)))
+            .child(div().flex_none().text_size(11.5).text_color(t.dim).child(`${ago(e.at)} ago`)))
+          .when(Boolean(text), (el) => el.child(div().px(14).py(10).rounded(8).border_1().border_color(t.border).bg(t.surface).child(text))));
+    };
+    return v_flex().gap(12)
+      .child(h_flex().id("activity-toggle").gap(6).items_center().cursor_pointer()
+        .on_click((_e, cx) => { localStorage.setItem("activity.open", open ? "0" : "1"); cx.notify(); })
+        .child(div().text_size(11).text_color(t.dim).child(open ? "▾" : "▸"))
+        .child(heading(list.length ? `Activity (${list.length})` : "Activity")))
+      .when(open && list.length === 0, (el) => el.child(div().text_size(12.5).text_color(t.dim).child("Nothing yet.")))
+      .when(open && list.length > 0, (el) => el.child(v_flex().children(list.map(row))));
+  }
 
   tabs(t, pr, cx) {
-    const { approved, need } = this.reviewers(pr, cx);
-    const reviewsLabel = need ? `Reviews ${Math.min(approved, need)}/${need}` : "Reviews";
     const tab = (id, text) => {
       const on = (this.tab ?? "description") === id;
       return div().id(`tab-${id}`).px(2).pb(8).text_size(13).cursor_pointer().border_b_2()
@@ -735,7 +652,7 @@ activity(t, details) {
         .on_click((_e, cx) => { this.tab = id; localStorage.setItem("tab", id); cx.notify(); })
         .child(text);
     };
-    return h_flex().gap(20).border_b_1().border_color(t.border).child(tab("description", "Overview")).child(tab("files", "Files")).child(tab("reviews", reviewsLabel)).when(Boolean(this.claudeEntry(pr)), (el) => el.child(tab("claude", this.claudeLabel(pr))));
+    return h_flex().gap(20).border_b_1().border_color(t.border).child(tab("description", "Overview")).child(tab("files", "Files")).when(Boolean(this.claudeEntry(pr)), (el) => el.child(tab("claude", this.claudeLabel(pr))));
   }
 
   filesSection(t, pr, details) {
@@ -828,6 +745,7 @@ activity(t, details) {
     if (!pr) return v_flex().flex_1().items_center().justify_center().gap(6).text_color(t.dim).text_size(13)
       .child(svg(ICON("pr-open")).size(22)).child("Pick a pull request on the left.");
     const body = dropEmptySections(plainBody(pr.body));
+    this.repo = pr.repo;
     const details = this.load(pr, cx);
     return v_flex().id("review-detail").flex_1().min_w(0).h_full().overflow_y_scroll().px(28).py(22).gap(18)
       .child(v_flex().gap(8)
@@ -844,10 +762,11 @@ activity(t, details) {
           .child(div().text_color(t.done).child(`+${pr.additions ?? 0}`))
           .child(div().text_color(t.blocked).child(`−${pr.deletions ?? 0}`))))
       .child(this.tabs(t, pr, cx))
-      .child(this.tab === "claude" ? this.claudeTab(t, pr, cx) : this.tab === "reviews" ? this.reviewsTab(t, pr, cx) : this.tab === "description"
-        ? v_flex().gap(22)
-          .child(div().text_size(12.5).text_color(body ? t.foreground : t.dim)
-            .child(body ? TextView.markdown(`review-body-${pr.number}`, body.slice(0, 20000)).selectable(true) : "No description."))
+      .child(this.tab === "claude" ? this.claudeTab(t, pr, cx) : this.tab !== "files"
+        ? v_flex().gap(28)
+          .child(v_flex()
+            .child(div().px(18).py(14).rounded(10).border_1().border_color(t.border).bg(t.surface).text_size(12.5).text_color(body ? t.foreground : t.dim)
+              .child(body ? TextView.markdown(`review-body-${pr.number}`, linkRefs(body.slice(0, 20000), pr.repo)).selectable(true) : "No description.")))
           .child(this.activity(t, details))
         : this.filesSection(t, pr, details));
   }
