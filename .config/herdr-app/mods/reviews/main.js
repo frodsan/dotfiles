@@ -166,7 +166,7 @@ export default class Reviews extends View {
       this.details = {};
       this.rules = {};
       this.me = {};
-      this.expanded = new Set();
+      this.toggled = new Set();
       this.showAll = false;
       this.tab = localStorage.getItem("tab") || "description";
       this.shown = null;
@@ -665,10 +665,11 @@ export default class Reviews extends View {
     const files = !details.hasRules || this.showAll ? details.files : mine;
     const hint = !details.hasRules ? "This repo has no CODEOWNERS, so all files show." : mine.length || this.showAll ? null : "None of these files belong to you or your teams.";
     const fileRow = (file) => {
-      const open = this.expanded.has(file.filename);
+      const byDefault = file.mine || (!details.hasRules && details.files.length <= 20);
+      const open = byDefault !== this.toggled.has(file.filename);
       return v_flex()
         .child(h_flex().id(`file-${file.filename}`).px(12).py(6).gap(8).items_center().text_size(12).cursor_pointer().hover((st) => st.bg(t.hover))
-          .on_click((_e, cx) => { if (open) this.expanded.delete(file.filename); else this.expanded.add(file.filename); cx.notify(); })
+          .on_click((_e, cx) => { if (this.toggled.has(file.filename)) this.toggled.delete(file.filename); else this.toggled.add(file.filename); cx.notify(); })
           .child(div().flex_none().text_color(t.dim).child(open ? "▾" : "▸"))
           .child(div().flex_1().min_w(0).truncate().text_color(file.mine ? t.foreground : t.muted).child(file.filename))
           .when((file.threads ?? []).some((th) => !th.resolved), (el) => el.child(div().flex_none().px(6).rounded(8).bg(t.raised).text_size(11).text_color(t.accent).tooltip("Open comment threads").child(`💬 ${file.threads.filter((th) => !th.resolved).length}`)))
@@ -772,7 +773,7 @@ export default class Reviews extends View {
     if (!props()?.view) return this.renderList();
     const t = theme();
     const pr = findPr(shared("reviews.selected")) ?? items()[0] ?? null;
-    if (pr?.url !== this.shown) { this.shown = pr?.url ?? null; this.expanded = new Set(); this.showAll = false; }
+    if (pr?.url !== this.shown) { this.shown = pr?.url ?? null; this.toggled = new Set(); this.showAll = false; }
     return h_flex().size_full().min_h(0).bg(t.background).text_color(t.foreground).child(this.detail(t, pr, cx));
   }
 }
