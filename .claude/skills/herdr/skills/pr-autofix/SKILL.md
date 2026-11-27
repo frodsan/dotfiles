@@ -42,9 +42,10 @@ Decide each thread with these rules. The first rule that matches decides.
 1. Estimate the size first. More than about 50 changed lines, or files the PR does not touch yet: always ask.
 2. The author's own comment, or the author's reply in the thread: do what it says. If it is unclear or is a question, ask. If it says to ignore a review bot comment, add 👎, reply in one sentence with why, then resolve it. If it says to ignore a teammate's comment, leave the thread as it is. Never react 👎 to a person's comment.
 3. The author's 👍: fix it.
-4. The review bot left 3 or more reviews on this PR (`gh pr view --json reviews`) and only nits (💬) or pre-existing findings (🟣) are left: ask about all of them at once instead of fixing.
-5. Pre-existing findings (🟣) are about code the PR did not cause: ask. Offer **Fix it here**, **Spin it off** (a new session with the herdr:spin-off skill), **Ignore it**.
-6. No signal: fix it when the fix is technical and simple. Ask when it changes behavior, or when the reviewer is unsure (the comment is a question or hedges).
+4. A teammate's comment or review (origin `human`) with no signal from the author: ask, even when the fix looks simple. Say what you would do and why, then wait for the author's answer. The author decides, not you.
+5. The review bot left 3 or more reviews on this PR (`gh pr view --json reviews`) and only nits (💬) or pre-existing findings (🟣) are left: ask about all of them at once instead of fixing.
+6. Pre-existing findings (🟣) are about code the PR did not cause: ask. Offer **Fix it here**, **Spin it off** (a new session with the herdr:spin-off skill), **Ignore it**.
+7. No signal on a review bot comment: fix it when the fix is technical and simple. Ask when it changes behavior, or when the bot is unsure (the comment is a question or hedges).
 
 Fix, reply, react and resolve review bot threads as the Comments section of `pr-fix/SKILL.md` says. For a teammate's thread, only fix and push.
 
