@@ -1,6 +1,6 @@
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, run, exec, theme, shared, setShared, nextCommand, readTextFile, writeTextFile, appHome, home, props, openOverlay } from "herdr";
+import { spaces, panes, run, exec, theme, shared, setShared, nextCommand, readTextFile, writeTextFile, appHome, home, props, openOverlay, hc } from "herdr";
 
 const CLAUDE = "claude";
 const CHATS_DIR = () => `${appHome()}/data/chats`;
@@ -38,6 +38,16 @@ async function trashChat(id) {
   setShared("chats.space", live);
 }
 
+async function firstStartSinceBoot(key) {
+  const r = await exec("sysctl", ["-n", "kern.boottime"]).catch(() => null);
+  const boot = r?.stdout.match(/sec = (\d+)/)?.[1];
+  if (!boot) return false;
+  const seen = shared(key);
+  if (seen === boot) return false;
+  setShared(key, boot);
+  return seen != null;
+}
+
 const setArchived = (id, on) => updateChatsMeta((m) => {
   m[id] = { ...(m[id] ?? {}) };
   if (on) m[id].archivedAt = Date.now();
@@ -65,6 +75,7 @@ export default class Chats extends View {
     cx.timer.every(10000, () => this.nameChatSpaces());
     cx.spawn(async () => this.purgeArchived());
     cx.timer.every(600000, () => { this.purgeArchived(); });
+    cx.timer.after(8000, () => { this.resumeAfterBoot().catch(() => null); });
     cx.spawn(async (cx) => {
       for (;;) {
         const command = await nextCommand();
@@ -72,6 +83,20 @@ export default class Chats extends View {
         else if (command === "remove") await this.removePending();
       }
     });
+  }
+
+  async resumeAfterBoot() {
+    if (!(await firstStartSinceBoot("chats.bootResumed"))) return;
+    const ps = panes();
+    for (const [chat, spaceId] of Object.entries(map("chats.space"))) {
+      const space = spaces().find((s) => s.id === spaceId);
+      if (!space) continue;
+      const tabs = new Set(space.tabs.map((tab) => tab.id));
+      const own = ps.filter((p) => tabs.has(p.tab));
+      if (own.some(claudeRunning) || own.length !== 1 || !own[0].terminal) continue;
+      const stored = await exec("test", ["-f", `${CHATS_PROJECT()}/${chat}.jsonl`]).then((r) => r.code === 0).catch(() => false);
+      if (stored) hc(["send", own[0].terminal, `${CLAUDE} --resume ${chat}`]);
+    }
   }
 
   closeExited() {

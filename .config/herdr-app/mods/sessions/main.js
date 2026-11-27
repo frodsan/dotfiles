@@ -358,6 +358,16 @@ async function latestConversation(cwd) {
   return file ? base(file).replace(/\.jsonl$/, "") : null;
 }
 
+async function firstStartSinceBoot(key) {
+  const r = await exec("sysctl", ["-n", "kern.boottime"]).catch(() => null);
+  const boot = r?.stdout.match(/sec = (\d+)/)?.[1];
+  if (!boot) return false;
+  const seen = shared(key);
+  if (seen === boot) return false;
+  setShared(key, boot);
+  return seen != null;
+}
+
 const settledDays = () => conf().settledDays;
 
 const allSettled = () => shared("sessions.archive") ?? [];
@@ -676,6 +686,7 @@ export default class Sessions extends View {
     cx.timer.every(5000, (cx) => this.readAutoFixStatus(cx));
     cx.timer.after(20000, (cx) => this.purgeSettled(cx));
     cx.timer.every(10 * 60000, (cx) => this.purgeSettled(cx));
+    cx.timer.after(8000, () => { this.resumeAfterBoot().catch(() => null); });
     cx.timer.every(30000, (cx) => cx.notify());
     cx.spawn(async (cx) => {
       for (;;) {
@@ -1341,6 +1352,20 @@ export default class Sessions extends View {
     const { [s.id]: _, ...pins } = map("sessions.claude");
     setShared("sessions.claude", pins);
     run("tab.new", { space: s.id, folder: place(s, ps), argv: [CLAUDE] });
+  }
+
+  async resumeAfterBoot() {
+    if (!(await firstStartSinceBoot("sessions.bootResumed"))) return;
+    const ps = panes();
+    for (const s of spaces().filter((sp) => !isChatSpace(sp))) {
+      if (claudePane(s, ps)) continue;
+      const shell = s.tabs.map((tab) => ps.filter((p) => p.tab === tab.id)).find((own) => own.length === 1 && own[0].terminal && own[0].program?.key === "shell")?.[0];
+      if (!shell) continue;
+      const id = map("sessions.claude")[s.id] ?? (await latestConversation(shell.cwd ?? place(s, ps)));
+      if (!id) continue;
+      setShared("sessions.claude", { ...map("sessions.claude"), [s.id]: id });
+      hc(["send", shell.terminal, `${CLAUDE} --resume ${id}`]);
+    }
   }
 
   openClaude(s, cx) {
