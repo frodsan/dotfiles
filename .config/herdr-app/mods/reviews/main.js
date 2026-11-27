@@ -24,7 +24,7 @@ const REVIEWS_QUERY = `query {
 
 const COMMENTS_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) { pullRequest(number: $number) {
-    commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { status conclusion } ... on StatusContext { state } } } } } } }
+    commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { name status conclusion detailsUrl startedAt completedAt checkSuite { workflowRun { workflow { name } } } } ... on StatusContext { context state targetUrl } } } } } } }
     reviewThreads(first: 100) { nodes { id isResolved isOutdated path line diffSide comments(first: 50) { nodes { id author { __typename login } body createdAt } } } }
     timelineItems(last: 60, itemTypes: [PULL_REQUEST_REVIEW, ISSUE_COMMENT]) {
       nodes {
@@ -195,7 +195,7 @@ export default class Reviews extends View {
       this.me = {};
       this.toggled = new Set();
       this.showAll = false;
-      this.tab = ["files", "claude"].includes(localStorage.getItem("tab")) ? localStorage.getItem("tab") : "description";
+      this.tab = ["files", "checks", "claude"].includes(localStorage.getItem("tab")) ? localStorage.getItem("tab") : "description";
       this.shown = null;
       cx.timer.every(2000, (cx) => cx.notify());
       return;
@@ -476,12 +476,13 @@ export default class Reviews extends View {
         const person = (c) => ({ id: c.id, author: c.author?.login ?? "ghost", bot: isBot(c.author), body: c.body ?? "", at: c.createdAt });
         const threads = (data?.reviewThreads?.nodes ?? []).map((th) => ({ id: th.id, resolved: th.isResolved, outdated: th.isOutdated, path: th.path, line: th.line, side: th.diffSide, comments: th.comments.nodes.map(person) }));
         const activity = buildActivity(data?.timelineItems?.nodes ?? []);
-        const checks = { passed: 0, pending: 0, failing: 0 };
+        const checks = { passed: 0, pending: 0, failing: 0, list: [] };
         for (const c of data?.commits?.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes ?? []) {
           const state = c.__typename === "CheckRun" ? (c.status !== "COMPLETED" ? "PENDING" : c.conclusion) : c.state;
-          if (["SUCCESS", "NEUTRAL"].includes(state)) checks.passed += 1;
-          else if (["PENDING", "EXPECTED", "QUEUED", "IN_PROGRESS"].includes(state)) checks.pending += 1;
-          else if (state !== "SKIPPED") checks.failing += 1;
+          const kind = ["SUCCESS", "NEUTRAL"].includes(state) ? "passed" : ["PENDING", "EXPECTED", "QUEUED", "IN_PROGRESS"].includes(state) ? "pending" : state === "SKIPPED" ? "skipped" : "failing";
+          if (kind !== "skipped") checks[kind] += 1;
+          const seconds = c.startedAt && c.completedAt ? Math.round((Date.parse(c.completedAt) - Date.parse(c.startedAt)) / 1000) : null;
+          checks.list.push({ kind, state, name: c.name ?? c.context ?? "check", workflow: c.checkSuite?.workflowRun?.workflow?.name ?? null, url: c.detailsUrl ?? c.targetUrl ?? null, seconds });
         }
         if (files.code !== 0) throw new Error(files.stderr.trim() || "Could not load the files");
         const list = files.stdout.split("\n").filter(Boolean).map((line) => JSON.parse(line)).map((file) => {
@@ -651,11 +652,49 @@ statusBar(t, pr, details, cx) {
   const missing = Math.max(0, need - approved);
   const approvalNote = rule.loading ? "Loading…" : changes ? "Changes requested" : missing ? `${missing} still required` : approved ? "Approved" : "None required";
   return h_flex().rounded(10).border_1().border_color(t.border).overflow_hidden()
-    .child(card("checks", "Checks", checkNote, c.failing ? t.ansi1 : null, segments([[c.passed, t.done], [c.pending, t.working], [c.failing, t.ansi1]]), () => exec("open", [`${pr.url}/checks`])))
+    .child(card("checks", "Checks", checkNote, c.failing ? t.ansi1 : null, segments([[c.passed, t.done], [c.pending, t.working], [c.failing, t.ansi1]]), () => { this.tab = "checks"; localStorage.setItem("tab", "checks"); }))
     .child(div().w(1).h_full().flex_none().bg(t.border))
     .child(card("comments", "Comments", threadNote, open ? t.working : null, segments([[threads.length - open, t.done], [open, t.working]]), () => { this.tab = "files"; localStorage.setItem("tab", "files"); }))
     .child(div().w(1).h_full().flex_none().bg(t.border))
     .child(card("approvals", "Approvals", approvalNote, changes ? t.blocked : null, segments([[approved, t.done], [changes, t.blocked], [missing, t.dim]]), () => exec("open", [pr.url])));
+}
+
+checkCount(pr) {
+  const d = this.details?.[`${pr.url}@${pr.headRefOid}`];
+  return d?.checks?.list ? d.checks.list.length : null;
+}
+
+checksTab(t, details) {
+  if (!details || details.loading) return div().text_size(12.5).text_color(t.dim).child("Loading checks…");
+  if (details.error) return div().text_size(12.5).text_color(t.blocked).child(details.error);
+  const list = details.checks?.list ?? [];
+  if (!list.length) return div().text_size(12.5).text_color(t.dim).child("No checks on the latest commit.");
+  const color = { failing: t.ansi1, pending: t.working, passed: t.done, skipped: t.dim };
+  const duration = (s) => (s == null ? "" : s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`);
+  const row = (c, i) => h_flex().id(`check-${i}`).px(12).py(7).gap(10).items_center().text_size(12.5)
+    .when(Boolean(c.url), (el) => el.cursor_pointer().hover((st) => st.bg(t.hover)).on_click(() => exec("open", [c.url])))
+    .child(div().size(8).flex_none().rounded(4).bg(color[c.kind]))
+    .child(div().flex_1().min_w(0).truncate().text_color(c.kind === "skipped" ? t.dim : t.foreground).child(c.workflow ? `${c.workflow} / ${c.name}` : c.name))
+    .when(c.kind === "pending", (el) => el.child(div().flex_none().text_size(11.5).text_color(t.working).child("running")))
+    .child(div().flex_none().text_size(11.5).text_color(t.dim).child(duration(c.seconds)))
+    .when(Boolean(c.url), (el) => el.child(svg(ICON("external-link")).size(11).flex_none().text_color(t.dim)));
+  const group = (kind, title, foldedByDefault) => {
+    const rows = list.map((c, i) => [c, i]).filter(([c]) => c.kind === kind);
+    if (!rows.length) return [];
+    const key = `checks.${kind}.open`;
+    const open = localStorage.getItem(key) == null ? !foldedByDefault : localStorage.getItem(key) === "1";
+    return [v_flex().gap(6)
+      .child(h_flex().id(`checks-${kind}`).gap(6).items_center().cursor_pointer()
+        .on_click((_e, cx) => { localStorage.setItem(key, open ? "0" : "1"); cx.notify(); })
+        .child(div().text_size(11).text_color(t.dim).child(open ? "▾" : "▸"))
+        .child(div().text_size(11).font_semibold().text_color(t.muted).child(`${title.toUpperCase()} (${rows.length})`)))
+      .when(open, (el) => el.child(v_flex().rounded(10).border_1().border_color(t.border).overflow_hidden().children(rows.map(([c, i]) => row(c, i)))))];
+  };
+  return v_flex().gap(18)
+    .children(group("failing", "Failing", false))
+    .children(group("pending", "Running", false))
+    .children(group("passed", "Passed", true))
+    .children(group("skipped", "Skipped", true));
 }
 
   activity(t, details) {
@@ -702,15 +741,15 @@ statusBar(t, pr, details, cx) {
   }
 
   tabs(t, pr, cx) {
-    const tab = (id, text, count = null) => {
+    const tab = (id, text, count = null, icon = null) => {
       const on = (this.tab ?? "description") === id;
       return div().id(`tab-${id}`).px(2).pb(8).text_size(13).cursor_pointer().border_b_2()
         .border_color(on ? t.accent : t.background).text_color(on ? t.foreground : t.dim)
         .hover((st) => st.text_color(t.foreground))
         .on_click((_e, cx) => { this.tab = id; localStorage.setItem("tab", id); cx.notify(); })
-        .child(h_flex().gap(5).items_center().child(text).when(count != null, (el) => el.child(div().text_color(t.dim).opacity(0.75).child(`(${count})`))));
+        .child(h_flex().gap(6).items_center().when(Boolean(icon), (el) => el.child(svg(ICON(icon ?? "")).size(13).flex_none())).child(text).when(count != null, (el) => el.child(div().px(7).rounded(9).bg(t.raised).text_size(11.5).font_medium().text_color(t.muted).child(String(count)))));
     };
-    return h_flex().gap(20).border_b_1().border_color(t.border).child(tab("description", "Overview")).child(tab("files", "Files changed", pr.changedFiles || null)).when(Boolean(this.claudeEntry(pr)), (el) => el.child(tab("claude", this.claudeLabel(pr))));
+    return h_flex().gap(20).border_b_1().border_color(t.border).child(tab("description", "Overview", null, "overview")).child(tab("files", "Files changed", pr.changedFiles || null, "files")).child(tab("checks", "Checks", this.checkCount(pr), "checks")).when(Boolean(this.claudeEntry(pr)), (el) => el.child(tab("claude", this.claudeLabel(pr))));
   }
 
   filesSection(t, pr, details) {
@@ -820,7 +859,7 @@ statusBar(t, pr, details, cx) {
           .child(div().text_color(t.done).child(`+${pr.additions ?? 0}`))
           .child(div().text_color(t.blocked).child(`−${pr.deletions ?? 0}`))))
       .child(this.tabs(t, pr, cx))
-      .child(this.tab === "claude" ? this.claudeTab(t, pr, cx) : this.tab !== "files"
+      .child(this.tab === "claude" ? this.claudeTab(t, pr, cx) : this.tab === "checks" ? this.checksTab(t, this.load(pr, cx)) : this.tab !== "files"
         ? v_flex().gap(28)
           .child(this.statusBar(t, pr, details, cx))
           .child(v_flex()
