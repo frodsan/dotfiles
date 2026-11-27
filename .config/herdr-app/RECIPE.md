@@ -122,7 +122,7 @@ Shared keys: `firehouse.settings` holds the settings, `commands.list` the custom
 - A mod copy starts the first time its block shows. A stack child that never showed, like the chats list, runs no timers. Background work needs a 0px block. Only one copy should handle a mod command, so the chats list does not call `nextCommand()`.
 - Herdr runs `argv` agents in the login shell, which stays open after the agent exits. After Claude exits, the terminal still reports `app: "claude-code"`. Check `program.key === "claude"` or an agent status instead.
 - `hc send` delivers text as a message from another terminal, so Claude does not run `/exit` from it. To test an exit, press `ctrl+d` twice with `hc keys`.
-- A mod folder that is a link may not reload when its files change. Restart Herdr. The terminals keep running.
+- Herdr does not reload a mod folder that is a link when a file behind the link changes. Copy mod folders into `~/.config/herdr-app/mods` instead of linking them.
 - The auto-fix reply check matches `[AI-generated]`, the label that the `pr-fix` skill writes. Change both together.
 - It assumes macOS: `dscl` for the login shell, `~/.Trash`, and the window button spot.
 - The Rails console key assumes a `bin/rails` in the worktree.

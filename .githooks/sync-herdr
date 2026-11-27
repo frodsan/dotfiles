@@ -1,0 +1,3 @@
+#!/bin/sh
+[ "$(git rev-parse --git-dir)" = "$(git rev-parse --git-common-dir)" ] || exit 0
+"$(git rev-parse --show-toplevel)/install.sh" --sync >/dev/null || echo "install.sh --sync failed. Run it by hand to see why." >&2

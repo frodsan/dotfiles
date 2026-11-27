@@ -11,6 +11,7 @@ if [[ -n "$SCRIPT" && -f "$SCRIPT" ]]; then
 fi
 FORCE="${FORCE:-0}"
 LINKS_ONLY=0
+SYNC_ONLY=0
 
 FILES=(
   .bundle/config
@@ -19,10 +20,6 @@ FILES=(
   .claude/skills/herdr
   .config/herdr-app/keys.json
   .config/herdr-app/layouts/Firehouse.json
-  .config/herdr-app/mods/sessions
-  .config/herdr-app/mods/chats
-  .config/herdr-app/mods/custom-commands
-  .config/herdr-app/mods/shortcuts
   .config/herdr-app/themes/firehouse.json
   .config/nvim
   .gemrc
@@ -40,8 +37,15 @@ COPIES=(
   .config/herdr-app/settings.json
 )
 
+SYNCS=(
+  .config/herdr-app/mods/sessions
+  .config/herdr-app/mods/chats
+  .config/herdr-app/mods/custom-commands
+  .config/herdr-app/mods/shortcuts
+)
+
 usage() {
-  echo "Usage: install.sh [--force] [--links]"
+  echo "Usage: install.sh [--force] [--links] [--sync]"
   echo
   echo "Run from curl, it installs the Xcode Command Line Tools, clones the repo into"
   echo "\$DOTFILES_DIR (default ~/Code/frodsan/dotfiles) and runs the clone's install.sh."
@@ -49,6 +53,8 @@ usage() {
   echo "Existing files are left alone unless you pass --force or set FORCE=1."
   echo "With --force, each existing file is moved to <name>.bak before it is linked."
   echo "With --links, it only links and copies the files, for example after adding one."
+  echo "With --sync, it only copies the Herdr mods. The repo's git hooks run it after each"
+  echo "commit, merge and checkout, because Herdr reloads copied mods but not linked ones."
 }
 
 parse_args() {
@@ -56,6 +62,7 @@ parse_args() {
     case "$arg" in
       --force) FORCE=1 ;;
       --links) LINKS_ONLY=1 ;;
+      --sync) SYNC_ONLY=1 ;;
       -h | --help) usage; exit 0 ;;
       *) echo "Unknown option: $arg"; usage; exit 1 ;;
     esac
@@ -172,6 +179,42 @@ copy_file() {
   echo "  copied   ~/$file"
 }
 
+sync_dir() {
+  local file="$1"
+  local source="$DOTFILES/$file"
+  local target="$HOME/$file"
+
+  if [[ -L "$target" ]]; then
+    if [[ "$(readlink "$target")" != "$source" && "$FORCE" != "1" ]]; then
+      echo "  skipped  ~/$file links somewhere else. Run with --force to replace it."
+      return
+    fi
+    rm "$target"
+    echo "  unlinked ~/$file"
+  elif [[ -e "$target" && ! -d "$target" ]]; then
+    echo "  skipped  ~/$file is not a folder"
+    return
+  fi
+
+  mkdir -p "$target"
+  rsync -a --delete --exclude gpui-kit.d.ts --exclude jsconfig.json --exclude .DS_Store "$source/" "$target/"
+  echo "  synced   ~/$file"
+}
+
+sync_files() {
+  echo "==> Herdr mods"
+
+  for file in "${SYNCS[@]}"; do
+    sync_dir "$file"
+  done
+}
+
+use_git_hooks() {
+  echo "==> Git hooks"
+  git -C "$DOTFILES" config core.hooksPath .githooks
+  echo "  ok       commits, merges and checkouts sync the Herdr mods"
+}
+
 link_files() {
   echo "==> Dotfiles"
   SKIPPED=0
@@ -247,14 +290,22 @@ if [[ -z "$DOTFILES" || ! -f "$DOTFILES/Brewfile" ]]; then
   bootstrap "$@"
   exit
 fi
+if [[ "$SYNC_ONLY" -eq 1 ]]; then
+  sync_files
+  exit
+fi
 if [[ "$LINKS_ONLY" -eq 1 ]]; then
   link_files
+  sync_files
+  use_git_hooks
   create_local_files
   exit
 fi
 install_homebrew
 install_packages
 link_files
+sync_files
+use_git_hooks
 create_local_files
 select_herdr_layout
 install_skills

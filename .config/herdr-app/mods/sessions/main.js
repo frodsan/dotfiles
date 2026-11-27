@@ -1272,7 +1272,7 @@ export default class Sessions extends View {
   }
 
   async devFolder() {
-    const r = await exec("sh", ["-c", 'cd "$(dirname "$(readlink -f "$1")")" 2>/dev/null && git rev-parse --show-toplevel', "sh", `${appHome()}/mods/sessions`]).catch(() => null);
+    const r = await exec("sh", ["-c", 'cd "$(dirname "$(readlink -f "$1")")" 2>/dev/null && git rev-parse --show-toplevel', "sh", `${appHome()}/keys.json`]).catch(() => null);
     return r?.code === 0 && r.stdout.trim() ? r.stdout.trim() : appHome();
   }
 
