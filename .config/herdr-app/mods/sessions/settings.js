@@ -2,7 +2,7 @@ import { div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { theme, shared, setShared, props, closeOverlay, openOverlay } from "herdr";
 
-const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", setup: {}, autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, nextWeekDay: 1, autoToasts: false };
+const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, nextWeekDay: 1, autoToasts: false };
 export const conf = () => ({ ...DEFAULT_SETTINGS, ...(shared("firehouse.settings") ?? {}) });
 export const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 export const openSettings = () => openOverlay({ mod: "sessions", kind: "dialog", width: 620, height: 620, props: { settings: true } });
@@ -36,8 +36,7 @@ export class SettingsDialog {
       .child(h_flex().flex_none().px(22).pt(22).pb(12).items_center().child(div().flex_1().text_size(16).font_semibold().child("Session settings")).child(div().text_size(11).text_color(t.dim).child("Esc")))
       .child(v_flex().id("settings-body").flex_1().min_h(0).px(22).pb(22).gap(20).overflow_y_scrollbar()
         .child(group("New sessions",
-          row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b.", input(this.branchPrefix)),
-          div().text_size(11.5).text_color(t.dim).child("To run a setup command in new worktrees, right-click a folder in Sessions.")))
+          row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b. To run a command in each new worktree, add a post-start hook to Worktrunk's config.", input(this.branchPrefix))))
         .child(group("Settling",
           row("Auto-settle", "Settle a session when its pull request merges or closes. You can still turn it off per session.", onOff("autoSettle")),
           row("Keep settled sessions and archived chats for", "After that, Herdr deletes a settled session's worktree and Claude conversation. A worktree with uncommitted changes or commits that are not on GitHub stays, with a warning in Settled. The branch always stays. An archived chat moves to the Trash.", h_flex().gap(4).children(SETTLED_DAYS.map((d) => choice(`settled-${d}`, d === 1 ? "1 day" : `${d} days`, c.settledDays === d, () => setConf({ settledDays: d })))))))

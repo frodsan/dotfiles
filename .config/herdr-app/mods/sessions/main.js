@@ -176,7 +176,6 @@ export function toolPane(kind, s, ps = panes()) {
   return id ? ps.find((p) => p.pane === id) ?? null : null;
 }
 const autoNotify = (n) => (conf().autoToasts ? notify(n) : null);
-const setupFor = (root) => (root ? (conf().setup?.[root] ?? "").trim() : "");
 const dayAt = (days, hour, minute = 0) => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days, hour, minute).getTime(); };
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const SNOOZE = [
@@ -233,9 +232,8 @@ const MODES = [["auto", "Auto"], ["plan", "Plan"], ["acceptEdits", "Accept edits
 const BRANCH_PROMPT = "You name git branches for a developer. Reply with only 2 to 5 lowercase English words joined by hyphens that say what the change does, for example rename-ci-test-databases. Never more than 5 words. Start with a ticket ID like pla-2525 when the request names one; it does not count as a word. Never use the names of repositories or folders where the work happens. No filler words, no prefix, no quotes.";
 const FILLER = new Set(["a", "an", "the", "in", "on", "at", "of", "to", "for", "from", "with", "by", "and", "or", "is", "are", "be", "it", "this", "that", "i", "we", "you", "me", "my", "can", "could", "would", "should", "please", "need", "want", "like", "let", "lets", "just", "some", "also", "how", "what", "why", "do", "does", "under", "into", "folder", "repo", "hey", "hi", "ok", "maybe", "try", "help"]);
 const START_SCRIPT = `#!/bin/sh
-FOLDER="$1"; BRANCH="$2"; MESSAGE_FILE="$3"; WORKTREE="$4"; SETUP="$5"; shift 5
+FOLDER="$1"; BRANCH="$2"; MESSAGE_FILE="$3"; WORKTREE="$4"; shift 4
 cd "$FOLDER" || exit 1
-NOTE=""
 if [ "$WORKTREE" = 1 ] || [ "$WORKTREE" = 2 ]; then
   if [ "$WORKTREE" = 1 ]; then
     DEFAULT=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##'); DEFAULT=\${DEFAULT:-master}
@@ -253,18 +251,11 @@ if [ "$WORKTREE" = 1 ] || [ "$WORKTREE" = 2 ]; then
   fi
   DIR=$(printf '%s\\n' "$OUT" | grep '^{' | tail -1 | jq -r .path)
   cd "$DIR" || exit 1
-  if [ -n "$SETUP" ]; then
-    LOG="\${TMPDIR:-/tmp}/herdr-setup-$$.log"
-    (sh -c "$SETUP" > "$LOG" 2>&1 &)
-    NOTE="<system-note>The worktree setup command ($SETUP) is still running in the background, logging to $LOG. Reading and editing code is fine, but tests, bundle, yarn and git commit hooks may fail until it finishes. If one fails for a missing dependency, say so and wait instead of working around it.</system-note>
-
-"
-  fi
 fi
 TEXT=$(cat "$MESSAGE_FILE" 2>/dev/null)
 rm -f "$MESSAGE_FILE"
 [ -z "$TEXT" ] && exec claude "$@"
-exec claude "$@" "$NOTE$TEXT"
+exec claude "$@" "$TEXT"
 `;
 
 function fallbackSlug(text) {
@@ -347,7 +338,7 @@ async function spinOff(req) {
   const previous = spaces().find((sp) => sp.active)?.id ?? null;
   const focus = Boolean(shared("focus.on")) || Boolean(source && map("focus.starred")[source.id]);
   setShared("sessions.pending", [...(shared("sessions.pending") ?? []), { name, section: source ? (map("sessions.membership")[source.id] ?? null) : null, focus, at: Date.now() }]);
-  run("space.new", { name, folder: root, machine: source?.machine ?? "", argv: ["env", `HERDR_BASE=${stack}`, "sh", scriptPath, root, branch, messagePath, "1", setupFor(root), "--permission-mode", req.mode || "auto", "--append-system-prompt", note] });
+  run("space.new", { name, folder: root, machine: source?.machine ?? "", argv: ["env", `HERDR_BASE=${stack}`, "sh", scriptPath, root, branch, messagePath, "1", "--permission-mode", req.mode || "auto", "--append-system-prompt", note] });
   if (previous) run("space.select", { id: previous });
   autoNotify({ title: `Spun off “${name}”`, body: stack ? `${branch}, stacked on ${stack}` : branch, level: "success", timeout: 5000 });
 }
@@ -637,7 +628,6 @@ export default class Sessions extends View {
     }
     if (props()?.composer) return this.initComposer(cx);
     if (props()?.menu?.snoozeOnly) return this.initSnooze(cx);
-    if (props()?.menu?.folderMenu) return this.initFolderMenu(cx);
     if (props()?.welcome) return this.initWelcome(cx);
     if (props()?.settings) { this.settings = new SettingsDialog(); return this.settings.init(); }
     if (props()?.menu) {
@@ -1598,7 +1588,6 @@ export default class Sessions extends View {
       .on_mouse_up("left", (_e, cx) => { if (this.pressed) this.dropOn(null, folderKey, cx); })
       .on_click((_e, cx) => this.toggleFolder(folderKey, cx))
       .on_hover(this.hovering(`folder-${folderKey}`))
-      .when(path !== home(), (el) => el.on_mouse_down("right", () => openOverlay({ mod: "sessions", kind: "popup", width: 300, height: 190, props: { menu: { folderMenu: folderKey } } })))
       .child(svg(ICON(collapsed ? "chevron-right" : "chevron-down")).size(12).flex_none().text_color(t.dim))
       .child(div().flex_1().min_w(0).truncate().child(path === home() ? "~" : base(path)).when(Boolean(on), (el) => el.child(div().text_color(t.dim).font_normal().child(` · ${on}`))))
       .when(Boolean(this.mains?.[folderKey]?.branch && this.mains[folderKey].def && this.mains[folderKey].branch !== this.mains[folderKey].def), (el) => {
@@ -1826,14 +1815,6 @@ export default class Sessions extends View {
     this.menuItems = [];
   }
 
-  initFolderMenu(cx) {
-    const folder = JSON.parse(props().menu.folderMenu)[1];
-    this.setupInput = InputState.new({ value: conf().setup?.[folder] ?? "", placeholder: "e.g. bin/setup" });
-    this.setupInput.on("change", () => setConf({ setup: { ...(conf().setup ?? {}), [folder]: this.setupInput.value() } }));
-    this.setupInput.on("submit", () => closeOverlay(props().overlay));
-    cx.timer.after(40, () => this.setupInput.focus?.());
-  }
-
   initSnooze(cx) {
     this.customOpen = false;
     this.snoozeInput = InputState.new({ value: "", placeholder: "e.g. 2h or fri 10:00" });
@@ -1904,10 +1885,9 @@ export default class Sessions extends View {
         }
         const prefix = conf().branchPrefix;
         const branch = choice.pr ? choice.pr : choice.worktree ? `${prefix}${await branchSlug(text, folder)}-${Math.random().toString(16).slice(2, 6)}` : "";
-        const setup = choice.worktree ? setupFor(folder) : "";
         const flags = [...(choice.model ? ["--model", choice.model] : []), "--permission-mode", choice.mode, ...(choice.where === "main" ? ["--append-system-prompt", mainCheckoutNote(base(folder))] : [])];
         setShared("sessions.pending", [...(shared("sessions.pending") ?? []), { name, section: choice.section, focus: choice.focus || Boolean(shared("focus.on")), at: Date.now() }]);
-        run("space.new", { name, folder, machine: machine ?? "", argv: ["sh", scriptPath, folder, branch, messagePath, choice.pr ? "2" : choice.worktree ? "1" : "0", setup, ...flags] });
+        run("space.new", { name, folder, machine: machine ?? "", argv: ["sh", scriptPath, folder, branch, messagePath, choice.pr ? "2" : choice.worktree ? "1" : "0", ...flags] });
         if (background) {
           if (previous) run("space.select", { id: previous });
           if (launch) launch.state = choice.pr ? `#${choice.pr.split("/").pop()}` : branch ? branch : "started";
@@ -2055,7 +2035,7 @@ export default class Sessions extends View {
             shortcut("sessions.dev", "Ask Claude to change this setup"),
             shortcut("sessions.shortcuts", "All shortcuts"),
           ))
-          .child(div().text_size(11.5).text_color(t.dim).child("Right-click a session for focus, snooze and the automatic actions. Right-click a folder to set its setup command."))))
+          .child(div().text_size(11.5).text_color(t.dim).child("Right-click a session for focus, snooze and the automatic actions."))))
       .child(h_flex().flex_none().px(22).py(14).gap(8).border_t_1().border_color(t.border).items_center()
         .child(div().flex_1())
         .child(action("welcome-recheck", "Check again", (cx) => this.checkWelcome(cx)))
@@ -2078,15 +2058,6 @@ export default class Sessions extends View {
       .child(div().flex_1().truncate().child(label));
     const label = (text) => div().px(10).pt(6).pb(2).text_size(11).text_color(t.dim).child(text);
     const line = () => div().my(4).h(1).bg(t.border);
-    if (p.menu.folderMenu) {
-      const folder = JSON.parse(p.menu.folderMenu)[1];
-      return v_flex().id("sessions-folder-menu").w_full().p(5).bg(t.popover)
-        .on_key_down((e, cx) => { if (e.key === "escape") { close(); cx.stop_propagation(); } })
-        .child(label(`Setup command for new ${base(folder)} worktrees`))
-        .child(v_flex().px(6).pt(2).pb(4).gap(5)
-          .child(Input.new(this.setupInput).h(28).px(8).rounded(6).border_1().border_color(t.input).bg(t.background).text_size(12.5).text_color(t.foreground))
-          .child(div().px(2).text_size(11.5).text_color(t.dim).child("Runs in the background in each new worktree. Empty means none.")));
-    }
     if (p.menu.snoozeOnly) {
       const store = p.menu.store;
       const isSnoozed = store ? (map(store)[id]?.until ?? 0) > Date.now() : snoozed(id);

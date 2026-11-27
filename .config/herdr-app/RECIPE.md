@@ -52,9 +52,9 @@ Type is Herdr's UI font. Sidebar rows are 13px, meta lines 11px to 12px.
 | `⌘,` | A Claude session in the folder that holds this config. |
 | `⇧⌘/` | Keyboard shortcuts dialog. |
 
-**New session.** Herdr fetches the default branch and creates a worktree with `wt switch <branch> --create`. It runs the folder's setup command, then starts Claude with the prompt. The branch is the settings prefix plus a slug that `claude -p --model haiku` writes, with a fallback from the prompt words.
+**New session.** Herdr fetches the default branch and creates a worktree with `wt switch <branch> --create`. Worktrunk runs its hooks, and Herdr starts Claude with the prompt. The branch is the settings prefix plus a slug that `claude -p --model haiku` writes, with a fallback from the prompt words.
 
-**Clicks.** A row click selects the space and focuses its Claude pane. Right-clicking a row opens its menu: open the pull request on GitHub, update the branch, settle, rename, move to a section and remove. A starred session's menu also has Snooze… and Pin. A snoozed row has a clock button to change the time or unsnooze. Right-clicking a folder sets its setup command. Dragging moves a session.
+**Clicks.** A row click selects the space and focuses its Claude pane. Right-clicking a row opens its menu: open the pull request on GitHub, update the branch, settle, rename, move to a section and remove. A starred session's menu also has Snooze… and Pin. A snoozed row has a clock button to change the time or unsnooze. Dragging moves a session.
 
 **Pull request panel.** It shows checks, reviews and the branch state. It has an update-branch button and three toggles. Fix turns on auto-fix. Merge turns on merge when ready. Settle turns on auto-settle.
 
