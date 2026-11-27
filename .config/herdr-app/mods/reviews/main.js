@@ -654,7 +654,7 @@ export default class Reviews extends View {
         .on_click((_e, cx) => { this.tab = id; localStorage.setItem("tab", id); cx.notify(); })
         .child(text);
     };
-    return h_flex().gap(20).border_b_1().border_color(t.border).child(tab("description", "Description")).child(tab("files", "Files")).child(tab("reviews", reviewsLabel)).when(Boolean(this.claudeEntry(pr)), (el) => el.child(tab("claude", this.claudeLabel(pr))));
+    return h_flex().gap(20).border_b_1().border_color(t.border).child(tab("description", "Overview")).child(tab("files", "Files")).child(tab("reviews", reviewsLabel)).when(Boolean(this.claudeEntry(pr)), (el) => el.child(tab("claude", this.claudeLabel(pr))));
   }
 
   filesSection(t, pr, details) {
