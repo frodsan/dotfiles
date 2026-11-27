@@ -24,6 +24,7 @@ const REVIEWS_QUERY = `query {
 
 const COMMENTS_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) { pullRequest(number: $number) {
+    commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { status conclusion } ... on StatusContext { state } } } } } } }
     reviewThreads(first: 100) { nodes { id isResolved isOutdated path line diffSide comments(first: 50) { nodes { id author { __typename login } body createdAt } } } }
     timelineItems(last: 60, itemTypes: [PULL_REQUEST_REVIEW, ISSUE_COMMENT]) {
       nodes {
@@ -475,12 +476,19 @@ export default class Reviews extends View {
         const person = (c) => ({ id: c.id, author: c.author?.login ?? "ghost", bot: isBot(c.author), body: c.body ?? "", at: c.createdAt });
         const threads = (data?.reviewThreads?.nodes ?? []).map((th) => ({ id: th.id, resolved: th.isResolved, outdated: th.isOutdated, path: th.path, line: th.line, side: th.diffSide, comments: th.comments.nodes.map(person) }));
         const activity = buildActivity(data?.timelineItems?.nodes ?? []);
+        const checks = { passed: 0, pending: 0, failing: 0 };
+        for (const c of data?.commits?.nodes?.[0]?.commit?.statusCheckRollup?.contexts?.nodes ?? []) {
+          const state = c.__typename === "CheckRun" ? (c.status !== "COMPLETED" ? "PENDING" : c.conclusion) : c.state;
+          if (["SUCCESS", "NEUTRAL"].includes(state)) checks.passed += 1;
+          else if (["PENDING", "EXPECTED", "QUEUED", "IN_PROGRESS"].includes(state)) checks.pending += 1;
+          else if (state !== "SKIPPED") checks.failing += 1;
+        }
         if (files.code !== 0) throw new Error(files.stderr.trim() || "Could not load the files");
         const list = files.stdout.split("\n").filter(Boolean).map((line) => JSON.parse(line)).map((file) => {
           const owners = ownersOf(rules, file.filename);
           return { ...file, owners, mine: owners.some((o) => me.mine.has(o)), threads: threads.filter((th) => th.path === file.filename) };
         });
-        this.details[key] = { files: list, hasRules: rules.length > 0, activity, loadedComments: Boolean(data) };
+        this.details[key] = { files: list, hasRules: rules.length > 0, activity, checks, threads, loadedComments: Boolean(data) };
       } catch (error) {
         this.details[key] = { error: String(error.message ?? error) };
       }
@@ -599,6 +607,56 @@ export default class Reviews extends View {
         .child(button(stale ? "Review the new commits" : "Re-run")))
       .when(Boolean(report), (el) => el.child(div().text_size(12.5).child(TextView.markdown(`claude-${pr.number}-${e.finishedAt}`, report).selectable(true))));
   }
+
+ruleFor(pr, cx) {
+  this.rulesets ??= {};
+  const key = `${pr.repo}@${pr.baseRefName}`;
+  const cached = this.rulesets[key];
+  if (cached && (cached.loading || Date.now() - cached.at < DAY_MS)) return cached;
+  this.rulesets[key] = { loading: true, at: Date.now() };
+  cx.spawn(async (cx) => {
+    const r = await exec("gh", ["api", `repos/${pr.repo}/rules/branches/${encodeURIComponent(pr.baseRefName)}`]).catch(() => null);
+    const rules = r?.code === 0 ? JSON.parse(r.stdout).filter((x) => x.type === "pull_request").map((x) => x.parameters ?? {}) : [];
+    this.rulesets[key] = { approvals: Math.max(0, ...rules.map((x) => x.required_approving_review_count ?? 0)), at: Date.now() };
+    cx.notify();
+  });
+  return this.rulesets[key];
+}
+
+statusBar(t, pr, details, cx) {
+  const segments = (parts) => {
+    const total = parts.reduce((sum, [n]) => sum + n, 0);
+    if (!total) return div().w_full().h(6).rounded(3).border_1().border_color(t.border);
+    return h_flex().w_full().h(6).gap(2).rounded(3).overflow_hidden()
+      .children(parts.filter(([n]) => n > 0).map(([n, color]) => div().h_full().bg(color).w(`${(n / total) * 100}%`)));
+  };
+  const card = (id, title, note, noteColor, bar, onClick) => v_flex().id(`status-${id}`).flex_1().min_w(0).gap(10).px(14).py(12).cursor_pointer().hover((st) => st.bg(t.hover))
+    .on_click((_e, cx) => { onClick(); cx.notify(); })
+    .child(h_flex().gap(6).items_center()
+      .child(div().flex_none().text_size(13).font_semibold().text_color(t.foreground).child(title))
+      .child(div().flex_1().min_w(0).truncate().text_size(12).text_color(noteColor ?? t.dim).child(note))
+      .child(svg(ICON("chevron-right")).size(12).flex_none().text_color(t.dim)))
+    .child(bar);
+  const ready = details && !details.loading && !details.error;
+  const c = ready ? details.checks : { passed: 0, pending: 0, failing: 0 };
+  const checkNote = !ready ? "Loading…" : c.failing ? `${c.failing} failing` : c.pending ? `${c.pending} running` : c.passed ? "All passed" : "None";
+  const threads = ready ? details.threads ?? [] : [];
+  const open = threads.filter((th) => !th.resolved).length;
+  const threadNote = !ready ? "Loading…" : !threads.length ? "None" : open ? `${open} unresolved` : "All resolved";
+  const rule = this.ruleFor(pr, cx);
+  const people = (pr.reviews ?? []).filter((r) => !r.bot);
+  const approved = people.filter((r) => r.state === "APPROVED").length;
+  const changes = people.filter((r) => r.state === "CHANGES_REQUESTED").length;
+  const need = rule.approvals ?? 0;
+  const missing = Math.max(0, need - approved);
+  const approvalNote = rule.loading ? "Loading…" : changes ? "Changes requested" : missing ? `${missing} still required` : approved ? "Approved" : "None required";
+  return h_flex().rounded(10).border_1().border_color(t.border).overflow_hidden()
+    .child(card("checks", "Checks", checkNote, c.failing ? t.ansi1 : null, segments([[c.passed, t.done], [c.pending, t.working], [c.failing, t.ansi1]]), () => exec("open", [`${pr.url}/checks`])))
+    .child(div().w(1).h_full().flex_none().bg(t.border))
+    .child(card("comments", "Comments", threadNote, open ? t.working : null, segments([[threads.length - open, t.done], [open, t.working]]), () => { this.tab = "files"; localStorage.setItem("tab", "files"); }))
+    .child(div().w(1).h_full().flex_none().bg(t.border))
+    .child(card("approvals", "Approvals", approvalNote, changes ? t.blocked : null, segments([[approved, t.done], [changes, t.blocked], [missing, t.dim]]), () => exec("open", [pr.url])));
+}
 
   activity(t, details) {
     const heading = (text) => div().text_size(11).font_semibold().text_color(t.muted).child(text.toUpperCase());
@@ -764,6 +822,7 @@ export default class Reviews extends View {
       .child(this.tabs(t, pr, cx))
       .child(this.tab === "claude" ? this.claudeTab(t, pr, cx) : this.tab !== "files"
         ? v_flex().gap(28)
+          .child(this.statusBar(t, pr, details, cx))
           .child(v_flex()
             .child(div().px(18).py(14).rounded(10).border_1().border_color(t.border).bg(t.surface).text_size(12.5).text_color(body ? t.foreground : t.dim)
               .child(body ? TextView.markdown(`review-body-${pr.number}`, linkRefs(body.slice(0, 20000), pr.repo)).selectable(true) : "No description.")))
