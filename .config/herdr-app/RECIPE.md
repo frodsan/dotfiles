@@ -59,7 +59,7 @@ Type is Herdr's UI font. Sidebar rows are 13px, meta lines 11px to 12px.
 
 **Pull request panel.** It shows checks, reviews and the branch state. It has an update-branch button and three toggles. Fix turns on auto-fix. Merge turns on merge when ready. Settle turns on auto-settle.
 
-**Auto-fix.** Every 2 minutes, Herdr reads failed checks, conflicts, unresolved review threads and 👎 reactions with `gh api graphql`. It sends the work to the session's Claude with `hc send` as a `/herdr:pr-autofix` request. While you look at the session, it waits and shows the "Auto-fix" button in the tab bar. After 5 rounds of review threads, or when Claude writes `needs_you` to `data/autofix/<PR>.json`, it stops and marks the session blocked. A 👎 from someone else on a reply that contains `[AI-generated]` posts a warning notification.
+**Auto-fix.** Every 2 minutes, Herdr reads failed checks, conflicts, unresolved review threads and 👎 reactions with `gh api graphql`. It sends the work to the session's Claude with `hc send` as a `/firehouse:pr-autofix` request. While you look at the session, it waits and shows the "Auto-fix" button in the tab bar. After 5 rounds of review threads, or when Claude writes `needs_you` to `data/autofix/<PR>.json`, it stops and marks the session blocked. A 👎 from someone else on a reply that contains `[AI-generated]` posts a warning notification.
 
 **Merge when ready.** Herdr adds the pull request to GitHub's merge queue once it is approved, mergeable and not a draft, and its merge state is clean, unstable or has hooks. It takes the pull request out of the queue while auto-fix works on it, and queues it again afterwards.
 
@@ -123,7 +123,7 @@ Shared keys: `firehouse.settings` holds the settings, `commands.list` the custom
 ## Watch out
 
 - The mods reach GitHub through `gh`, run programs with `exec` and `hc`, and read `~/.claude/projects` for chat titles and conversations.
-- Auto-fix, the update-branch button and spin-offs call Claude Code skills from the `herdr` plugin: `pr-autofix`, `pr-fix`, `update-branch` and `spin-off`. In this repo they are in `.claude/skills/herdr`. Without them those features do nothing.
+- Auto-fix, the update-branch button and spin-offs call Claude Code skills from the `firehouse` plugin: `pr-autofix`, `pr-fix`, `update-branch` and `spin-off`. In this repo they are in `.claude/skills/firehouse`. Without them those features do nothing.
 - `shared(key)` returns `null` for a missing key. Test with `== null`, not `=== undefined`.
 - A mod copy starts the first time its block shows. A stack child that never showed, like the chats list, runs no timers. Background work needs a 0px block. Only one copy should handle a mod command, so the chats list does not call `nextCommand()`.
 - Herdr runs `argv` agents in the login shell, which stays open after the agent exits. After Claude exits, the terminal still reports `app: "claude-code"`. Check `program.key === "claude"` or an agent status instead.

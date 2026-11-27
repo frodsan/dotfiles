@@ -6,7 +6,7 @@ Firehouse is a Herdr setup for running many Claude Code sessions on one repo at 
 
 Press `⌥⌘N` and type what you want. Firehouse creates a worktree and a branch with Worktrunk, such as `fr/fix-login-1a2b`, and starts Claude with your prompt. Worktrunk's `post-start` hooks set up the worktree in the background. You never stash, switch branches or wait for another task to finish.
 
-When a task turns up a side task, spin it off. The `herdr:spin-off` skill writes a brief, and Firehouse starts the side task as a new session on its own branch. The first session keeps going.
+When a task turns up a side task, spin it off. The `firehouse:spin-off` skill writes a brief, and Firehouse starts the side task as a new session on its own branch. The first session keeps going.
 
 ## See what needs you
 
@@ -52,5 +52,5 @@ Paste this into Claude Code:
 
 ```
 Read ~/.config/herdr-app/AGENTS.md, then add this layout: https://github.com/frodsan/dotfiles/tree/master/.config/herdr-app
-Also copy https://github.com/frodsan/dotfiles/tree/master/.claude/skills/herdr to ~/.claude/skills/herdr.
+Also copy https://github.com/frodsan/dotfiles/tree/master/.claude/skills/firehouse to ~/.claude/skills/firehouse.
 ```

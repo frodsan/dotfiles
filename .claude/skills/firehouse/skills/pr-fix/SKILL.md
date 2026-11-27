@@ -1,6 +1,6 @@
 ---
 name: pr-fix
-description: Explain or fix failing CI checks and review comments on this session's pull request, with the shared rules for GitHub writes. Herdr sends it as /herdr:pr-fix from the PR panel, and pr-autofix reads its rules.
+description: Explain or fix failing CI checks and review comments on this session's pull request, with the shared rules for GitHub writes. Herdr sends it as /firehouse:pr-fix from the PR panel, and pr-autofix reads its rules.
 disable-model-invocation: true
 ---
 
@@ -32,7 +32,7 @@ Read the failed logs: `gh pr checks`, then `gh run view --job <job id> --log-fai
 |----------|------|--------|
 | Infrastructure | No spec or lint failure: lost runner, setup timeout, network, Docker, cache, out of memory, GitHub API errors | `gh run rerun <run id> --failed` |
 | Flaky | Fails in code the branch does not touch (`gh pr diff --name-only`), or matches a known flaky pattern (timeout, intermittent assertion) | `gh run rerun <run id> --failed` |
-| Base branch | Fails in code the branch does not touch, every time: a regression already fixed on the base | Update the branch as `~/.claude/skills/herdr/skills/update-branch/SKILL.md` says |
+| Base branch | Fails in code the branch does not touch, every time: a regression already fixed on the base | Update the branch as `~/.claude/skills/firehouse/skills/update-branch/SKILL.md` says |
 | Branch | Everything else, in particular specs or lint in files the PR touches. When in doubt, it is this | Reproduce locally, fix, run `pre-commit run --files <files>`, commit, push |
 
 - Rerun a run at most 2 times. Check `gh run view <run id> --json attempt`: from attempt 3 on, treat it as a branch failure.
