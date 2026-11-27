@@ -2,11 +2,12 @@ import { View, div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { theme, shared, setShared, props, closeOverlay, exec } from "herdr";
 
-const DEFAULTS = { settledDays: 7, branchPrefix: "", autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, autoToasts: false, reviewsRefreshMinutes: 2 };
+const DEFAULTS = { settledDays: 7, branchPrefix: "", autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, autoToasts: false, reviewsRefreshMinutes: 2, reviewsKeepDays: 1 };
 const conf = () => ({ ...DEFAULTS, ...(shared("firehouse.settings") ?? {}) });
 const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 const SETTLED_DAYS = [1, 3, 7, 14, 30];
 const REFRESH_MINUTES = [1, 2, 5, 10];
+const KEEP_DAYS = [1, 3, 7];
 
 export default class Settings extends View {
   init(_props, cx) {
@@ -65,7 +66,8 @@ export default class Settings extends View {
         .child(group("Snooze",
           row("Wake-up time for Tomorrow and Next week", "Next week is the coming Monday.", chips("tomorrowHour", [7, 8, 9, 10].map((h) => [h, `${h}:00`])))))
         .child(group("Reviews",
-          row("Refresh the list every", "How often Herdr asks GitHub for the pull requests that list you as a reviewer. Refresh in the list asks right away.", chips("reviewsRefreshMinutes", REFRESH_MINUTES.map((m) => [m, m === 1 ? "1 minute" : `${m} minutes`])))))
+          row("Refresh the list every", "How often Herdr asks GitHub for the pull requests that list you as a reviewer. Refresh in the list asks right away.", chips("reviewsRefreshMinutes", REFRESH_MINUTES.map((m) => [m, m === 1 ? "1 minute" : `${m} minutes`]))),
+          row("Keep recently reviewed for", "Pull requests you approved, or that merged, closed or stopped asking you, stay under Recently reviewed this long.", chips("reviewsKeepDays", KEEP_DAYS.map((d) => [d, d === 1 ? "1 day" : `${d} days`])))))
         .child(group("Notifications",
           row("Toasts for automatic actions", "Auto-fix, merge when ready, auto-settle, snooze wake-ups and spin-offs. Off: the sidebar shows the change, and Herdr still plays its sounds. Errors from things you click always show.", onOff("autoToasts"))))
         .child(group("GitHub API",

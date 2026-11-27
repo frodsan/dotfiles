@@ -71,7 +71,7 @@ const claudeReviewPrompt = (pr) => [
 const mainCheckoutNote = (repo) => `You are working in the main checkout of ${repo}, which must stay on its default branch (main or master). Do not create, switch or check out branches here: no git checkout, git switch, git worktree or gh pr checkout in this folder.`;
 
 const SNOOZED = "reviews.snoozed";
-const SETTLED_MS = DAY_MS;
+const settledMs = () => (conf().reviewsKeepDays ?? 1) * DAY_MS;
 const items = () => shared("reviews.list")?.items ?? [];
 const settledReviews = () => shared("reviews.settled") ?? {};
 const snoozedUntil = (pr) => {
@@ -235,7 +235,7 @@ export default class Reviews extends View {
         const fetchedAt = Date.now();
         const settled = { ...settledReviews() };
         for (const [url, entry] of Object.entries(settled)) {
-          if (fetchedAt - entry.at > SETTLED_MS || (open.has(url) && entry.at < (data?.at ?? 0))) delete settled[url];
+          if (fetchedAt - entry.at > settledMs() || (open.has(url) && entry.at < (data?.at ?? 0))) delete settled[url];
         }
         const gone = (data?.items ?? []).filter((pr) => !open.has(pr.url) && !settled[pr.url]);
         if (gone.length) {
@@ -395,7 +395,7 @@ export default class Reviews extends View {
     const live = items().filter((pr) => !settled[pr.url]);
     const waiting = live.filter((pr) => !isSnoozed(pr));
     const sleeping = live.filter(isSnoozed).sort((a, b) => snoozedUntil(a) - snoozedUntil(b));
-    const done = Object.values(settled).filter((e) => Date.now() - e.at < SETTLED_MS).sort((a, b) => b.at - a.at);
+    const done = Object.values(settled).filter((e) => Date.now() - e.at < settledMs()).sort((a, b) => b.at - a.at);
     const selected = shared("reviews.selected");
     const row = (pr, grouped = false) => {
       const key = `review-${pr.url}`;
