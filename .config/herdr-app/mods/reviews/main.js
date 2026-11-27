@@ -760,6 +760,7 @@ export default class Reviews extends View {
           .child(this.approveButton(t, pr)))
         .child(h_flex().gap(8).items_center().text_size(12.5).text_color(t.dim)
           .child(div().child(`${pr.authorName ?? pr.author} opened ${ago(pr.createdAt)} ago`))
+          .child(div().child("·"))
           .child(div().text_color(t.done).child(`+${pr.additions ?? 0}`))
           .child(div().text_color(t.blocked).child(`−${pr.deletions ?? 0}`))))
       .child(this.tabs(t, pr, cx))
