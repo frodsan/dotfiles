@@ -50,5 +50,3 @@ Paste this into Claude Code:
 Read ~/.config/herdr-app/AGENTS.md, then add this layout: https://github.com/frodsan/dotfiles/tree/master/.config/herdr-app
 Also copy https://github.com/frodsan/dotfiles/tree/master/.claude/skills/herdr to ~/.claude/skills/herdr.
 ```
-
-The agent reads `RECIPE.md`, copies the layout and its mods into your Herdr folder, merges the shortcuts into your `keys.json` and switches to Firehouse. The second line installs the `herdr` skills that auto-fix, the update-branch button and spin-offs use.
