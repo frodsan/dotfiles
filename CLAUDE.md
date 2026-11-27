@@ -1,5 +1,16 @@
 # dotfiles
 
+## Keep work and secrets out
+
+This repo is public. Everything in it, including commit messages, is published.
+
+- Treat every project outside `~/Code/frodsan` as work. Never put anything from one in this repo: company, product, repo or service names, paths, hostnames, URLs, ticket IDs, branch names, people's names or code.
+- Write examples with neutral placeholders, such as `~/Code/app`, `bin/setup` or `fr/fix-login`.
+- Never commit a secret: tokens, API keys, passwords, SSH keys, cookies, `.env` files or anything copied from a credentials store. Read config files before you copy them in, because some hold tokens.
+- Put machine-specific or work values in a local file outside the repo, such as `~/.zshenv.local`, `~/.zprofile.local`, `~/.zshrc.local` or `~/.config/worktrunk/config.local.toml`.
+- Never add a screenshot of a window that shows work sessions, chats or terminals.
+- Before each commit, read the diff for any of the above. If you find something, stop and ask.
+
 ## Add a file
 
 1. Copy the file into the repo at the same path it has under the home folder.
