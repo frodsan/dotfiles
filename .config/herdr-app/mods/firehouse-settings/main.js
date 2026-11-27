@@ -1,6 +1,6 @@
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
-import { theme, shared, setShared, props, closeOverlay } from "herdr";
+import { theme, shared, setShared, props, closeOverlay, exec } from "herdr";
 
 const DEFAULTS = { settledDays: 7, branchPrefix: "", autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, autoToasts: false, reviewsRefreshMinutes: 2 };
 const conf = () => ({ ...DEFAULTS, ...(shared("firehouse.settings") ?? {}) });
@@ -9,10 +9,29 @@ const SETTLED_DAYS = [1, 3, 7, 14, 30];
 const REFRESH_MINUTES = [1, 2, 5, 10];
 
 export default class Settings extends View {
-  init() {
+  init(_props, cx) {
+    this.rate = null;
+    const load = async (cx) => {
+      const r = await exec("gh", ["api", "rate_limit"]).catch(() => null);
+      if (r?.code !== 0) return;
+      try { this.rate = JSON.parse(r.stdout).resources; } catch { return; }
+      cx.notify();
+    };
+    cx.spawn(async (cx) => load(cx));
+    cx.timer.every(10000, (cx) => { load(cx); });
     const state = InputState.new({ value: conf().branchPrefix ?? "", placeholder: "e.g. fr/" });
     state.on("change", () => setConf({ branchPrefix: state.value().trim() }));
     this.branchPrefix = state;
+  }
+
+  rateRow(r, label, hint, row, t) {
+    if (!r) return div();
+    const share = r.limit ? Math.min(1, r.used / r.limit) : 0;
+    const color = share > 0.9 ? t.blocked : share > 0.6 ? t.working : t.done;
+    const reset = new Date(r.reset * 1000);
+    const at = `${reset.getHours()}:${String(reset.getMinutes()).padStart(2, "0")}`;
+    return row(`${label} · ${r.used.toLocaleString()} of ${r.limit.toLocaleString()} used`, `${hint} Resets at ${at}.`,
+      div().w_full().h(6).rounded(3).bg(t.raised).child(div().h_full().rounded(3).bg(color).w(`${Math.max(2, Math.round(share * 100))}%`)));
   }
 
   render() {
@@ -48,6 +67,11 @@ export default class Settings extends View {
         .child(group("Reviews",
           row("Refresh the list every", "How often Herdr asks GitHub for the pull requests that list you as a reviewer. Refresh in the list asks right away.", chips("reviewsRefreshMinutes", REFRESH_MINUTES.map((m) => [m, m === 1 ? "1 minute" : `${m} minutes`])))))
         .child(group("Notifications",
-          row("Toasts for automatic actions", "Auto-fix, merge when ready, auto-settle, snooze wake-ups and spin-offs. Off: the sidebar shows the change, and Herdr still plays its sounds. Errors from things you click always show.", onOff("autoToasts")))));
+          row("Toasts for automatic actions", "Auto-fix, merge when ready, auto-settle, snooze wake-ups and spin-offs. Off: the sidebar shows the change, and Herdr still plays its sounds. Errors from things you click always show.", onOff("autoToasts"))))
+        .child(group("GitHub API",
+          ...(this.rate
+            ? [["graphql", "GraphQL", "The pull request list, the pull request panel and auto-fix. When fewer than 500 are left, the list refreshes every 30 seconds, and below 100 every 2 minutes."], ["core", "REST", "Most other gh commands."], ["search", "Search", "The reviews list."]]
+                .map(([key, label, hint]) => this.rateRow(this.rate[key], label, hint, row, t))
+            : [div().text_size(12).text_color(t.dim).child("Asking GitHub…")]))));
   }
 }
