@@ -41,21 +41,3 @@ Add shell commands to the command palette with "Edit custom commands…", such a
 ## Change it with Claude
 
 `⌘,` opens a Claude session in this repo to change the setup itself. `⇧⌘,`, or the gear in the sidebar header, opens the session settings: branch prefix, settling, focus mode, snooze times and toasts.
-
-## Install
-
-`install.sh` at the root of this repo links these files into `~/.config/herdr-app` and switches Herdr to the Firehouse layout. On first start, a welcome dialog checks for the tools Firehouse needs: `wt`, `gh`, `claude`, `nvim` and `lazygit`. It also checks for the `herdr` Claude Code skills in `.claude/skills/herdr`.
-
-Herdr may not reload a linked mod when its files change. Restart Herdr after you edit one. Your terminals keep running.
-
-## What's inside
-
-| Path | What it does |
-|---|---|
-| `layouts/Firehouse.json` | The window: the sidebar, the tab bar, the panes and the Pull request panel. |
-| `themes/firehouse.json` | The colors. |
-| `keys.json` | Every shortcut. |
-| `mods/sessions` | The sidebar, new sessions, focus mode, the tab bar, the Pull request panel, auto-fix, settling and the settings. |
-| `mods/chats` | The chats list. A 0px block in the layout runs its background work, so exited chats close even while the list is hidden. |
-| `mods/custom-commands` | Your palette commands, kept in the shared key `commands.list`. It writes the palette entries into a generated mod, `custom-commands-local`. |
-| `mods/shortcuts` | The shortcuts dialog. |
