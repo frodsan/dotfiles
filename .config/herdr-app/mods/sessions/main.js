@@ -1,7 +1,7 @@
 import { View, div, svg } from "gpui-kit";
 import { initBar, renderBar } from "./bar.js";
 import { PullRequestPanel, updateBranchCommand } from "./pr.js";
-import { SettingsDialog, conf, setConf, openSettings } from "./settings.js";
+import { conf, setConf, openSettings } from "./config.js";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea } from "gpui-base";
 import { hc, keys, spaces, panes, machines, layout, run, exec, theme, shared, setShared, openOverlay, closeOverlay, props, nextCommand, playSound, readTextFile, writeTextFile, appHome, home, window, pickFolder, notify } from "herdr";
 
@@ -13,6 +13,7 @@ const CHATS_CWD = () => `${CHATS_DIR()}/workspace`;
 const isChatSpace = (s) => s.folder === CHATS_CWD() || Object.values(map("chats.space")).includes(s.id);
 const isReviewSpace = (s) => s.folder === `${appHome()}/data/reviews/workspace`;
 const isSideSpace = (s) => isChatSpace(s) || isReviewSpace(s);
+const reviewsWaiting = () => (shared("reviews.list") ?? []).filter((pr) => !((map("reviews.snoozed")[pr.url]?.until ?? 0) > Date.now())).length;
 function snoozeStore(menu, until) {
   const all = { ...map(menu.store) };
   delete all[menu.id];
@@ -630,7 +631,6 @@ export default class Sessions extends View {
       cx.spawn(async (cx) => {
         for (;;) {
           const command = await nextCommand();
-          if (listVisible()) continue;
           if (command.startsWith("ext-")) this.toggleExtension(command.slice(4));
           else if (command === "focus") await this.focusPressed();
           else if (command === "chats") this.toggleChats();
@@ -644,7 +644,6 @@ export default class Sessions extends View {
     if (props()?.composer) return this.initComposer(cx);
     if (props()?.menu?.snoozeOnly) return this.initSnooze(cx);
     if (props()?.welcome) return this.initWelcome(cx);
-    if (props()?.settings) { this.settings = new SettingsDialog(); return this.settings.init(); }
     if (props()?.menu) {
       const entry = props().menu.entry;
       if (entry?.branch && !entry.pr?.baseRefName && entry.cwd) cx.spawn(async (cx) => {
@@ -691,14 +690,6 @@ export default class Sessions extends View {
     cx.timer.every(10 * 60000, (cx) => this.purgeSettled(cx));
     cx.timer.after(8000, () => { this.resumeAfterBoot().catch(() => null); });
     cx.timer.every(30000, (cx) => cx.notify());
-    cx.spawn(async (cx) => {
-      for (;;) {
-        const command = await nextCommand();
-        if (command === "focus") await this.focusPressed();
-        else this.command(command, cx);
-        cx.notify();
-      }
-    });
   }
 
   where(s, ps) {
@@ -1024,6 +1015,17 @@ export default class Sessions extends View {
       return;
     }
     if (!s) return;
+    if (command === "github" && isReviewSpace(s)) {
+      const tab = s.tabs.find((t) => t.active)?.id;
+      const terminal = panes().find((p) => p.tab === tab && p.terminal)?.terminal;
+      if (!terminal) return;
+      cx.spawn(async () => {
+        const r = await exec("hc", ["get", terminal]).catch(() => null);
+        const url = (r?.stdout ?? "").match(/https:\/\/github\.com\/[^"\s]+\/pull\/\d+/)?.[0];
+        if (url) exec("open", [url]);
+      });
+      return;
+    }
     const ps = panes();
     const info = this.info(s, ps);
     const viewExt = command === "github" ? extensions().find((e) => e.view === this.activeView() && e.github) : null;
@@ -1720,7 +1722,6 @@ export default class Sessions extends View {
     if (props()?.header) return this.renderHeader();
     if (props()?.composer) return this.renderComposer();
     if (props()?.welcome) return this.renderWelcome();
-    if (props()?.settings) return this.settings.render();
     if (props()?.menu) return this.renderMenu();
     const t = theme();
     const sp = spaces().filter((s) => !isSideSpace(s));
@@ -1782,10 +1783,10 @@ export default class Sessions extends View {
         .child(svg(ICON("focus")).size(14)))
       .child(div().id("reviews-toggle").relative().p(5).rounded(6).text_color(this.reviewsMode ? t.accent : t.dim).when(this.reviewsMode, (el) => el.bg(t.raised))
         .hover((st) => st.bg(t.hover).text_color(this.reviewsMode ? t.accent : t.foreground))
-        .tooltip(this.reviewsMode ? "Back to the sessions (⇧⌘R)" : `Reviews (⇧⌘R)${(shared("reviews.list") ?? []).length ? `: ${(shared("reviews.list") ?? []).length} waiting` : ""}`)
+        .tooltip(this.reviewsMode ? "Back to the sessions (⇧⌘R)" : `Reviews (⇧⌘R)${reviewsWaiting() ? `: ${reviewsWaiting()} waiting` : ""}`)
         .on_click((_e, cx) => { this.toggleReviews(); cx.notify(); })
         .child(svg(ICON("pr-open")).size(14))
-        .when((shared("reviews.list") ?? []).length > 0, (el) => el.child(div().absolute().top(1).right(1).size(7).rounded(4).bg(t.accent))))
+        .when(reviewsWaiting() > 0, (el) => el.child(div().absolute().top(1).right(1).size(7).rounded(4).bg(t.accent))))
       .children(extensions().filter((ext) => ext.icon && ext.view && inLayout(ext.view)).map((ext) => {
         const open = this.activeView() === ext.view;
         const count = Number(shared(ext.badge ?? "") ?? 0) || 0;
@@ -1798,7 +1799,7 @@ export default class Sessions extends View {
           .when(count > 0, (el) => el.child(div().absolute().top(1).right(1).size(7).rounded(4).bg(t.accent)));
       }))
       .child(div().flex_1())
-      .child(div().id("settings-open").p(5).rounded(6).hover((st) => st.bg(t.hover).text_color(t.foreground)).tooltip("Session settings (⇧⌘,)")
+      .child(div().id("settings-open").p(5).rounded(6).hover((st) => st.bg(t.hover).text_color(t.foreground)).tooltip("Firehouse settings (⇧⌘,)")
         .on_click(() => openSettings())
         .child(svg(ICON("settings")).size(14)));
   }

@@ -1,14 +1,14 @@
-import { div } from "gpui-kit";
+import { View, div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
-import { theme, shared, setShared, props, closeOverlay, openOverlay } from "herdr";
+import { theme, shared, setShared, props, closeOverlay } from "herdr";
 
-const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, autoToasts: false };
-export const conf = () => ({ ...DEFAULT_SETTINGS, ...(shared("firehouse.settings") ?? {}) });
-export const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
-export const openSettings = () => openOverlay({ mod: "sessions", kind: "dialog", width: 620, height: 620, props: { settings: true } });
+const DEFAULTS = { settledDays: 7, branchPrefix: "", autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, autoToasts: false, reviewsRefreshMinutes: 2 };
+const conf = () => ({ ...DEFAULTS, ...(shared("firehouse.settings") ?? {}) });
+const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 const SETTLED_DAYS = [1, 3, 7, 14, 30];
+const REFRESH_MINUTES = [1, 2, 5, 10];
 
-export class SettingsDialog {
+export default class Settings extends View {
   init() {
     const state = InputState.new({ value: conf().branchPrefix ?? "", placeholder: "e.g. fr/" });
     state.on("change", () => setConf({ branchPrefix: state.value().trim() }));
@@ -31,9 +31,9 @@ export class SettingsDialog {
       .child(div().text_size(11).font_semibold().text_color(t.muted).child(title.toUpperCase()))
       .child(v_flex().gap(14).p(14).rounded(10).border_1().border_color(t.border).bg(t.background).children(rows));
     const onOff = (key) => chips(key, [[true, "On"], [false, "Off"]]);
-    return v_flex().id("sessions-settings").size_full().min_h(0).bg(t.popover).text_color(t.foreground)
+    return v_flex().id("settings").size_full().min_h(0).bg(t.popover).text_color(t.foreground)
       .on_key_down((e, cx) => { if (e.key === "escape") { closeOverlay(props().overlay); cx.stop_propagation(); } })
-      .child(h_flex().flex_none().px(22).pt(22).pb(12).items_center().child(div().flex_1().text_size(16).font_semibold().child("Session settings")).child(div().text_size(11).text_color(t.dim).child("Esc")))
+      .child(h_flex().flex_none().px(22).pt(22).pb(12).items_center().child(div().flex_1().text_size(16).font_semibold().child("Firehouse settings")).child(div().text_size(11).text_color(t.dim).child("Esc")))
       .child(v_flex().id("settings-body").flex_1().min_h(0).px(22).pb(22).gap(20).overflow_y_scrollbar()
         .child(group("New sessions",
           row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b. To run a command in each new worktree, add a post-start hook to Worktrunk's config.", input(this.branchPrefix))))
@@ -45,6 +45,8 @@ export class SettingsDialog {
           row("Working group", "Shows the focus sessions where Claude is working in their own group.", onOff("focusWorking"))))
         .child(group("Snooze",
           row("Wake-up time for Tomorrow and Next week", "Next week is the coming Monday.", chips("tomorrowHour", [7, 8, 9, 10].map((h) => [h, `${h}:00`])))))
+        .child(group("Reviews",
+          row("Refresh the list every", "How often Herdr asks GitHub for the pull requests that list you as a reviewer. Refresh in the list asks right away.", chips("reviewsRefreshMinutes", REFRESH_MINUTES.map((m) => [m, m === 1 ? "1 minute" : `${m} minutes`])))))
         .child(group("Notifications",
           row("Toasts for automatic actions", "Auto-fix, merge when ready, auto-settle, snooze wake-ups and spin-offs. Off: the sidebar shows the change, and Herdr still plays its sounds. Errors from things you click always show.", onOff("autoToasts")))));
   }

@@ -28,7 +28,7 @@ Type is Herdr's UI font. Sidebar rows are 13px, meta lines 11px to 12px.
 
 **Chats list.** A "Chats" heading with a + button, then one row per chat: a 6px dot, the name and "5m ago". On hover, an archive button and a remove button appear. A folded "Archived · N" group is at the bottom.
 
-**Dialogs**, `popover`, `#30302e`: new session, session settings, keyboard shortcuts, custom commands and welcome.
+**Dialogs**, `popover`, `#30302e`: new session, Firehouse settings, keyboard shortcuts, custom commands and welcome.
 
 ## How it behaves
 
@@ -49,7 +49,7 @@ Type is Herdr's UI font. Sidebar rows are 13px, meta lines 11px to 12px.
 | `⇧⌘C` | Swaps the sessions list and the chats list. |
 | `⇧⌘R` | Swaps the sessions list and the reviews list. |
 | `⇧⌘N` | New chat. |
-| `⇧⌘,` | Session settings. The gear in the header opens it too. |
+| `⇧⌘,` | Firehouse settings. The gear in the header opens it too. |
 | `⌘,` | A Claude session in the folder that holds this config. |
 | `⇧⌘/` | Keyboard shortcuts dialog. |
 
@@ -102,12 +102,13 @@ Theme `themes/firehouse.json`. Shortcuts `keys.json`.
 
 Mods:
 
-- `sessions`. With no props it is the list and owns all background work. Its roles are `header`, `bar`, `pr`, `composer`, `menu`, `welcome` and `settings`. Code is split into `main.js`, `bar.js` for the tab bar, `pr.js` for the panel and `settings.js` for the settings dialog and its defaults. Icons are in `assets/`.
+- `sessions`. With no props it is the list and owns all background work. Its roles are `header`, `bar`, `pr`, `composer`, `menu` and `welcome`. The header is the only copy that takes `sessions.*` commands. It forwards the rest to the list through the shared key `sessions.forward`. Code is split into `main.js`, `bar.js` for the tab bar, `pr.js` for the panel and `config.js` for the settings defaults. Icons are in `assets/`.
 - `chats`. With no props it draws the list. With `watch` it links new chat spaces, names them, closes exited chats, moves old archived chats to the Trash and handles `chats.new`.
 - `custom-commands`. With no props it publishes the palette entries into a generated mod, `mods/custom-commands-local`. With `editor` it is the editor dialog.
+- `firehouse-settings`. The Firehouse settings dialog. It holds its own copy of the defaults and writes the shared key `firehouse.settings`.
 - `shortcuts`. The shortcuts dialog. It reads `keys()`.
 
-- `reviews`. With `watch` it runs `gh search prs user-review-requested:@me --state=open` every 2 minutes. That query skips requests sent to your teams and saves the result in the shared key `reviews.list`. With no props it draws that list. A click opens the pull request with `tuicr pr <URL>` in the Reviews space, whose folder is `data/reviews/workspace`, one named tab per pull request. The pen button puts the link in `sessions.composerText` and runs `sessions.new-session`, so the new session dialog opens in pull request mode.
+- `reviews`. With `watch` it runs `gh search prs user-review-requested:@me --state=open` every 2 minutes, or as Firehouse settings says. That query skips requests sent to your teams. It saves the result in the shared key `reviews.list`, and drops snoozes of pull requests that left it. With no props it draws that list, with snoozed ones folded under Snoozed. With `menu` it is the right-click menu: Open review, Open on GitHub, Make changes in a new session, and Snooze…, which opens the sessions snooze menu with `store: "reviews.snoozed"`. A click opens the pull request with `tuicr pr <URL>` in the Reviews space, whose folder is `data/reviews/workspace`, one named tab per pull request. Make changes in a new session puts the link in `sessions.composerText` and runs `sessions.new-session`, so the new session dialog opens in pull request mode.
 
 Shipped mods it uses: `workspace-chrome`, `workspace-status`, `pane`, `menu`, `files` and `changes` for their icons.
 
@@ -140,5 +141,5 @@ Shared keys: `firehouse.settings` holds the settings, `commands.list` the custom
 - A session with an open pull request shows its number, review state and CI dot, and `⌥⌘P` opens the panel with its checks.
 - `herdr-app do chats.new` works while the chats list is hidden, and pressing `ctrl+d` twice in that chat closes its space within 2 seconds and moves the chat to Archived.
 - `⇧⌘R` shows the pull requests waiting for your review, and a click opens one in tuicr in the Reviews space.
-- `⇧⌘/` lists every key from `keys.json`, and `⇧⌘,` opens Session settings.
+- `⇧⌘/` lists every key from `keys.json`, and `⇧⌘,` opens Firehouse settings.
 - A custom command added in the editor shows in the command palette and opens a terminal on the right.

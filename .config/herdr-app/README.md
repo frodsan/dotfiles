@@ -36,7 +36,7 @@ Some questions belong to no repo. `⇧⌘C` swaps the session list for your chat
 
 ## Reviews without leaving Herdr
 
-`⇧⌘R` swaps the session list for the pull requests that list you as a reviewer, not through a team, refreshed every 2 minutes. A dot on its icon says some are waiting. Click one, and it opens in tuicr in a Reviews space, one tab per pull request. Read the diff, comment, then approve or request changes, and tuicr sends the review to GitHub. To change the code yourself, the pen button checks the pull request out in a new session.
+`⇧⌘R` swaps the session list for the pull requests that list you as a reviewer, not through a team, refreshed every 2 minutes by default. A dot on its icon says some are waiting. Click one, and it opens in tuicr in a Reviews space, one tab per pull request. Read the diff, comment, then approve or request changes, and tuicr sends the review to GitHub. `⇧⌘G` opens the pull request of the review tab on GitHub. Right-click a pull request to snooze it, or to check it out in a new session and change the code yourself.
 
 ## Your own commands
 
@@ -44,7 +44,7 @@ Add shell commands to the command palette with "Edit custom commands…", such a
 
 ## Change it with Claude
 
-`⌘,` opens a Claude session in this repo to change the setup itself. `⇧⌘,`, or the gear in the sidebar header, opens the session settings: branch prefix, settling, focus mode, snooze times and toasts.
+`⌘,` opens a Claude session in this repo to change the setup itself. `⇧⌘,`, or the gear in the sidebar header, opens Firehouse settings: branch prefix, settling, focus mode, snooze time, how often reviews refresh, and toasts.
 
 ## Install
 

@@ -43,6 +43,7 @@ SYNCS=(
   .config/herdr-app/mods/custom-commands
   .config/herdr-app/mods/shortcuts
   .config/herdr-app/mods/reviews
+  .config/herdr-app/mods/firehouse-settings
 )
 
 usage() {
