@@ -53,8 +53,8 @@ usage() {
   echo "Existing files are left alone unless you pass --force or set FORCE=1."
   echo "With --force, each existing file is moved to <name>.bak before it is linked."
   echo "With --links, it only links and copies the files, for example after adding one."
-  echo "With --sync, it only copies the Herdr mods. The repo's git hooks run it after each"
-  echo "commit, merge and checkout, because Herdr reloads copied mods but not linked ones."
+  echo "With --sync, it only copies the Herdr mods, for example after changing one."
+  echo "Herdr reloads copied mods, but not linked ones."
 }
 
 parse_args() {
@@ -209,12 +209,6 @@ sync_files() {
   done
 }
 
-use_git_hooks() {
-  echo "==> Git hooks"
-  git -C "$DOTFILES" config core.hooksPath .githooks
-  echo "  ok       commits, merges and checkouts sync the Herdr mods"
-}
-
 link_files() {
   echo "==> Dotfiles"
   SKIPPED=0
@@ -297,7 +291,6 @@ fi
 if [[ "$LINKS_ONLY" -eq 1 ]]; then
   link_files
   sync_files
-  use_git_hooks
   create_local_files
   exit
 fi
@@ -305,7 +298,6 @@ install_homebrew
 install_packages
 link_files
 sync_files
-use_git_hooks
 create_local_files
 select_herdr_layout
 install_skills
