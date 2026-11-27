@@ -644,15 +644,15 @@ export default class Reviews extends View {
   }
 
   tabs(t, pr, cx) {
-    const tab = (id, text) => {
+    const tab = (id, text, count = null) => {
       const on = (this.tab ?? "description") === id;
       return div().id(`tab-${id}`).px(2).pb(8).text_size(13).cursor_pointer().border_b_2()
         .border_color(on ? t.accent : t.background).text_color(on ? t.foreground : t.dim)
         .hover((st) => st.text_color(t.foreground))
         .on_click((_e, cx) => { this.tab = id; localStorage.setItem("tab", id); cx.notify(); })
-        .child(text);
+        .child(h_flex().gap(5).items_center().child(text).when(count != null, (el) => el.child(div().text_color(t.dim).opacity(0.75).child(`(${count})`))));
     };
-    return h_flex().gap(20).border_b_1().border_color(t.border).child(tab("description", "Overview")).child(tab("files", "Files")).when(Boolean(this.claudeEntry(pr)), (el) => el.child(tab("claude", this.claudeLabel(pr))));
+    return h_flex().gap(20).border_b_1().border_color(t.border).child(tab("description", "Overview")).child(tab("files", "Files changed", pr.changedFiles || null)).when(Boolean(this.claudeEntry(pr)), (el) => el.child(tab("claude", this.claudeLabel(pr))));
   }
 
   filesSection(t, pr, details) {
