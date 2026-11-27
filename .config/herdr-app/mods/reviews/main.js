@@ -757,7 +757,10 @@ export default class Reviews extends View {
           .child(div().flex_1().min_w(0).text_size(17).font_semibold().child(pr.title))
           .child(this.checkButton(t, pr))
           .child(this.approveButton(t, pr)))
-        .child(div().text_size(12.5).text_color(t.dim).child(`${pr.repo}#${pr.number} · ${pr.authorName ?? pr.author} · opened ${ago(pr.createdAt)} ago · updated ${ago(pr.updatedAt)} ago`)))
+        .child(h_flex().gap(8).items_center().text_size(12.5).text_color(t.dim)
+          .child(div().child(`${pr.authorName ?? pr.author} opened ${ago(pr.createdAt)} ago`))
+          .child(div().text_color(t.done).child(`+${pr.additions ?? 0}`))
+          .child(div().text_color(t.blocked).child(`−${pr.deletions ?? 0}`))))
       .child(this.tabs(t, pr, cx))
       .child(this.tab === "claude" ? this.claudeTab(t, pr, cx) : this.tab === "reviews" ? this.reviewsTab(t, pr, cx) : this.tab === "description"
         ? v_flex().gap(22)
