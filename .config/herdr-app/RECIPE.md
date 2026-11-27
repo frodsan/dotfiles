@@ -64,7 +64,7 @@ Type is Herdr's UI font. Sidebar rows are 13px, meta lines 11px to 12px.
 
 **Settle.** A merged or closed pull request moves its session to Settled. After the keep setting, 7 days by default, Herdr removes the worktree and the Claude conversation. A worktree with uncommitted changes or unpushed commits stays, with a warning. The branch always stays. Restore brings Claude back on the same conversation.
 
-**Snooze.** It hides a session until a time, such as tomorrow at 9:00 or next week on Monday. The settings set both. Auto-fix wakes a snoozed session early when it needs you. In focus mode, that plays the blocked sound.
+**Snooze.** It hides a session until a time, such as tomorrow at 9:00 or next Monday at 9:00. The settings set the hour. Auto-fix wakes a snoozed session early when it needs you. In focus mode, that plays the blocked sound.
 
 **Chats.** A new chat opens a space in `data/chats/workspace` running `claude --session-id <uuid>`. Opening a closed chat runs `claude --resume <uuid>`. A chat takes its name from Claude's title. When Claude exits, the space closes and the chat moves to Archived. Opening an archived chat restores it. After the keep setting, an archived chat's conversation moves to `~/.Trash`.
 

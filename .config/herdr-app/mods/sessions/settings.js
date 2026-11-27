@@ -2,7 +2,7 @@ import { div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { theme, shared, setShared, props, closeOverlay, openOverlay } from "herdr";
 
-const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, nextWeekDay: 1, autoToasts: false };
+const DEFAULT_SETTINGS = { settledDays: 7, branchPrefix: "", autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, autoToasts: false };
 export const conf = () => ({ ...DEFAULT_SETTINGS, ...(shared("firehouse.settings") ?? {}) });
 export const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 export const openSettings = () => openOverlay({ mod: "sessions", kind: "dialog", width: 620, height: 620, props: { settings: true } });
@@ -44,8 +44,7 @@ export class SettingsDialog {
           row("Mute sounds", "When on, blocked sessions you can see still make a sound.", onOff("focusMute")),
           row("Working group", "Shows the focus sessions where Claude is working in their own group.", onOff("focusWorking"))))
         .child(group("Snooze",
-          row("Wake-up time for Tomorrow and Next week", null, chips("tomorrowHour", [7, 8, 9, 10].map((h) => [h, `${h}:00`]))),
-          row("Next week starts on", null, chips("nextWeekDay", [[1, "Monday"], [2, "Tuesday"], [5, "Friday"]]))))
+          row("Wake-up time for Tomorrow and Next week", "Next week is the coming Monday.", chips("tomorrowHour", [7, 8, 9, 10].map((h) => [h, `${h}:00`])))))
         .child(group("Notifications",
           row("Toasts for automatic actions", "Auto-fix, merge when ready, auto-settle, snooze wake-ups and spin-offs. Off: the sidebar shows the change, and Herdr still plays its sounds. Errors from things you click always show.", onOff("autoToasts")))));
   }

@@ -1,6 +1,6 @@
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, run, exec, theme, shared, setShared, nextCommand, readTextFile, writeTextFile, appHome, home, props } from "herdr";
+import { spaces, panes, run, exec, theme, shared, setShared, nextCommand, readTextFile, writeTextFile, appHome, home, props, openOverlay } from "herdr";
 
 const CLAUDE = "claude";
 const CHATS_DIR = () => `${appHome()}/data/chats`;
@@ -50,6 +50,12 @@ export default class Chats extends View {
     this.hover = null;
     cx.spawn(async (cx) => this.loadChats(cx));
     cx.timer.every(10000, (cx) => this.loadChats(cx));
+    this.changed = shared("chats.changed");
+    cx.timer.every(500, (cx) => {
+      if (shared("chats.changed") === this.changed) return;
+      this.changed = shared("chats.changed");
+      this.loadChats(cx);
+    });
   }
 
   initWatch(cx) {
@@ -63,6 +69,7 @@ export default class Chats extends View {
       for (;;) {
         const command = await nextCommand();
         if (command === "new") this.newChat(cx);
+        else if (command === "remove") await this.removePending();
       }
     });
   }
@@ -199,14 +206,23 @@ export default class Chats extends View {
     run("space.new", { name: chat.name, folder: CHATS_CWD(), argv: stored ? [CLAUDE, "--resume", chat.id] : [CLAUDE, "--session-id", chat.id] });
   }
 
-  removeChat(chat, cx) {
-    cx.spawn(async (cx) => {
-      const spaceId = map("chats.space")[chat.id];
-      if (spaces().some((sp) => sp.id === spaceId)) run("space.close", { id: spaceId });
-      await trashChat(chat.id);
-      this.confirmChat = null;
-      await this.loadChats(cx);
-    });
+  confirmRemove(chat) {
+    setShared("chats.removing", chat.id);
+    openOverlay({ mod: "confirm", kind: "dialog", width: 420, height: 180, props: {
+      title: `Remove “${chat.name}”?`,
+      detail: "Herdr closes the chat and moves its Claude conversation to the Trash.",
+      command: { name: "chats.remove", args: {} },
+    } });
+  }
+
+  async removePending() {
+    const id = shared("chats.removing");
+    if (!id) return;
+    setShared("chats.removing", null);
+    const spaceId = map("chats.space")[id];
+    if (spaces().some((sp) => sp.id === spaceId)) run("space.close", { id: spaceId, confirmed: true });
+    await trashChat(id);
+    setShared("chats.changed", Date.now());
   }
 
   archiveChat(chat, cx) {
@@ -246,7 +262,6 @@ export default class Chats extends View {
       const space = spaces().find((sp) => sp.id === spaceId);
       const on = Boolean(space) && space.id === activeId;
       const key = `chat-${chat.id}`;
-      const confirming = this.confirmChat === chat.id;
       return h_flex().id(key).px(8).py(6).gap(8).items_center().rounded(8).cursor_pointer()
         .on_hover(this.hovering(key))
         .when(on, (el) => el.bg(t.selected)).when(!on, (el) => el.hover((st) => st.bg(t.hover)))
@@ -255,27 +270,18 @@ export default class Chats extends View {
         .child(v_flex().flex_1().min_w(0)
           .child(div().truncate().text_size(13).text_color(t.foreground).child(chat.name))
           .child(div().truncate().text_size(11).text_color(t.dim).child(chat.archivedAt ? `archived ${age(chat.archivedAt)} ago` : chat.at ? `${age(chat.at)} ago` : "not started")))
-        .when(!chat.archivedAt && !confirming, (el) => el.child(div().id(`${key}-archive`).flex_none().p(3).rounded(4).text_color(t.dim)
+        .when(!chat.archivedAt, (el) => el.child(div().id(`${key}-archive`).flex_none().p(3).rounded(4).text_color(t.dim)
           .map(this.reveal(key))
           .hover((st) => st.bg(t.raised).text_color(t.foreground))
           .tooltip(`Archive this chat. It moves to the Trash after ${keepDays()} days.`)
           .on_click((_e, cx) => { cx.stop_propagation(); this.archiveChat(chat, cx); })
           .child(svg("mods/chats/assets/archive.svg").size(11))))
-        .child(div().id(`${key}-remove`).flex_none().px(confirming ? 6 : 3).py(3).rounded(4).text_size(11)
-          .text_color(confirming ? t.blocked : t.dim)
-          .when(!confirming, (el) => el.map(this.reveal(key)))
-          .hover((st) => st.bg(t.raised).text_color(confirming ? t.blocked : t.foreground))
-          .tooltip(confirming ? "Click again to move this chat to the Trash" : "Remove this chat")
-          .on_click((_e, cx) => {
-            cx.stop_propagation();
-            if (!confirming) {
-              this.confirmChat = chat.id;
-              cx.timer.after(4000, (cx) => { if (this.confirmChat === chat.id) { this.confirmChat = null; cx.notify(); } });
-              return cx.notify();
-            }
-            this.removeChat(chat, cx);
-          })
-          .child(confirming ? "Remove?" : svg("mods/workspace-chrome/x.svg").size(11)));
+        .child(div().id(`${key}-remove`).flex_none().p(3).rounded(4).text_color(t.dim)
+          .map(this.reveal(key))
+          .hover((st) => st.bg(t.raised).text_color(t.foreground))
+          .tooltip("Remove this chat")
+          .on_click((_e, cx) => { cx.stop_propagation(); this.confirmRemove(chat); })
+          .child(svg("mods/workspace-chrome/x.svg").size(11)));
     };
     return v_flex().flex_1().min_h(0)
       .child(h_flex().flex_none().px(14).pt(4).pb(8).gap(8).items_center()

@@ -176,13 +176,15 @@ export function toolPane(kind, s, ps = panes()) {
   return id ? ps.find((p) => p.pane === id) ?? null : null;
 }
 const autoNotify = (n) => (conf().autoToasts ? notify(n) : null);
+const confirmRemove = (title, detail, name, args = {}) =>
+  openOverlay({ mod: "confirm", kind: "dialog", width: 420, height: 180, props: { title, detail, command: { name, args } } });
 const dayAt = (days, hour, minute = 0) => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days, hour, minute).getTime(); };
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const SNOOZE = [
   ["1h", "In 1 hour", () => Date.now() + 60 * 60000],
   ["3h", "In 3 hours", () => Date.now() + 3 * 60 * 60000],
   ["tomorrow", "Tomorrow", () => dayAt(1, conf().tomorrowHour)],
-  ["week", "Next week", () => dayAt(((conf().nextWeekDay - new Date().getDay() + 7) % 7) || 7, conf().tomorrowHour)],
+  ["week", "Next week", () => dayAt(((1 - new Date().getDay() + 7) % 7) || 7, conf().tomorrowHour)],
 ];
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
@@ -846,6 +848,38 @@ export default class Sessions extends View {
     if (next.length !== saved.length) setShared("sessions.folders", next);
   }
 
+  async addPickedFolder() {
+    const path = await pickFolder({ prompt: "Add folder" });
+    if (!path) return;
+    const top = await exec("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], { cwd: path }).catch(() => null);
+    const dir = top?.code === 0 ? top.stdout.trim() : "";
+    this.addFolders([JSON.stringify([null, dir.endsWith("/.git") ? dir.slice(0, -5) : path])]);
+  }
+
+  folderSessions(folderKey) {
+    const ps = panes();
+    return spaces().filter((sp) => !isChatSpace(sp) && this.info(sp, ps).folderKey === folderKey);
+  }
+
+  removeFolder() {
+    const folderKey = shared("sessions.removing")?.folder;
+    if (!folderKey) return;
+    setShared("sessions.removing", null);
+    for (const sp of this.folderSessions(folderKey)) run("space.close", { id: sp.id, confirmed: true });
+    setShared("sessions.folders", (shared("sessions.folders") ?? []).filter((key) => key !== folderKey));
+  }
+
+  async forgetPending(cx) {
+    const key = shared("sessions.removing")?.settled;
+    if (!key) return;
+    setShared("sessions.removing", null);
+    const entry = allSettled().find((e) => e.key === key);
+    if (!entry) return;
+    const kept = await forgetSettled(entry).catch((e) => e.message);
+    if (kept) notify({ title: `Kept the worktree of “${entry.name}”`, body: `It has ${kept}. Push or discard them, then remove it again.`, level: "warning" });
+    cx.notify();
+  }
+
   active() {
     return spaces().find((space) => space.active) ?? null;
   }
@@ -938,6 +972,8 @@ export default class Sessions extends View {
     if (command === "requests") return this.runRequests(cx);
     if (command === "autofix-now") { const space = this.active(); if (space) this.runAutoFix(cx, space.id); return; }
     if (command === "spinoff") return this.runSpinoffs(cx);
+    if (command === "remove-folder") return this.removeFolder();
+    if (command === "forget-settled") return cx.spawn(async (cx) => this.forgetPending(cx));
     if (command === "new-chat") return run("chats.new");
     if (command === "chats") return this.toggleChats();
     if (command === "new-session") return this.openComposer();
@@ -1610,11 +1646,16 @@ export default class Sessions extends View {
         })
         .child(svg(ICON("plus")).size(12)));
     const removable = rows.length === 0;
-    const withRemove = removable
-      ? head.child(div().id(`folder-remove-${folderKey}`).map(this.reveal(`folder-${folderKey}`)).flex_none().p(3).rounded(4).text_color(t.dim).hover((st) => st.bg(t.raised).text_color(t.foreground)).tooltip("Remove this folder from the list")
-          .on_click((_e, cx) => { cx.stop_propagation(); setShared("sessions.folders", (shared("sessions.folders") ?? []).filter((key) => key !== folderKey)); cx.notify(); })
-          .child(svg("mods/workspace-chrome/x.svg").size(12)))
-      : head;
+    const withRemove = path === home() ? head : head.child(div().id(`folder-remove-${folderKey}`).map(this.reveal(`folder-${folderKey}`)).flex_none().p(3).rounded(4).text_color(t.dim).hover((st) => st.bg(t.raised).text_color(t.foreground)).tooltip("Remove this folder from the sidebar")
+      .on_click((_e, cx) => {
+        cx.stop_propagation();
+        const count = this.folderSessions(folderKey).length;
+        setShared("sessions.removing", { folder: folderKey });
+        confirmRemove(`Remove ${base(path)}?`, count
+          ? `Herdr closes its ${count === 1 ? "session" : `${count} sessions`} and their terminals, then takes the folder off the sidebar. Worktrees, branches and files stay on disk.`
+          : "Herdr takes the folder off the sidebar. Its files stay on disk.", "sessions.remove-folder");
+      })
+      .child(svg("mods/workspace-chrome/x.svg").size(12)));
     if (collapsed || removable) return [withRemove];
     const shownSections = sections.filter((section) => !focus || rows.some((r) => membership[r.s.id] === section.id));
     return [
@@ -1661,8 +1702,15 @@ export default class Sessions extends View {
       : null;
     const rows = listed;
     this.visibleOrder = [];
+    const button = (id, tip, icon, onClick) => div().id(id).p(4).rounded(6).text_color(t.dim).cursor_pointer()
+      .hover((st) => st.bg(t.hover).text_color(t.foreground)).tooltip(tip).on_click(onClick).child(svg(ICON(icon)).size(13));
+    const heading = h_flex().flex_none().px(14).pt(4).pb(8).gap(2).items_center()
+      .child(div().flex_1().text_size(12.5).font_medium().text_color(t.foreground).child("Sessions"))
+      .child(button("folder-add", "Add a folder", "folder-plus", (_e, cx) => cx.spawn(async (cx) => { await this.addPickedFolder(); cx.notify(); })))
+      .child(button("session-new", "New session (⌥⌘N)", "plus", () => run("sessions.new-session")));
     return v_flex().size_full().min_h(0).bg(t.chrome)
       .on_mouse_up("left", (_e, cx) => { this.pressed = null; this.over = null; cx.notify(); })
+      .child(heading)
       .when(Boolean(banner), (el) => el.child(banner))
       .when(Boolean(empty), (el) => el.child(empty))
       .child(v_flex().flex_1().min_h(0).px(8).pb(14).overflow_y_scrollbar()
@@ -1676,8 +1724,7 @@ export default class Sessions extends View {
   renderHeader() {
     const t = theme();
     const focus = Boolean(shared("focus.on"));
-    return h_flex().h(34).pl(14).pr(8).flex_none().items_center().gap(4).text_size(12).text_color(t.dim)
-      .child(div().flex_1())
+    return h_flex().w_full().h(34).pl(10).pr(8).flex_none().items_center().gap(4).text_size(12).text_color(t.dim)
       .child(div().id("chats-toggle").p(5).rounded(6).text_color(this.chatsMode ? t.accent : t.dim).when(this.chatsMode, (el) => el.bg(t.raised))
         .hover((st) => st.bg(t.hover).text_color(this.chatsMode ? t.accent : t.foreground))
         .tooltip(this.chatsMode ? "Back to the sessions (⇧⌘C)" : "Chats with Claude (⇧⌘C)")
@@ -1699,19 +1746,7 @@ export default class Sessions extends View {
           .child(svg(ext.icon).size(14))
           .when(count > 0, (el) => el.child(div().absolute().top(1).right(1).size(7).rounded(4).bg(t.accent)));
       }))
-      .child(div().id("folder-add").p(5).rounded(6).hover((st) => st.bg(t.hover).text_color(t.foreground)).tooltip("Add a folder")
-        .on_click((_e, cx) => cx.spawn(async (cx) => {
-          const path = await pickFolder({ prompt: "Add folder" });
-          if (!path) return;
-          const top = await exec("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], { cwd: path }).catch(() => null);
-          const dir = top?.code === 0 ? top.stdout.trim() : "";
-          this.addFolders([JSON.stringify([null, dir.endsWith("/.git") ? dir.slice(0, -5) : path])]);
-          cx.notify();
-        }))
-        .child(svg(ICON("folder-plus")).size(14)))
-      .child(div().id("session-new").p(5).rounded(6).hover((st) => st.bg(t.hover).text_color(t.foreground)).tooltip("New session (⌥⌘N)")
-        .on_click(() => run("sessions.new-session"))
-        .child(svg(ICON("plus")).size(14)))
+      .child(div().flex_1())
       .child(div().id("settings-open").p(5).rounded(6).hover((st) => st.bg(t.hover).text_color(t.foreground)).tooltip("Session settings (⇧⌘,)")
         .on_click(() => openSettings())
         .child(svg(ICON("settings")).size(14)));
@@ -1803,11 +1838,10 @@ export default class Sessions extends View {
         .child(svg(ICON("restore")).size(12)))
       .child(div().id(`forget-${entry.key}`).flex_none().p(3).rounded(4).text_color(t.dim).tooltip("Remove now: deletes its worktree and Claude conversation")
         .hover((st) => st.bg(t.raised).text_color(t.foreground))
-        .on_click((_e, cx) => cx.spawn(async (cx) => {
-          const kept = await forgetSettled(entry).catch((e) => e.message);
-          if (kept) notify({ title: `Kept the worktree of “${entry.name}”`, body: `It has ${kept}. Push or discard them, then remove it again.`, level: "warning" });
-          cx.notify();
-        }))
+        .on_click(() => {
+          setShared("sessions.removing", { settled: entry.key });
+          confirmRemove(`Remove “${entry.name}” now?`, "Herdr deletes its worktree and Claude conversation. A worktree with uncommitted changes or unpushed commits stays. The branch stays.", "sessions.forget-settled");
+        })
         .child(svg("mods/workspace-chrome/x.svg").size(11))))];
   }
 
@@ -2108,7 +2142,7 @@ export default class Sessions extends View {
         setShared("sessions.noAutoSettle", all);
       }, ICON("check-check"))))
       .child(line())
-      .child(item("remove", "Remove", () => run("space.close", { id, confirmed: true }), "mods/workspace-chrome/x.svg"))
+      .child(item("remove", "Remove", () => confirmRemove(`Remove “${spaces().find((sp) => sp.id === id)?.name ?? "this session"}”?`, "Herdr closes the session and its terminals. The worktree, the branch and the Claude conversation stay.", "space.close", { id, confirmed: true }), "mods/workspace-chrome/x.svg"))
       .child(line())
       .when(Boolean(url), (el) => el.child(item("github", "Open pull request on GitHub", () => exec("open", [url]), ICON("external-link"))))
       .child(item("rename", "Rename", () => run("space.rename", { id }), "mods/workspace-chrome/square-pen.svg"))
