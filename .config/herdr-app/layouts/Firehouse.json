@@ -59,6 +59,17 @@
               "content": {
                 "mod": "chats"
               }
+            },
+            {
+              "id": "reviews",
+              "type": "block",
+              "size": {
+                "weight": 1
+              },
+              "min": 90,
+              "content": {
+                "mod": "reviews"
+              }
             }
           ],
           "active": "sessions",
@@ -74,6 +85,19 @@
           },
           "content": {
             "mod": "chats",
+            "props": {
+              "watch": true
+            }
+          }
+        },
+        {
+          "id": "reviews-watch",
+          "type": "block",
+          "size": {
+            "px": 0
+          },
+          "content": {
+            "mod": "reviews",
             "props": {
               "watch": true
             }

@@ -34,6 +34,7 @@ export default class Shortcuts extends View {
         ["sessions.rails", "Rails console"],
         ["sessions.chats", "Chats with Claude"],
         ["sessions.new-chat", "New chat"],
+        ["sessions.reviews", "Reviews"],
       ]],
       ["From Herdr", [
         ["tab.new", "New terminal tab"],

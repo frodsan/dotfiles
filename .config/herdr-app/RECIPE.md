@@ -10,8 +10,8 @@ Left to right:
 
 1. **Sidebar**, 296px wide, between 200px and 520px, background `chrome`, `#1f1e1d`. Top to bottom:
    - Brand row, 46px, Herdr's `workspace-chrome` mod. It drags the window.
-   - Header row, 34px, 14px icons in `dim`, `#85837b`, on the right: chats, focus mode, one icon per sidebar extension, add a folder, new session and settings. An active icon is `accent`, `#d97757`, on `raised`, `#30302e`.
-   - The list, a stack of two children. The sessions list shows first. The chats list replaces it.
+   - Header row, 34px, 14px icons in `dim`, `#85837b`. On the left: chats, focus mode, reviews with a 7px `accent` dot while pull requests wait, and one icon per sidebar extension. On the right: settings. An active icon is `accent`, `#d97757`, on `raised`, `#30302e`.
+   - The list, a stack of three children: sessions, chats and reviews. The sessions list shows first, under a "Sessions" heading with add a folder and new session buttons.
    - Two 0px blocks: a background copy of `chats` and `custom-commands`.
    - Footer, 69px, `workspace-chrome` with its footer role: Settings and Add machine.
 2. **Work column**. Top to bottom:
@@ -47,6 +47,7 @@ Type is Herdr's UI font. Sidebar rows are 13px, meta lines 11px to 12px.
 | `⇧⌘T` | A "Rails console" tab running `bin/rails console`. |
 | `⌥⌘P` | Shows or hides the Pull request panel. |
 | `⇧⌘C` | Swaps the sessions list and the chats list. |
+| `⇧⌘R` | Swaps the sessions list and the reviews list. |
 | `⇧⌘N` | New chat. |
 | `⇧⌘,` | Session settings. The gear in the header opens it too. |
 | `⌘,` | A Claude session in the folder that holds this config. |
@@ -82,7 +83,9 @@ root row
     sidebar-lists stack, active "sessions"
       sessions block: sessions
       chats block: chats
+      reviews block: reviews
     chats-watch block, 0px: chats {watch: true}
+    reviews-watch block, 0px: reviews {watch: true}
     custom-commands block, 0px: custom-commands
     sidebar-footer block, 69px: workspace-chrome {footer: true}
   views stack, active "work"
@@ -104,13 +107,15 @@ Mods:
 - `custom-commands`. With no props it publishes the palette entries into a generated mod, `mods/custom-commands-local`. With `editor` it is the editor dialog.
 - `shortcuts`. The shortcuts dialog. It reads `keys()`.
 
+- `reviews`. With `watch` it runs `gh search prs --review-requested=@me --state=open` every 2 minutes and saves the result in the shared key `reviews.list`. With no props it draws that list. A click opens the pull request with `tuicr pr <URL>` in the Reviews space, whose folder is `data/reviews/workspace`, one named tab per pull request. The pen button puts the link in `sessions.composerText` and runs `sessions.new-session`, so the new session dialog opens in pull request mode.
+
 Shipped mods it uses: `workspace-chrome`, `workspace-status`, `pane`, `menu`, `files` and `changes` for their icons.
 
 `herdr` functions: `spaces`, `panes`, `layout`, `keys`, `machines`, `window`, `settings`, `shared`, `setShared`, `props`, `nextCommand`, `run`, `exec`, `hc`, `openOverlay`, `closeOverlay`, `notify`, `playSound`, `pickFolder`, `readTextFile`, `writeTextFile`, `appHome`, `home` and `checking`.
 
 App commands: `space.new`, `space.select`, `space.close`, `space.rename`, `tab.new`, `tab.select`, `tab.close`, `tab.move`, `tab.rename`, `pane.focus`, `pane.close`, `terminal.open`, `layout.select`, `layout.show`, `layout.hide` and `window.minimize`, `window.maximize` and `window.close`.
 
-Programs: `gh`, `git`, `wt`, `claude`, `nvim`, `lazygit`, `bin/rails`, `sh`, `open`, `dscl`, `mkdir`, `test`, `rm` and `rmdir`.
+Programs: `gh`, `git`, `wt`, `claude`, `nvim`, `lazygit`, `tuicr`, `bin/rails`, `sh`, `open`, `dscl`, `mkdir`, `test`, `rm` and `rmdir`.
 
 Shared keys: `firehouse.settings` holds the settings, `commands.list` the custom commands, and `chats.space` the chat to space links. Files go under `~/.config/herdr-app/data/`: `new-session/`, `spinoff/`, `autofix/` and `chats/`.
 
@@ -134,5 +139,6 @@ Shared keys: `firehouse.settings` holds the settings, `commands.list` the custom
 - `⌥⌘N` with a prompt creates a worktree on a new branch with the settings prefix, and the space shows Claude working with a pulsing dot.
 - A session with an open pull request shows its number, review state and CI dot, and `⌥⌘P` opens the panel with its checks.
 - `herdr-app do chats.new` works while the chats list is hidden, and pressing `ctrl+d` twice in that chat closes its space within 2 seconds and moves the chat to Archived.
+- `⇧⌘R` shows the pull requests waiting for your review, and a click opens one in tuicr in the Reviews space.
 - `⇧⌘/` lists every key from `keys.json`, and `⇧⌘,` opens Session settings.
 - A custom command added in the editor shows in the command palette and opens a terminal on the right.

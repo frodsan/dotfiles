@@ -42,6 +42,7 @@ SYNCS=(
   .config/herdr-app/mods/chats
   .config/herdr-app/mods/custom-commands
   .config/herdr-app/mods/shortcuts
+  .config/herdr-app/mods/reviews
 )
 
 usage() {

@@ -14,6 +14,7 @@ brew "node"
 brew "podman"
 brew "ripgrep"
 brew "tree-sitter-cli"
+brew "tuicr"
 brew "worktrunk"
 
 cask "claude-code@latest"

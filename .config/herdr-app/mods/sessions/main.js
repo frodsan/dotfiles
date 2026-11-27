@@ -11,6 +11,8 @@ const PR_FRESH_MS = 5000;
 const CHATS_DIR = () => `${appHome()}/data/chats`;
 const CHATS_CWD = () => `${CHATS_DIR()}/workspace`;
 const isChatSpace = (s) => s.folder === CHATS_CWD() || Object.values(map("chats.space")).includes(s.id);
+const isReviewSpace = (s) => s.folder === `${appHome()}/data/reviews/workspace`;
+const isSideSpace = (s) => isChatSpace(s) || isReviewSpace(s);
 function snoozeStore(menu, until) {
   const all = { ...map(menu.store) };
   delete all[menu.id];
@@ -632,6 +634,7 @@ export default class Sessions extends View {
           if (command.startsWith("ext-")) this.toggleExtension(command.slice(4));
           else if (command === "focus") await this.focusPressed();
           else if (command === "chats") this.toggleChats();
+          else if (command === "reviews") this.toggleReviews();
           else setShared("sessions.forward", { command, at: Date.now() });
           cx.notify();
         }
@@ -869,7 +872,7 @@ export default class Sessions extends View {
 
   folderSessions(folderKey) {
     const ps = panes();
-    return spaces().filter((sp) => !isChatSpace(sp) && this.info(sp, ps).folderKey === folderKey);
+    return spaces().filter((sp) => !isSideSpace(sp) && this.info(sp, ps).folderKey === folderKey);
   }
 
   removeFolder() {
@@ -900,7 +903,7 @@ export default class Sessions extends View {
   }
 
   async focusPressed() {
-    const elsewhere = this.chatsMode || this.activeView() !== "work";
+    const elsewhere = this.chatsMode || this.reviewsMode || this.activeView() !== "work";
     this.setChatsMode(false);
     if (elsewhere) {
       if (this.activeView() !== "work") this.showView("work");
@@ -912,6 +915,16 @@ export default class Sessions extends View {
 
   get chatsMode() {
     return !listVisible() && sidebarList() === "chats";
+  }
+
+  get reviewsMode() {
+    return !listVisible() && sidebarList() === "reviews";
+  }
+
+  toggleReviews() {
+    const on = !(this.reviewsMode && this.activeView() === "work");
+    if (this.activeView() !== "work") this.showView("work");
+    run("layout.select", { stack: "sidebar-lists", child: on ? "reviews" : "sessions" });
   }
 
   setChatsMode(on) {
@@ -991,6 +1004,7 @@ export default class Sessions extends View {
     if (command === "forget-settled") return cx.spawn(async (cx) => this.forgetPending(cx));
     if (command === "new-chat") return run("chats.new");
     if (command === "chats") return this.toggleChats();
+    if (command === "reviews") return this.toggleReviews();
     if (command === "new-session") return this.openComposer();
     if (command === "dev") return this.openDev(cx);
     if (command === "settings") return openSettings();
@@ -1357,7 +1371,7 @@ export default class Sessions extends View {
   async resumeAfterBoot() {
     if (!(await firstStartSinceBoot("sessions.bootResumed"))) return;
     const ps = panes();
-    for (const s of spaces().filter((sp) => !isChatSpace(sp))) {
+    for (const s of spaces().filter((sp) => !isSideSpace(sp))) {
       if (claudePane(s, ps)) continue;
       const shell = s.tabs.map((tab) => ps.filter((p) => p.tab === tab.id)).find((own) => own.length === 1 && own[0].terminal && own[0].program?.key === "shell")?.[0];
       if (!shell) continue;
@@ -1406,7 +1420,9 @@ export default class Sessions extends View {
     const active = all.find((r) => r.s.active);
     const folder = preferred && folders.includes(preferred) ? preferred : active && folders.includes(active.folderKey) ? active.folderKey : folders[0] ?? null;
     const section = preferredSection ?? (!preferred && active && active.folderKey === folder ? (map("sessions.membership")[active.s.id] ?? null) : null);
-    openOverlay({ mod: "sessions", kind: "dialog", width: 720, height: 560, props: { composer: { folders, folder, section } } });
+    const text = shared("sessions.composerText") ?? "";
+    if (text) setShared("sessions.composerText", null);
+    openOverlay({ mod: "sessions", kind: "dialog", width: 720, height: 560, props: { composer: { folders, folder, section, text } } });
   }
 
   adoptCreated(sp) {
@@ -1700,14 +1716,14 @@ export default class Sessions extends View {
 
   render(cx) {
     if (props()?.pr) return this.panel.render();
-    if (props()?.bar) return renderBar(this, isChatSpace(spaces().find((s) => s.active) ?? {}));
+    if (props()?.bar) return renderBar(this, isSideSpace(spaces().find((s) => s.active) ?? {}) || sidebarList() !== "sessions");
     if (props()?.header) return this.renderHeader();
     if (props()?.composer) return this.renderComposer();
     if (props()?.welcome) return this.renderWelcome();
     if (props()?.settings) return this.settings.render();
     if (props()?.menu) return this.renderMenu();
     const t = theme();
-    const sp = spaces().filter((s) => !isChatSpace(s));
+    const sp = spaces().filter((s) => !isSideSpace(s));
     const ps = panes();
     this.prune(sp);
     const focus = Boolean(shared("focus.on"));
@@ -1764,6 +1780,12 @@ export default class Sessions extends View {
         .tooltip(focus ? "Stop focus mode (⌘⇧F)" : "Focus mode (⌘⇧F): only the sessions you added, sounds off")
         .on_click((_e, cx) => cx.spawn(async (cx) => { await this.focusPressed(); cx.notify(); }))
         .child(svg(ICON("focus")).size(14)))
+      .child(div().id("reviews-toggle").relative().p(5).rounded(6).text_color(this.reviewsMode ? t.accent : t.dim).when(this.reviewsMode, (el) => el.bg(t.raised))
+        .hover((st) => st.bg(t.hover).text_color(this.reviewsMode ? t.accent : t.foreground))
+        .tooltip(this.reviewsMode ? "Back to the sessions (⇧⌘R)" : `Reviews (⇧⌘R)${(shared("reviews.list") ?? []).length ? `: ${(shared("reviews.list") ?? []).length} waiting` : ""}`)
+        .on_click((_e, cx) => { this.toggleReviews(); cx.notify(); })
+        .child(svg(ICON("pr-open")).size(14))
+        .when((shared("reviews.list") ?? []).length > 0, (el) => el.child(div().absolute().top(1).right(1).size(7).rounded(4).bg(t.accent))))
       .children(extensions().filter((ext) => ext.icon && ext.view && inLayout(ext.view)).map((ext) => {
         const open = this.activeView() === ext.view;
         const count = Number(shared(ext.badge ?? "") ?? 0) || 0;
@@ -1908,7 +1930,7 @@ export default class Sessions extends View {
   initComposer(cx) {
     const p = props().composer;
     this.composer = { folder: p.folder, section: p.section, where: "worktree", whereTouched: false, folderTouched: false, autoFor: null, model: localStorage.getItem("composer.model") || null, mode: localStorage.getItem("composer.mode") || "auto", focus: Boolean(shared("focus.on")) || localStorage.getItem("composer.focus") === "1", starting: null, error: null };
-    this.message = TextareaState.new({ placeholder: "What fire are we putting out first?", rows: 7 });
+    this.message = TextareaState.new({ placeholder: "What fire are we putting out first?", rows: 7, value: p.text ?? "" });
     this.message.on("change", (_e, cx) => cx.notify());
     if (!composerKeysBound) {
       composerKeysBound = true;

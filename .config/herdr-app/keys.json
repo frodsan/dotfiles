@@ -69,7 +69,8 @@
     "cmd-shift-n": "sessions.new-chat",
     "cmd-alt-,": "app.settings",
     "cmd-shift-,": "sessions.settings",
-    "cmd-shift-c": "sessions.chats"
+    "cmd-shift-c": "sessions.chats",
+    "cmd-shift-r": "sessions.reviews"
   },
   "terminal": {
     "cmd-f": "terminal.search",

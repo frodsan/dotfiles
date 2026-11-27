@@ -34,6 +34,10 @@ The tab bar opens tools beside Claude, in the session's worktree: Files in Neovi
 
 Some questions belong to no repo. `⇧⌘C` swaps the session list for your chats with Claude, and `⇧⌘N` starts a new one. Each chat names itself after the conversation. Exiting Claude archives the chat, and opening it again resumes the conversation. Archived chats go to the Trash after 7 days.
 
+## Reviews without leaving Herdr
+
+`⇧⌘R` swaps the session list for the pull requests that wait for your review, refreshed every 2 minutes. A dot on its icon says some are waiting. Click one, and it opens in tuicr in a Reviews space, one tab per pull request. Read the diff, comment, then approve or request changes, and tuicr sends the review to GitHub. To change the code yourself, the pen button checks the pull request out in a new session.
+
 ## Your own commands
 
 Add shell commands to the command palette with "Edit custom commands…", such as an AWS login or `claude /mcp`. Each one opens a terminal on the right. They stay on your machine and out of this repo.
