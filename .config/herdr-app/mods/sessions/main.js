@@ -1852,7 +1852,6 @@ export default class Sessions extends View {
     this.composer = { folder: p.folder, section: p.section, where: "worktree", whereTouched: false, folderTouched: false, autoFor: null, model: localStorage.getItem("composer.model") || null, mode: localStorage.getItem("composer.mode") || "auto", focus: Boolean(shared("focus.on")) || localStorage.getItem("composer.focus") === "1", starting: null, error: null };
     this.message = TextareaState.new({ placeholder: "What fire are we putting out first?", rows: 7 });
     this.message.on("change", (_e, cx) => cx.notify());
-    this.message.on("submit", (_e, cx) => this.startSession(cx));
     if (!composerKeysBound) {
       composerKeysBound = true;
       cx.bind_keys([
