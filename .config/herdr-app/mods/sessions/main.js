@@ -631,11 +631,15 @@ export default class Sessions extends View {
       cx.spawn(async (cx) => {
         for (;;) {
           const command = await nextCommand();
-          if (command.startsWith("ext-")) this.toggleExtension(command.slice(4));
-          else if (command === "focus") await this.focusPressed();
-          else if (command === "chats") this.toggleChats();
-          else if (command === "reviews") this.toggleReviews();
-          else setShared("sessions.forward", { command, at: Date.now() });
+          try {
+            if (command.startsWith("ext-")) this.toggleExtension(command.slice(4));
+            else if (command === "focus") await this.focusPressed();
+            else if (command === "chats") this.toggleChats();
+            else if (command === "reviews") this.toggleReviews();
+            else setShared("sessions.forward", { command, at: Date.now() });
+          } catch (e) {
+            notify({ title: `Could not run sessions.${command}`, body: String(e?.message ?? e), level: "error" });
+          }
           cx.notify();
         }
       });
@@ -670,7 +674,7 @@ export default class Sessions extends View {
       const job = shared("sessions.forward");
       if (!job || job.at <= this.forwardedAt) return;
       this.forwardedAt = job.at;
-      this.command(job.command, cx);
+      try { this.command(job.command, cx); } catch (e) { notify({ title: `Could not run sessions.${job.command}`, body: String(e?.message ?? e), level: "error" }); }
       cx.notify();
     });
     if (!shared("sessions.welcomed")) cx.timer.after(1500, () => { setShared("sessions.welcomed", true); openWelcome(); });
