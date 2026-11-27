@@ -41,3 +41,14 @@ Add shell commands to the command palette with "Edit custom commands…", such a
 ## Change it with Claude
 
 `⌘,` opens a Claude session in this repo to change the setup itself. `⇧⌘,`, or the gear in the sidebar header, opens the session settings: branch prefix, settling, focus mode, snooze times and toasts.
+
+## Install
+
+Paste this into Claude Code:
+
+```
+Read ~/.config/herdr-app/AGENTS.md, then add this layout: https://github.com/frodsan/dotfiles/tree/master/.config/herdr-app
+Also copy https://github.com/frodsan/dotfiles/tree/master/.claude/skills/herdr to ~/.claude/skills/herdr.
+```
+
+The agent reads `RECIPE.md`, copies the layout and its mods into your Herdr folder, merges the shortcuts into your `keys.json` and switches to Firehouse. The second line installs the `herdr` skills that auto-fix, the update-branch button and spin-offs use.
