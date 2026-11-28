@@ -963,7 +963,7 @@ export default class Reviews extends View {
             .child(div().flex_1().min_w(0).truncate().text_color(t.muted).child(what(e)))
             .child(div().flex_none().text_size(11.5).text_color(t.dim).child(`${ago(e.at)} ago`)))
           .when(Boolean(text), (el) => el.child(div().px(14).py(10).rounded(8).border_1().border_color(t.border).bg(t.surface).child(text)))
-          .child(this.reactionsRow(t, e.id, e.reactions)));
+          .when(Boolean(text), (el) => el.child(this.reactionsRow(t, e.id, e.reactions))));
     };
     return v_flex().gap(12)
       .child(v_flex().pb(8).child(this.commentBox(t)))
