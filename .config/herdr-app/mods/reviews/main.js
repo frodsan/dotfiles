@@ -25,7 +25,7 @@ const REVIEWS_QUERY = `query {
 const COMMENTS_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) { pullRequest(number: $number) {
     commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { name status conclusion detailsUrl startedAt completedAt checkSuite { workflowRun { workflow { name } } } } ... on StatusContext { context state targetUrl } } } } } } }
-    reviewThreads(first: 100) { nodes { id isResolved isOutdated path line diffSide comments(first: 50) { nodes { id author { __typename login } body createdAt reactionGroups { content viewerHasReacted reactors { totalCount } } } } } }
+    reviewThreads(first: 100) { nodes { id isResolved isOutdated path line diffSide comments(first: 50) { nodes { id url author { __typename login } body createdAt reactionGroups { content viewerHasReacted reactors { totalCount } } } } } }
     timelineItems(last: 60, itemTypes: [PULL_REQUEST_REVIEW, ISSUE_COMMENT]) {
       nodes {
         __typename
@@ -478,7 +478,7 @@ export default class Reviews extends View {
           exec("gh", ["api", "graphql", "-f", `query=${COMMENTS_QUERY}`, "-f", `owner=${owner}`, "-f", `name=${name}`, "-F", `number=${pr.number}`]).catch(() => null),
         ]);
         const data = talk?.code === 0 ? JSON.parse(talk.stdout).data?.repository?.pullRequest : null;
-        const person = (c) => ({ id: c.id, author: c.author?.login ?? "ghost", bot: isBot(c.author), body: c.body ?? "", at: c.createdAt, reactions: groups(c) });
+        const person = (c) => ({ id: c.id, url: c.url, author: c.author?.login ?? "ghost", bot: isBot(c.author), body: c.body ?? "", at: c.createdAt, reactions: groups(c) });
         const threads = (data?.reviewThreads?.nodes ?? []).map((th) => ({ id: th.id, resolved: th.isResolved, outdated: th.isOutdated, path: th.path, line: th.line, side: th.diffSide, comments: th.comments.nodes.map(person) }));
         const activity = buildActivity(data?.timelineItems?.nodes ?? []);
         const checks = { passed: 0, pending: 0, failing: 0, list: [] };
@@ -503,7 +503,7 @@ export default class Reviews extends View {
     return this.details[key];
   }
 
-  comment(t, c) {
+  comment(t, c, th = null) {
     return v_flex().gap(4)
       .child(h_flex().gap(6).text_size(11.5).text_color(t.dim)
         .child(div().font_semibold().text_color(t.muted).child(c.author))
@@ -511,7 +511,13 @@ export default class Reviews extends View {
         .when(Boolean(c.state) && c.state !== "COMMENTED", (el) => el.child(div().text_color(c.state === "APPROVED" ? t.done : c.state === "CHANGES_REQUESTED" ? t.blocked : t.dim).child((c.state ?? "").toLowerCase().replace(/_/g, " "))))
         .child(div().child(`${ago(c.at)} ago`)))
       .child(div().text_size(12.5).child(TextView.markdown(`comment-${c.id}`, linkRefs(plainBody(c.body).slice(0, 8000), this.repo) || "_(empty)_").selectable(true)))
-      .child(this.reactionsRow(t, c.id, c.reactions));
+      .child(this.reactionsRow(t, c.id, c.reactions, th ? this.commentActions(t, c, (cx, quoted) => {
+        if (!(this.draft?.kind === "reply" && this.draft.thread === th.id)) this.startDraft({ kind: "reply", thread: th.id }, cx);
+        const current = this.draft.state.value().trim();
+        this.draft.state.set_value(`${current ? `${current}\n\n` : ""}${quoted}\n\n`);
+        this.previews?.delete("draft");
+        this.draft.state.focus?.();
+      }) : null));
   }
 
   thread(t, th) {
@@ -535,7 +541,7 @@ export default class Reviews extends View {
     return v_flex().mx(14).my(6).px(12).py(8).gap(8).rounded(8).border_l_2().border_color(th.resolved ? t.border : t.accent).bg(t.raised)
       .when(th.resolved, (el) => el.opacity(0.7))
       .child(head)
-      .when(open, (el) => el.children(th.comments.map((c) => this.comment(t, c))))
+      .when(open, (el) => el.children(th.comments.map((c) => this.comment(t, c, th))))
       .when(open && !(this.draft?.kind === "reply" && this.draft.thread === th.id), (el) => el.child(h_flex().child(div().id(`reply-${th.id}`).px(10).py(4).rounded(6).text_size(12).text_color(t.muted).border_1().border_color(t.border).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground))
         .on_click((_e, cx) => { this.startDraft({ kind: "reply", thread: th.id }, cx); }).child("Reply"))))
       .when(this.draft?.kind === "reply" && this.draft.thread === th.id, (el) => el.child(this.draftBox(t)));
@@ -795,13 +801,14 @@ export default class Reviews extends View {
       .children(group("skipped", "Skipped", true));
   }
 
-  commentActions(t, e) {
+  commentActions(t, e, quote = null) {
     const pill = (id, label, icon, action) => h_flex().id(`${id}-${e.id}`).gap(4).items_center().px(7).py(1).rounded(10).text_size(11.5).text_color(t.dim).border_1().border_color(t.border).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground))
       .on_click((_e, cx) => { cx.stop_propagation(); action(cx); cx.notify(); })
       .child(svg(ICON(icon)).size(11).flex_none()).child(label);
     return h_flex().gap(4)
-      .child(pill("quote", "Quote reply", "overview", () => {
+      .child(pill("quote", "Quote reply", "overview", (cx) => {
         const quoted = plainBody(e.body).split("\n").map((line) => `> ${line}`).join("\n");
+        if (quote) return quote(cx, quoted);
         const current = this.newComment.value().trim();
         this.newComment.set_value(`${current ? `${current}\n\n` : ""}${quoted}\n\n`);
         this.previews?.delete("comment");
