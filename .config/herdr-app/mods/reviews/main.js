@@ -1096,7 +1096,7 @@ export default class Reviews extends View {
         .child(chip("all", "All", details.files.length))
         .child(chip("unresolved", "Unresolved comments", unresolved.length))
         .child(div().flex_1())
-        .child(div().flex_none().text_size(12).text_color(t.dim).child(`${details.files.filter((f) => f.viewed).length} of ${details.files.length} viewed`))
+        .child(div().flex_none().text_size(12).text_color(t.dim).child(`${files.filter((f) => f.viewed).length} of ${files.length} viewed`))
         .child(this.layoutSwitch(t)))
       .when(Boolean(hint), (el) => el.child(div().text_size(12).text_color(t.dim).child(hint ?? "")))
       .when(files.length > 0, (el) => el.child(v_flex().rounded(10).border_1().border_color(t.border).overflow_hidden().children(files.map(fileRow))));
