@@ -1934,7 +1934,7 @@ export default class Sessions extends View {
   initComposer(cx) {
     const p = props().composer;
     this.composer = { folder: p.folder, section: p.section, where: "worktree", whereTouched: false, folderTouched: false, autoFor: null, model: localStorage.getItem("composer.model") || null, effort: localStorage.getItem("composer.effort") || null, mode: localStorage.getItem("composer.mode") || "auto", focus: Boolean(shared("focus.on")) || localStorage.getItem("composer.focus") === "1", starting: null, error: null };
-    this.message = TextareaState.new({ placeholder: "What fire are we putting out first?", rows: 7, value: p.text ?? "" });
+    this.message = TextareaState.new({ placeholder: conf().composerPlaceholder || "What fire are we putting out first?", rows: 7, value: p.text ?? "" });
     this.message.on("change", (_e, cx) => cx.notify());
     if (!composerKeysBound) {
       composerKeysBound = true;
@@ -2112,7 +2112,7 @@ export default class Sessions extends View {
   }
 
   initWelcome(cx) {
-    this.prefix = InputState.new({ value: conf().branchPrefix ?? "", placeholder: "e.g. fr/" });
+    this.prefix = InputState.new({ value: conf().branchPrefix ?? "", placeholder: "e.g. me/" });
     this.prefix.on("change", () => setConf({ branchPrefix: this.prefix.value().trim() }));
     this.checks = {};
     this.checkWelcome(cx);
@@ -2161,7 +2161,7 @@ export default class Sessions extends View {
         .child(v_flex().gap(10).child(heading("Set up"))
           .child(card(
             v_flex().gap(6)
-              .child(check(true, "Branch prefix", "Optional. New branches start with it, e.g. fr/fix-login-1a2b."))
+              .child(check(true, "Branch prefix", "Optional. New branches start with it, e.g. me/fix-login-1a2b."))
               .child(div().pl(26).child(Input.new(this.prefix).h(28).px(8).rounded(6).border_1().border_color(t.input).bg(t.background).text_size(12.5))),
             ...WELCOME_TOOLS.map(([name, , what, install]) => check(this.checks[name], name, this.checks[name] === false ? `${what} Install: ${install}` : what)),
             check(this.checks.skills, "Claude skills", this.checks.skills === false ? "Auto-fix and /firehouse:spin-off need the firehouse plugin in ~/.claude/skills/firehouse. Run the dotfiles install.sh." : "The firehouse plugin: /firehouse:pr-autofix for auto-fix, /firehouse:pr-fix for the PR panel, /firehouse:update-branch and /firehouse:spin-off."),

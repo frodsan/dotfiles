@@ -11,29 +11,25 @@ Firehouse is a Herdr setup for running many Claude Code sessions on one repo at 
 
 - **Sidebar.** Sessions are grouped by repo and marked working, blocked or done.
 - **Focus mode.** `⇧⌘F` shows only the sessions you starred and mutes the rest.
-- **Snooze.** A session hides until tomorrow or next week, then comes back.
+- **Snooze.** Put a session away for now, and it comes back when you said.
 
 ## Pull requests that finish themselves
 
 The Pull request panel (`⌥⌘P`) shows the session's checks and reviews, and has three toggles.
 
-- **Fix.** Claude fixes failed CI, merge conflicts and review comments on its own, and asks you after 5 rounds.
+- **Fix.** Claude fixes failed CI, merge conflicts and review comments on its own.
 - **Merge.** Firehouse puts the pull request in the merge queue once it's ready.
-- **Settle.** After the pull request merges, the session moves to Settled, and its worktree goes away after 7 days. The branch stays.
+- **Settle.** When the pull request merges, the session cleans up its worktree.
 
 ## Everything else
 
 - **Tools beside Claude.** Files in Neovim, Changes in lazygit and a Rails console open in the session's worktree.
 - **Chats.** `⇧⌘C` holds questions that belong to no repo, and each chat names itself.
 - **Reviews.** `⇧⌘R` lists the pull requests that ask for your review, with diffs, threads and Review changes inside Herdr.
-- **Check out.** One click opens a pull request's branch in a new focus session.
 - **Custom commands.** Your own shell commands go in the command palette and stay on your machine.
 - **Settings.** `⇧⌘,` sets the branch prefix, settling, focus mode, snooze time, reviews and the model for text generation.
 - **Change it with Claude.** `⌘,` opens Claude in this repo to change the setup itself.
-
-`⇧⌘/` shows every shortcut.
-
-![The keyboard shortcuts dialog](docs/shortcuts.png)
+- **Shortcuts.** `⇧⌘/` shows every shortcut.
 
 ## Install
 

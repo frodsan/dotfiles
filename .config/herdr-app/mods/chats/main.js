@@ -27,7 +27,7 @@ function claudePane(s, ps) {
 
 const DAY = 86400000;
 const quickFlags = () => { const c = { quickModel: "haiku", quickEffort: null, ...(shared("firehouse.settings") ?? {}) }; return ["--model", c.quickModel, ...(c.quickEffort ? ["--effort", c.quickEffort] : [])]; };
-const keepDays = () => (shared("firehouse.settings") ?? {}).settledDays ?? 7;
+const keepDays = () => (shared("firehouse.settings") ?? {}).archivedDays ?? 7;
 const claudeRunning = (p) => p.program?.key === "claude" || p.status != null;
 
 async function trashChat(id) {
@@ -359,7 +359,7 @@ export default class Chats extends View {
     if (!archived.length) return [];
     const open = localStorage.getItem("chats.archived.open") === "1";
     const head = h_flex().id("chats-archived").mt(12).px(6).py(4).gap(6).items_center().rounded(6).text_size(12).text_color(t.dim).cursor_pointer().hover((st) => st.bg(t.hover))
-      .tooltip(`Archived chats move to the Trash after ${keepDays()} days, as set in Session settings`)
+      .tooltip(`Archived chats move to the Trash after ${keepDays()} days, as set in Firehouse settings`)
       .on_click((_e, cx) => { localStorage.setItem("chats.archived.open", open ? "0" : "1"); cx.notify(); })
       .child(svg(`mods/chats/assets/${open ? "chevron-down" : "chevron-right"}.svg`).size(12).flex_none())
       .child(div().flex_1().font_medium().child(`Archived · ${archived.length}`));

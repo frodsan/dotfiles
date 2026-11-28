@@ -2,12 +2,28 @@ import { View, div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { theme, shared, setShared, props, closeOverlay, exec } from "herdr";
 
-const DEFAULTS = { settledDays: 7, branchPrefix: "", autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, autoToasts: false, reviewsRefreshMinutes: 2, reviewsKeepDays: 1, reviewsDiffLayout: "split", quickModel: "haiku", quickEffort: null };
+const DEFAULTS = { settledDays: 7, archivedDays: 7, branchPrefix: "", autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, autoToasts: false, reviewsRefreshMinutes: 2, reviewsKeepDays: 1, reviewsDiffLayout: "split", quickModel: "haiku", quickEffort: null };
 const conf = () => ({ ...DEFAULTS, ...(shared("firehouse.settings") ?? {}) });
 const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 const SETTLED_DAYS = [1, 3, 7, 14, 30];
 const REFRESH_MINUTES = [1, 2, 5, 10, 30, 60];
 const KEEP_DAYS = [1, 3, 7];
+
+const USAGE_SCRIPT = 'PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"; find "$HOME/.claude/projects" -name "*.jsonl" -mtime -8 -print0 | xargs -0 grep -h output_tokens 2>/dev/null | jq -nc --arg today "$1" --arg week "$2" "$3"';
+const USAGE_JQ = [
+  'def add($a; $n): ($a // [0, 0]) | [.[0] + $n[0], .[1] + $n[1]];',
+  'reduce (inputs | select(.type == "assistant" and .message.usage and .message.model != "<synthetic>" and (.timestamp // "") >= $week)) as $m ({seen: {}, rows: {}};',
+  '  if .seen[$m.message.id] then . else',
+  '    .seen[$m.message.id] = true',
+  '    | ($m.message.usage) as $u',
+  '    | [([$u.input_tokens, $u.cache_creation_input_tokens, $u.cache_read_input_tokens] | map(. // 0) | add), ($u.output_tokens // 0)] as $n',
+  '    | ($m.message.model // "unknown") as $k',
+  '    | .rows[$k].week = add(.rows[$k].week; $n)',
+  '    | if $m.timestamp >= $today then .rows[$k].today = add(.rows[$k].today; $n) else . end',
+  '  end) | .rows',
+].join(" ");
+const tokens = (n) => n >= 1e9 ? `${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(n);
+const modelName = (id) => { const m = id.match(/claude-([a-z]+)-(\d+)-(\d+)/); return m ? `${m[1][0].toUpperCase()}${m[1].slice(1)} ${m[2]}.${m[3]}` : id; };
 
 export default class Settings extends View {
   init(_props, cx) {
@@ -20,9 +36,23 @@ export default class Settings extends View {
     };
     cx.spawn(async (cx) => load(cx));
     cx.timer.every(10000, (cx) => { load(cx); });
-    const state = InputState.new({ value: conf().branchPrefix ?? "", placeholder: "e.g. fr/" });
+    this.usage = null;
+    const loadUsage = async (cx) => {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const week = new Date(Date.now() - 7 * 86400000);
+      const r = await exec("sh", ["-c", USAGE_SCRIPT, "sh", today.toISOString(), week.toISOString(), USAGE_JQ]).catch(() => null);
+      if (r?.code !== 0) { this.usage = this.usage ?? {}; cx.notify(); return; }
+      try { this.usage = JSON.parse(r.stdout || "{}") ?? {}; } catch { this.usage = {}; }
+      cx.notify();
+    };
+    cx.spawn(async (cx) => loadUsage(cx));
+    cx.timer.every(60000, (cx) => { loadUsage(cx); });
+    const state = InputState.new({ value: conf().branchPrefix ?? "", placeholder: "e.g. me/" });
     state.on("change", () => setConf({ branchPrefix: state.value().trim() }));
     this.branchPrefix = state;
+    const hint = InputState.new({ value: conf().composerPlaceholder ?? "", placeholder: "What fire are we putting out first?" });
+    hint.on("change", () => setConf({ composerPlaceholder: hint.value().trim() }));
+    this.composerPlaceholder = hint;
   }
 
   rateRow(r, label, hint, row, t) {
@@ -55,14 +85,14 @@ export default class Settings extends View {
       .on_key_down((e, cx) => { if (e.key === "escape") { closeOverlay(props().overlay); cx.stop_propagation(); } })
       .child(h_flex().flex_none().px(22).pt(22).pb(12).items_center().child(div().flex_1().text_size(16).font_semibold().child("Firehouse settings")).child(div().text_size(11).text_color(t.dim).child("Esc")))
       .child(v_flex().id("settings-body").flex_1().min_h(0).px(22).pb(22).gap(20).overflow_y_scrollbar()
+        .child(group("Chats",
+          row("Keep archived chats for", "After that, an archived chat's conversation moves to the Trash.", h_flex().gap(4).children(SETTLED_DAYS.map((d) => choice(`archived-${d}`, d === 1 ? "1 day" : `${d} days`, c.archivedDays === d, () => setConf({ archivedDays: d })))))))
         .child(group("New sessions",
-          row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b. To run a command in each new worktree, add a post-start hook to Worktrunk's config.", input(this.branchPrefix))))
-        .child(group("Text generation",
-          row("Model", "Claude writes branch names for new sessions and titles for chats with this model.", chips("quickModel", [["haiku", "Haiku"], ["sonnet", "Sonnet"], ["opus", "Opus"], ["fable", "Fable"]])),
-          row("Effort", "Default uses your Claude setting.", chips("quickEffort", [[null, "Default"], ["low", "Low"], ["medium", "Medium"], ["high", "High"], ["xhigh", "Extra high"], ["max", "Max"]]))))
+          row("Branch prefix", "New worktree branches start with this, e.g. me/fix-login-1a2b. To run a command in each new worktree, add a post-start hook to Worktrunk's config.", input(this.branchPrefix)),
+          row("Prompt placeholder", "The gray text in an empty New session prompt. Leave it empty for the default.", input(this.composerPlaceholder))))
         .child(group("Settling",
           row("Auto-settle", "Settle a session when its pull request merges or closes. You can still turn it off per session.", onOff("autoSettle")),
-          row("Keep settled sessions and archived chats for", "After that, Herdr deletes a settled session's worktree, with any uncommitted changes, and its Claude conversation. The branch always stays, with its commits. An archived chat moves to the Trash.", h_flex().gap(4).children(SETTLED_DAYS.map((d) => choice(`settled-${d}`, d === 1 ? "1 day" : `${d} days`, c.settledDays === d, () => setConf({ settledDays: d })))))))
+          row("Keep settled sessions for", "After that, Herdr deletes a settled session's worktree, with any uncommitted changes, and its Claude conversation. The branch always stays, with its commits.", h_flex().gap(4).children(SETTLED_DAYS.map((d) => choice(`settled-${d}`, d === 1 ? "1 day" : `${d} days`, c.settledDays === d, () => setConf({ settledDays: d })))))))
         .child(group("Focus mode",
           row("Mute sounds", "When on, blocked sessions you can see still make a sound.", onOff("focusMute")),
           row("Working group", "Shows the focus sessions where Claude is working in their own group.", onOff("focusWorking"))))
@@ -74,6 +104,21 @@ export default class Settings extends View {
           row("Diff layout", "How Files changed shows diffs. The switch above the files changes it too.", chips("reviewsDiffLayout", [["split", "Split"], ["unified", "Unified"]]))))
         .child(group("Notifications",
           row("Toasts for automatic actions", "Auto-fix, merge when ready, auto-settle, snooze wake-ups and spin-offs. Off: the sidebar shows the change, and Herdr still plays its sounds. Errors from things you click always show.", onOff("autoToasts"))))
+        .child(group("Text generation",
+          row("Model", "Claude writes branch names for new sessions and titles for chats with this model.", chips("quickModel", [["haiku", "Haiku"], ["sonnet", "Sonnet"], ["opus", "Opus"], ["fable", "Fable"]])),
+          row("Effort", "Default uses your Claude setting.", chips("quickEffort", [[null, "Default"], ["low", "Low"], ["medium", "Medium"], ["high", "High"], ["xhigh", "Extra high"], ["max", "Max"]]))))
+        .child(group("Claude usage",
+          ...(this.usage == null
+            ? [div().text_size(12).text_color(t.dim).child("Reading Claude transcripts…")]
+            : Object.keys(this.usage).length === 0
+              ? [div().text_size(12).text_color(t.dim).child("No Claude use in the last 7 days.")]
+              : Object.entries(this.usage).sort((a, b) => (b[1].week?.[1] ?? 0) - (a[1].week?.[1] ?? 0)).map(([id, u]) => {
+                  const line = (label, v) => v ? `${label}: ${tokens(v[1])} output, ${tokens(v[0])} input` : `${label}: none`;
+                  return h_flex().gap(12).items_start()
+                    .child(div().w(90).flex_none().text_size(12.5).font_medium().child(modelName(id)))
+                    .child(v_flex().gap(2).flex_1().min_w(0).text_size(12).text_color(t.muted).child(line("Today", u.today)).child(line("Last 7 days", u.week)));
+                })),
+          div().text_size(11.5).text_color(t.dim).child("Counted from the transcripts in ~/.claude/projects, every session and text generation included. Input counts cache reads and writes. Your plan's limits are in /usage in Claude."))
         .child(group("GitHub API",
           ...(this.rate
             ? [["graphql", "GraphQL", "The pull request list, the pull request panel and auto-fix. When fewer than 500 are left, the list refreshes every 30 seconds, and below 100 every 2 minutes."], ["core", "REST", "Most other gh commands."], ["search", "Search", "The reviews list."]]
