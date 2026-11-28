@@ -57,7 +57,7 @@ export default class Settings extends View {
       .child(v_flex().id("settings-body").flex_1().min_h(0).px(22).pb(22).gap(20).overflow_y_scrollbar()
         .child(group("New sessions",
           row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b. To run a command in each new worktree, add a post-start hook to Worktrunk's config.", input(this.branchPrefix))))
-        .child(group("Quick AI tasks",
+        .child(group("Text generation",
           row("Model", "Claude writes branch names for new sessions and titles for chats with this model.", chips("quickModel", [["haiku", "Haiku"], ["sonnet", "Sonnet"], ["opus", "Opus"], ["fable", "Fable"]])),
           row("Effort", "Default uses your Claude setting.", chips("quickEffort", [[null, "Default"], ["low", "Low"], ["medium", "Medium"], ["high", "High"], ["xhigh", "Extra high"], ["max", "Max"]]))))
         .child(group("Settling",

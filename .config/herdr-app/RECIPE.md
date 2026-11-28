@@ -53,7 +53,7 @@ Type is Herdr's UI font. Sidebar rows are 13px, meta lines 11px to 12px.
 | `⌘,` | A Claude session in the folder that holds this config. |
 | `⇧⌘/` | Keyboard shortcuts dialog. |
 
-**New session.** Herdr fetches the default branch and creates a worktree with `wt switch <branch> --create`. Worktrunk runs its hooks, and Herdr starts Claude with the prompt and the model, effort and mode you picked. The dialog remembers the last choices. The branch is the settings prefix plus a slug that `claude -p` writes with the Quick AI tasks model and effort, Haiku by default, with a fallback from the prompt words.
+**New session.** Herdr fetches the default branch and creates a worktree with `wt switch <branch> --create`. Worktrunk runs its hooks, and Herdr starts Claude with the prompt and the model, effort and mode you picked. The dialog remembers the last choices. The branch is the settings prefix plus a slug that `claude -p` writes with the Text generation model and effort, Haiku by default, with a fallback from the prompt words.
 
 **Clicks.** A row click selects the space and focuses its Claude pane. Right-clicking a row opens its menu: open the pull request on GitHub, update the branch, settle, rename, move to a section and remove. A starred session's menu also has Snooze… and Pin. A snoozed row has a clock button to change the time or unsnooze. Dragging moves a session.
 
@@ -67,7 +67,7 @@ Type is Herdr's UI font. Sidebar rows are 13px, meta lines 11px to 12px.
 
 **Snooze.** It hides a session until a time, such as tomorrow at 9:00 or next Monday at 9:00. The settings set the hour. Auto-fix wakes a snoozed session early when it needs you. In focus mode, that plays the blocked sound.
 
-**Chats.** A new chat opens a space in `data/chats/workspace` running `claude --session-id <uuid>`. Opening a closed chat runs `claude --resume <uuid>`. The background copy names each chat once from its first message with `claude -p` and the Quick AI tasks settings, and marks it `titled`. When Claude exits, the space closes and the chat moves to Archived. Opening an archived chat restores it. After the keep setting, an archived chat's conversation moves to `~/.Trash`.
+**Chats.** A new chat opens a space in `data/chats/workspace` running `claude --session-id <uuid>`. Opening a closed chat runs `claude --resume <uuid>`. The background copy names each chat once from its first message with `claude -p` and the Text generation settings, and marks it `titled`. When Claude exits, the space closes and the chat moves to Archived. Opening an archived chat restores it. After the keep setting, an archived chat's conversation moves to `~/.Trash`.
 
 **Custom commands.** The palette's "Edit custom commands…" opens an editor of title and shell command pairs. Each one becomes a palette entry that opens a terminal on the right running the command in the login shell.
 
