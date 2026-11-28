@@ -471,11 +471,12 @@ export default class Reviews extends View {
     cx.spawn(async (cx) => {
       try {
         const [owner, name] = pr.repo.split("/");
-        const [me, rules, files, talk] = await Promise.all([
+        const [me, rules, files, talk, viewed] = await Promise.all([
           this.identity(owner),
           this.ownerRules(pr.repo, pr.baseRefName),
           exec("gh", ["api", "--paginate", `repos/${pr.repo}/pulls/${pr.number}/files?per_page=100`, "--jq", ".[] | {filename, status, additions, deletions, patch}"]),
           exec("gh", ["api", "graphql", "-f", `query=${COMMENTS_QUERY}`, "-f", `owner=${owner}`, "-f", `name=${name}`, "-F", `number=${pr.number}`]).catch(() => null),
+          this.viewedStates(pr),
         ]);
         const data = talk?.code === 0 ? JSON.parse(talk.stdout).data?.repository?.pullRequest : null;
         const person = (c) => ({ id: c.id, url: c.url, author: c.author?.login ?? "ghost", bot: isBot(c.author), body: c.body ?? "", at: c.createdAt, reactions: groups(c) });
@@ -492,9 +493,9 @@ export default class Reviews extends View {
         if (files.code !== 0) throw new Error(files.stderr.trim() || "Could not load the files");
         const list = files.stdout.split("\n").filter(Boolean).map((line) => JSON.parse(line)).map((file) => {
           const owners = ownersOf(rules, file.filename);
-          return { ...file, owners, mine: owners.some((o) => me.mine.has(o)), threads: threads.filter((th) => th.path === file.filename) };
+          return { ...file, owners, mine: owners.some((o) => me.mine.has(o)), viewed: viewed.states[file.filename] === "VIEWED", threads: threads.filter((th) => th.path === file.filename) };
         });
-        this.details[key] = { files: list, hasRules: rules.length > 0, activity, checks, threads, loadedComments: Boolean(data) };
+        this.details[key] = { files: list, hasRules: rules.length > 0, activity, checks, threads, prId: viewed.id, loadedComments: Boolean(data) };
       } catch (error) {
         this.details[key] = { error: String(error.message ?? error) };
       }
@@ -1010,6 +1011,37 @@ export default class Reviews extends View {
     return h_flex().gap(20).border_b_1().border_color(t.border).child(tab("description", "Overview", null, "overview")).child(tab("files", "Files changed", pr.changedFiles || null, "files")).child(tab("checks", "Checks", this.checkCount(pr), "checks")).when(Boolean(this.claudeEntry(pr)), (el) => el.child(tab("claude", this.claudeLabel(pr))));
   }
 
+  async viewedStates(pr) {
+    const [owner, name] = pr.repo.split("/");
+    const states = {};
+    let id = null;
+    let after = null;
+    for (let page = 0; page < 30; page++) {
+      const query = "query($o: String!, $n: String!, $num: Int!, $a: String) { repository(owner: $o, name: $n) { pullRequest(number: $num) { id files(first: 100, after: $a) { pageInfo { hasNextPage endCursor } nodes { path viewerViewedState } } } } }";
+      const r = await exec("gh", ["api", "graphql", "-f", `query=${query}`, "-f", `o=${owner}`, "-f", `n=${name}`, "-F", `num=${pr.number}`, ...(after ? ["-f", `a=${after}`] : [])]).catch(() => null);
+      if (r?.code !== 0) break;
+      const node = JSON.parse(r.stdout).data?.repository?.pullRequest;
+      id = node?.id ?? id;
+      for (const f of node?.files?.nodes ?? []) states[f.path] = f.viewerViewedState;
+      if (!node?.files?.pageInfo?.hasNextPage) break;
+      after = node.files.pageInfo.endCursor;
+    }
+    return { id, states };
+  }
+
+  toggleViewed(file, details, cx) {
+    if (!details.prId) return;
+    const on = !file.viewed;
+    file.viewed = on;
+    if (on) this.toggled.delete(file.filename);
+    cx.notify();
+    const field = on ? "markFileAsViewed" : "unmarkFileAsViewed";
+    cx.spawn(async (cx) => {
+      const r = await exec("gh", ["api", "graphql", "-f", `query=mutation($p: ID!, $f: String!) { ${field}(input: { pullRequestId: $p, path: $f }) { clientMutationId } }`, "-f", `p=${details.prId}`, "-f", `f=${file.filename}`]).catch(() => null);
+      if (r?.code !== 0) { file.viewed = !on; cx.notify(); }
+    });
+  }
+
   layoutSwitch(t) {
     const layout = conf().reviewsDiffLayout ?? "split";
     const option = (id, label) => div().id(`layout-${id}`).px(10).py(4).rounded(6).text_size(12).cursor_pointer()
@@ -1030,18 +1062,24 @@ export default class Reviews extends View {
     const hint = !details.hasRules && filter === "all" ? "This repo has no CODEOWNERS, so all files show." : files.length ? null
       : filter === "mine" ? "None of these files belong to you or your teams." : filter === "unresolved" ? "No unresolved comments." : null;
     const fileRow = (file) => {
-      const byDefault = filter === "unresolved" || file.mine || (!details.hasRules && details.files.length <= 20);
+      const byDefault = !file.viewed && (filter === "unresolved" || file.mine || (!details.hasRules && details.files.length <= 20));
       const open = byDefault !== this.toggled.has(file.filename);
       return v_flex()
         .child(h_flex().id(`file-${file.filename}`).px(12).py(6).gap(8).items_center().text_size(12).cursor_pointer().hover((st) => st.bg(t.hover))
           .on_click((_e, cx) => { if (this.toggled.has(file.filename)) this.toggled.delete(file.filename); else this.toggled.add(file.filename); cx.notify(); })
           .child(div().flex_none().text_color(t.dim).child(open ? "▾" : "▸"))
-          .child(div().flex_1().min_w(0).truncate().text_color(file.mine ? t.foreground : t.muted).child(file.filename))
+          .child(div().flex_1().min_w(0).truncate().text_color(file.viewed ? t.dim : file.mine ? t.foreground : t.muted).child(file.filename))
           .when((file.threads ?? []).some((th) => !th.resolved), (el) => el.child(div().flex_none().px(6).rounded(8).bg(t.raised).text_size(11).text_color(t.accent).tooltip("Open comment threads").child(`💬 ${file.threads.filter((th) => !th.resolved).length}`)))
           .when((file.threads ?? []).length > 0 && (file.threads ?? []).every((th) => th.resolved), (el) => el.child(div().flex_none().text_size(11).text_color(t.dim).tooltip("All threads resolved").child(`💬 ${file.threads.length} ✓`)))
           .when(filter !== "mine" && details.hasRules && file.mine, (el) => el.child(div().flex_none().px(5).rounded(4).bg(t.raised).text_size(10.5).text_color(t.accent).child("yours")))
           .child(div().flex_none().text_color(t.done).child(`+${file.additions}`))
-          .child(div().flex_none().text_color(t.blocked).child(`−${file.deletions}`)))
+          .child(div().flex_none().text_color(t.blocked).child(`−${file.deletions}`))
+          .child(h_flex().id(`viewed-${file.filename}`).flex_none().gap(5).items_center().px(7).py(1).rounded(6).text_size(11.5).border_1()
+            .border_color(file.viewed ? t.done : t.border).text_color(file.viewed ? t.done : t.dim).cursor_pointer().hover((st) => st.bg(t.hover))
+            .tooltip(file.viewed ? "Mark as not viewed" : "Mark as viewed. It also shows as viewed on GitHub.")
+            .on_click((_e, cx) => { cx.stop_propagation(); this.toggleViewed(file, details, cx); })
+            .child(div().size(10).flex_none().rounded(2).border_1().border_color(file.viewed ? t.done : t.dim).when(file.viewed, (el) => el.bg(t.done)))
+            .child("Viewed")))
         .when(open, (el) => el.child(this.diff(t, file)));
     };
     const chip = (id, label, count) => {
@@ -1058,6 +1096,7 @@ export default class Reviews extends View {
         .child(chip("all", "All", details.files.length))
         .child(chip("unresolved", "Unresolved comments", unresolved.length))
         .child(div().flex_1())
+        .child(div().flex_none().text_size(12).text_color(t.dim).child(`${details.files.filter((f) => f.viewed).length} of ${details.files.length} viewed`))
         .child(this.layoutSwitch(t)))
       .when(Boolean(hint), (el) => el.child(div().text_size(12).text_color(t.dim).child(hint ?? "")))
       .when(files.length > 0, (el) => el.child(v_flex().rounded(10).border_1().border_color(t.border).overflow_hidden().children(files.map(fileRow))));
