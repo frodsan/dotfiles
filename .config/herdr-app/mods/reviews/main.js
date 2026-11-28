@@ -795,19 +795,19 @@ export default class Reviews extends View {
       .children(group("skipped", "Skipped", true));
   }
 
-  commentMenu(t, e) {
-    const item = (id, label, icon, action) => h_flex().id(`menu-${id}-${e.id}`).px(10).py(5).gap(8).items_center().rounded(6).text_size(12.5).text_color(t.foreground).cursor_pointer().hover((st) => st.bg(t.hover))
-      .on_click((_e, cx) => { this.menuFor = null; action(cx); cx.notify(); })
-      .child(svg(ICON(icon)).size(13).flex_none().text_color(t.muted)).child(label);
-    return v_flex().w(200).p(4).rounded(8).border_1().border_color(t.border).bg(t.popover)
-      .child(item("quote", "Quote reply", "overview", () => {
+  commentActions(t, e) {
+    const pill = (id, label, icon, action) => h_flex().id(`${id}-${e.id}`).gap(4).items_center().px(7).py(1).rounded(10).text_size(11.5).text_color(t.dim).border_1().border_color(t.border).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground))
+      .on_click((_e, cx) => { cx.stop_propagation(); action(cx); cx.notify(); })
+      .child(svg(ICON(icon)).size(11).flex_none()).child(label);
+    return h_flex().gap(4)
+      .child(pill("quote", "Quote reply", "overview", () => {
         const quoted = plainBody(e.body).split("\n").map((line) => `> ${line}`).join("\n");
         const current = this.newComment.value().trim();
         this.newComment.set_value(`${current ? `${current}\n\n` : ""}${quoted}\n\n`);
         this.previews?.delete("comment");
         this.newComment.focus?.();
       }))
-      .when(Boolean(e.url), (el) => el.child(item("link", "Copy link", "link", (cx) => cx.write_to_clipboard(e.url))));
+      .when(Boolean(e.url), (el) => el.child(pill("link", "Copy link", "link", (cx) => cx.write_to_clipboard(e.url))));
   }
 
   reactionsRow(t, subjectId, list, extra = null) {
@@ -979,9 +979,7 @@ export default class Reviews extends View {
             .child(div().flex_1().min_w(0).truncate().text_color(t.muted).child(what(e)))
             .child(div().flex_none().text_size(11.5).text_color(t.dim).child(`${ago(e.at)} ago`)))
           .when(Boolean(text), (el) => el.child(div().px(14).py(10).rounded(8).border_1().border_color(t.border).bg(t.surface).child(text)))
-          .when(Boolean(text), (el) => el.child(this.reactionsRow(t, e.id, e.reactions, div().id(`more-${e.id}`).flex_none().px(6).py(1).rounded(10).text_size(12).text_color(t.dim).border_1().border_color(this.menuFor === e.id ? t.accent : t.border).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground))
-            .tooltip("More").on_click((_e, cx) => { cx.stop_propagation(); this.menuFor = this.menuFor === e.id ? null : e.id; cx.notify(); }).child("…"))))
-          .when(this.menuFor === e.id, (el) => el.child(this.commentMenu(t, e))));
+          .when(Boolean(text), (el) => el.child(this.reactionsRow(t, e.id, e.reactions, this.commentActions(t, e)))));
     };
     return v_flex().gap(12)
       .child(v_flex().pb(8).child(this.commentBox(t)))
