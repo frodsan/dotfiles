@@ -55,6 +55,23 @@ export default class Settings extends View {
     this.composerPlaceholder = hint;
   }
 
+  usageRows(t) {
+    const note = (text) => div().text_size(12).text_color(t.dim).child(text);
+    if (this.usage == null) return [note("Reading Claude transcripts…")];
+    const models = Object.keys(this.usage);
+    if (models.length === 0) return [note("No Claude use in the last 7 days.")];
+    const output = (id) => (this.usage[id].week ? this.usage[id].week[1] : 0);
+    models.sort((a, b) => output(b) - output(a));
+    const line = (label, v) => (v ? label + ": " + tokens(v[1]) + " output, " + tokens(v[0]) + " input" : label + ": none");
+    const rows = models.map((id) => h_flex().gap(12).items_start()
+      .child(div().w(90).flex_none().text_size(12.5).font_medium().child(modelName(id)))
+      .child(v_flex().gap(2).flex_1().min_w(0).text_size(12).text_color(t.muted)
+        .child(line("Today", this.usage[id].today))
+        .child(line("Last 7 days", this.usage[id].week))));
+    rows.push(div().text_size(11.5).text_color(t.dim).child("Counted from the transcripts in ~/.claude/projects, every session and text generation included. Input counts cache reads and writes. Your plan's limits are in /usage in Claude."));
+    return rows;
+  }
+
   rateRow(r, label, hint, row, t) {
     if (!r) return div();
     const share = r.limit ? Math.min(1, r.used / r.limit) : 0;
@@ -107,18 +124,7 @@ export default class Settings extends View {
         .child(group("Text generation",
           row("Model", "Claude writes branch names for new sessions and titles for chats with this model.", chips("quickModel", [["haiku", "Haiku"], ["sonnet", "Sonnet"], ["opus", "Opus"], ["fable", "Fable"]])),
           row("Effort", "Default uses your Claude setting.", chips("quickEffort", [[null, "Default"], ["low", "Low"], ["medium", "Medium"], ["high", "High"], ["xhigh", "Extra high"], ["max", "Max"]]))))
-        .child(group("Claude usage",
-          ...(this.usage == null
-            ? [div().text_size(12).text_color(t.dim).child("Reading Claude transcripts…")]
-            : Object.keys(this.usage).length === 0
-              ? [div().text_size(12).text_color(t.dim).child("No Claude use in the last 7 days.")]
-              : Object.entries(this.usage).sort((a, b) => (b[1].week?.[1] ?? 0) - (a[1].week?.[1] ?? 0)).map(([id, u]) => {
-                  const line = (label, v) => v ? `${label}: ${tokens(v[1])} output, ${tokens(v[0])} input` : `${label}: none`;
-                  return h_flex().gap(12).items_start()
-                    .child(div().w(90).flex_none().text_size(12.5).font_medium().child(modelName(id)))
-                    .child(v_flex().gap(2).flex_1().min_w(0).text_size(12).text_color(t.muted).child(line("Today", u.today)).child(line("Last 7 days", u.week)));
-                })),
-          div().text_size(11.5).text_color(t.dim).child("Counted from the transcripts in ~/.claude/projects, every session and text generation included. Input counts cache reads and writes. Your plan's limits are in /usage in Claude."))
+        .child(group("Claude usage", ...this.usageRows(t)))
         .child(group("GitHub API",
           ...(this.rate
             ? [["graphql", "GraphQL", "The pull request list, the pull request panel and auto-fix. When fewer than 500 are left, the list refreshes every 30 seconds, and below 100 every 2 minutes."], ["core", "REST", "Most other gh commands."], ["search", "Search", "The reviews list."]]
