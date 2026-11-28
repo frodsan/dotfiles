@@ -7,7 +7,7 @@ const SICON = (name) => `mods/sessions/assets/${name}.svg`;
 const conf = () => shared("firehouse.settings") ?? {};
 const base = (path) => (path ?? "").replace(/\/+$/, "").split("/").pop() || "~";
 const DAY_MS = 24 * 60 * 60000;
-const refreshMs = () => (conf().reviewsRefreshMinutes ?? 2) * 60000;
+const refreshMs = () => (conf().reviewsRefreshMinutes ?? 5) * 60000;
 
 const REVIEWS_QUERY = `query {
   search(query: "is:pr is:open archived:false user-review-requested:@me sort:updated-desc", type: ISSUE, first: 50) {

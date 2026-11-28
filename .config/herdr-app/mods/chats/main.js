@@ -26,8 +26,18 @@ function claudePane(s, ps) {
 }
 
 const DAY = 86400000;
-const quickFlags = () => { const c = { quickModel: "haiku", quickEffort: null, ...(shared("firehouse.settings") ?? {}) }; return ["--model", c.quickModel, ...(c.quickEffort ? ["--effort", c.quickEffort] : [])]; };
+const quickFlags = () => { const c = { quickModel: "haiku", quickEffort: "low", ...(shared("firehouse.settings") ?? {}) }; return ["--model", c.quickModel, ...(c.quickEffort ? ["--effort", c.quickEffort] : [])]; };
 const keepDays = () => (shared("firehouse.settings") ?? {}).archivedDays ?? 7;
+const keepLabel = () => {
+  let left = Math.round(keepDays() * 1440);
+  const parts = [];
+  for (const [unit, size] of [["day", 1440], ["hour", 60], ["minute", 1]]) {
+    const n = Math.floor(left / size);
+    if (n) parts.push(n + " " + unit + (n === 1 ? "" : "s"));
+    left -= n * size;
+  }
+  return parts.join(" ") || "1 minute";
+};
 const claudeRunning = (p) => p.program?.key === "claude" || p.status != null;
 
 async function trashChat(id) {
@@ -333,7 +343,7 @@ export default class Chats extends View {
         .when(!chat.archivedAt, (el) => el.child(div().id(`${key}-archive`).flex_none().p(3).rounded(4).text_color(t.dim)
           .map(this.reveal(key))
           .hover((st) => st.bg(t.raised).text_color(t.foreground))
-          .tooltip(`Archive this chat. It moves to the Trash after ${keepDays()} days.`)
+          .tooltip(`Archive this chat. It moves to the Trash after ${keepLabel()}.`)
           .on_click((_e, cx) => { cx.stop_propagation(); this.archiveChat(chat, cx); })
           .child(svg("mods/chats/assets/archive.svg").size(11))))
         .child(div().id(`${key}-remove`).flex_none().p(3).rounded(4).text_color(t.dim)
@@ -359,7 +369,7 @@ export default class Chats extends View {
     if (!archived.length) return [];
     const open = localStorage.getItem("chats.archived.open") === "1";
     const head = h_flex().id("chats-archived").mt(12).px(6).py(4).gap(6).items_center().rounded(6).text_size(12).text_color(t.dim).cursor_pointer().hover((st) => st.bg(t.hover))
-      .tooltip(`Archived chats move to the Trash after ${keepDays()} days, as set in Firehouse settings`)
+      .tooltip(`Archived chats move to the Trash after ${keepLabel()}, as set in Firehouse settings`)
       .on_click((_e, cx) => { localStorage.setItem("chats.archived.open", open ? "0" : "1"); cx.notify(); })
       .child(svg(`mods/chats/assets/${open ? "chevron-down" : "chevron-right"}.svg`).size(12).flex_none())
       .child(div().flex_1().font_medium().child(`Archived · ${archived.length}`));

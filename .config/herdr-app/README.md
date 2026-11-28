@@ -1,6 +1,6 @@
 # Firehouse
 
-Firehouse is a Herdr setup for running many Claude Code sessions on one repo at the same time. Each task gets its own git worktree and its own Claude. The sidebar shows which session needs you. Claude fixes the CI failures, conflicts and review comments on its own pull requests, and a session cleans itself up after its pull request merges.
+Firehouse is my Herdr setup for running many Claude Code sessions on one repo at the same time.
 
 ## Start a task in one keystroke
 
