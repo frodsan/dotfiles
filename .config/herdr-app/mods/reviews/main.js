@@ -726,9 +726,20 @@ export default class Reviews extends View {
     setShared("reviews.refresh", Date.now());
   }
 
-  input(t, state, rows) {
-    return div().w_full().min_h(rows * 22).rounded(8).border_1().border_color(t.input).bg(t.background).p(8)
-      .child(Textarea.new(state).size_full().text_size(12.5).text_color(t.foreground));
+  input(t, state, rows, key) {
+    this.previews ??= new Set();
+    const preview = this.previews.has(key);
+    const toggle = (id, label, on) => div().id(`${key}-${id}`).px(8).py(3).rounded(6).text_size(12).cursor_pointer()
+      .when(on, (el) => el.bg(t.raised).text_color(t.foreground)).when(!on, (el) => el.text_color(t.dim).hover((st) => st.text_color(t.foreground)))
+      .on_click((_e, cx) => { if (id === "preview") this.previews.add(key); else this.previews.delete(key); cx.notify(); })
+      .child(label);
+    const text = state.value().trim();
+    return v_flex().gap(6)
+      .child(h_flex().gap(4).child(toggle("write", "Write", !preview)).child(toggle("preview", "Preview", preview)))
+      .child(div().w_full().min_h(rows * 22).rounded(8).border_1().border_color(t.input).bg(t.background).p(8)
+        .when(!preview, (el) => el.child(Textarea.new(state).size_full().text_size(12.5).text_color(t.foreground)))
+        .when(preview, (el) => el.text_size(12.5).text_color(text ? t.foreground : t.dim)
+          .child(text ? TextView.markdown(`${key}-preview-${text.length}`, linkRefs(text, this.repo)).selectable(true) : "Nothing to preview.")));
   }
 
   sendButton(t, id, label, busy, onClick) {
@@ -742,7 +753,7 @@ export default class Reviews extends View {
     const pr = this.pr;
     const busy = this.posting === "comment";
     return v_flex().gap(8)
-      .child(this.input(t, this.newComment, 3))
+      .child(this.input(t, this.newComment, 3, "comment"))
       .child(h_flex().gap(10).items_center()
         .child(div().flex_1().text_size(11.5).text_color(t.blocked).child(this.postError?.where === "comment" ? this.postError.text : ""))
         .child(this.sendButton(t, "comment-send", "Comment", busy, (_e, cx) => {
@@ -754,7 +765,7 @@ export default class Reviews extends View {
           cx.spawn(async (cx) => {
             const r = await exec("gh", ["api", `repos/${pr.repo}/issues/${pr.number}/comments`, "-f", `body=${body}`]).catch((e) => ({ code: 1, stderr: String(e) }));
             this.posting = null;
-            if (r.code === 0) { this.newComment.set_value(""); this.reload(pr); }
+            if (r.code === 0) { this.newComment.set_value(""); this.previews?.delete("comment"); this.reload(pr); }
             else this.postError = { where: "comment", text: (r.stderr ?? "").trim().split("\n")[0] || "Could not post the comment." };
             cx.notify();
           });
@@ -765,6 +776,7 @@ export default class Reviews extends View {
     const state = TextareaState.new({ placeholder: target.kind === "reply" ? "Reply" : "Comment on this line", rows: 3 });
     state.on("change", (_e, cx) => cx.notify());
     this.draft = { ...target, state };
+    this.previews?.delete("draft");
     this.postError = null;
     cx.timer.after(40, () => state.focus?.());
     cx.notify();
@@ -775,7 +787,7 @@ export default class Reviews extends View {
     const draft = this.draft;
     const busy = this.posting === "draft";
     return v_flex().mx(14).my(6).gap(8).p(10).rounded(8).border_1().border_color(t.border).bg(t.raised)
-      .child(this.input(t, draft.state, 3))
+      .child(this.input(t, draft.state, 3, "draft"))
       .child(h_flex().gap(8).items_center()
         .child(div().flex_1().text_size(11.5).text_color(t.blocked).child(this.postError?.where === "draft" ? this.postError.text : ""))
         .child(div().id("draft-cancel").px(12).py(5).rounded(7).text_size(12.5).text_color(t.muted).border_1().border_color(t.border).cursor_pointer().hover((st) => st.bg(t.hover))
