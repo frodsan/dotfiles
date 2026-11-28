@@ -2,7 +2,7 @@ import { View, div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { theme, shared, setShared, props, closeOverlay, exec } from "herdr";
 
-const DEFAULTS = { settledDays: 7, branchPrefix: "", autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, autoToasts: false, reviewsRefreshMinutes: 2, reviewsKeepDays: 1, reviewsDiffLayout: "split" };
+const DEFAULTS = { settledDays: 7, branchPrefix: "", autoSettle: true, focusMute: false, focusWorking: true, tomorrowHour: 9, autoToasts: false, reviewsRefreshMinutes: 2, reviewsKeepDays: 1, reviewsDiffLayout: "split", quickModel: "haiku", quickEffort: null };
 const conf = () => ({ ...DEFAULTS, ...(shared("firehouse.settings") ?? {}) });
 const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 const SETTLED_DAYS = [1, 3, 7, 14, 30];
@@ -57,6 +57,9 @@ export default class Settings extends View {
       .child(v_flex().id("settings-body").flex_1().min_h(0).px(22).pb(22).gap(20).overflow_y_scrollbar()
         .child(group("New sessions",
           row("Branch prefix", "New worktree branches start with this, e.g. fr/fix-login-1a2b. To run a command in each new worktree, add a post-start hook to Worktrunk's config.", input(this.branchPrefix))))
+        .child(group("Quick AI tasks",
+          row("Model", "Claude writes branch names for new sessions and titles for chats with this model.", chips("quickModel", [["haiku", "Haiku"], ["sonnet", "Sonnet"], ["opus", "Opus"], ["fable", "Fable"]])),
+          row("Effort", "Default uses your Claude setting.", chips("quickEffort", [[null, "Default"], ["low", "Low"], ["medium", "Medium"], ["high", "High"], ["xhigh", "Extra high"], ["max", "Max"]]))))
         .child(group("Settling",
           row("Auto-settle", "Settle a session when its pull request merges or closes. You can still turn it off per session.", onOff("autoSettle")),
           row("Keep settled sessions and archived chats for", "After that, Herdr deletes a settled session's worktree, with any uncommitted changes, and its Claude conversation. The branch always stays, with its commits. An archived chat moves to the Trash.", h_flex().gap(4).children(SETTLED_DAYS.map((d) => choice(`settled-${d}`, d === 1 ? "1 day" : `${d} days`, c.settledDays === d, () => setConf({ settledDays: d })))))))

@@ -1,7 +1,7 @@
 import { View, div, svg } from "gpui-kit";
 import { initBar, renderBar } from "./bar.js";
 import { PullRequestPanel, updateBranchCommand } from "./pr.js";
-import { conf, setConf, openSettings } from "./config.js";
+import { conf, setConf, openSettings, quickFlags } from "./config.js";
 import { v_flex, h_flex, InputState, Input, TextareaState, Textarea } from "gpui-base";
 import { hc, keys, spaces, panes, machines, layout, run, exec, theme, shared, setShared, openOverlay, closeOverlay, props, nextCommand, playSound, readTextFile, writeTextFile, appHome, home, window, pickFolder, notify } from "herdr";
 
@@ -235,7 +235,8 @@ const byName = (a, b) => a.localeCompare(b, undefined, { sensitivity: "base", nu
 const map = (key) => shared(key) ?? {};
 const newId = () => Math.random().toString(36).slice(2, 10);
 const CLAUDE = "claude";
-const MODELS = [[null, "Default model"], ["fable", "Fable"], ["opus", "Opus"], ["sonnet", "Sonnet"]];
+const MODELS = [[null, "Default model"], ["fable", "Fable"], ["opus", "Opus"], ["sonnet", "Sonnet"], ["haiku", "Haiku"]];
+const EFFORTS = [[null, "Default"], ["low", "Low"], ["medium", "Medium"], ["high", "High"], ["xhigh", "Extra high"], ["max", "Max"]];
 const MODES = [["auto", "Auto"], ["plan", "Plan"], ["acceptEdits", "Accept edits"], ["manual", "Manual"]];
 const BRANCH_PROMPT = "You name git branches for a developer. Reply with only 2 to 5 lowercase English words joined by hyphens that say what the change does, for example rename-ci-test-databases. Never more than 5 words. Start with a ticket ID like pla-2525 when the request names one; it does not count as a word. Never use the names of repositories or folders where the work happens. No filler words, no prefix, no quotes.";
 const FILLER = new Set(["a", "an", "the", "in", "on", "at", "of", "to", "for", "from", "with", "by", "and", "or", "is", "are", "be", "it", "this", "that", "i", "we", "you", "me", "my", "can", "could", "would", "should", "please", "need", "want", "like", "let", "lets", "just", "some", "also", "how", "what", "why", "do", "does", "under", "into", "folder", "repo", "hey", "hi", "ok", "maybe", "try", "help"]);
@@ -300,7 +301,7 @@ const WELCOME_SKILLS = ["pr-autofix", "pr-fix", "update-branch", "spin-off"];
 async function branchSlug(text, folder) {
   const repo = base(folder).toLowerCase().split(/[^a-z0-9]+/);
   try {
-    const r = await shellRun('claude -p --model haiku "$1" < /dev/null', [`${BRANCH_PROMPT}\n\n<request>\n${text.slice(0, 1600)}\n</request>\n\nBranch:`]);
+    const r = await shellRun('claude -p "$@" < /dev/null', [...quickFlags(), `${BRANCH_PROMPT}\n\n<request>\n${text.slice(0, 1600)}\n</request>\n\nBranch:`]);
     const slug = r.code === 0 ? r.stdout.trim().split("\n").pop().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") : "";
     const words = slug.split("-").filter((w) => w && !repo.includes(w));
     if (words.length && words.length <= 7 && slug.length <= 48) return words.join("-");
@@ -1426,7 +1427,7 @@ export default class Sessions extends View {
     const section = preferredSection ?? (!preferred && active && active.folderKey === folder ? (map("sessions.membership")[active.s.id] ?? null) : null);
     const text = shared("sessions.composerText") ?? "";
     if (text) setShared("sessions.composerText", null);
-    openOverlay({ mod: "sessions", kind: "dialog", width: 720, height: 560, props: { composer: { folders, folder, section, text } } });
+    openOverlay({ mod: "sessions", kind: "dialog", width: 720, height: 640, props: { composer: { folders, folder, section, text } } });
   }
 
   adoptCreated(sp) {
@@ -1687,7 +1688,7 @@ export default class Sessions extends View {
       .when(!focus, (el) => el.child(div().id(`folder-section-${folderKey}`).map(this.reveal(`folder-${folderKey}`)).flex_none().p(3).rounded(4).text_color(t.dim).hover((st) => st.bg(t.raised).text_color(t.foreground)).tooltip("New section")
         .on_click((_e, cx) => { cx.stop_propagation(); if (collapsed) this.toggleFolder(folderKey, cx); this.startEditing({ kind: "new", folder: folderKey }, "", cx); })
         .child(svg("mods/workspace-chrome/layers.svg").size(12))))
-      .child(div().id(`folder-new-${folderKey}`).flex_none().p(3).rounded(4).text_color(t.dim).map(this.reveal(`folder-${folderKey}`)).hover((st) => st.bg(t.raised).text_color(t.foreground)).tooltip(path === home() ? "New space here" : "New session in this folder (⌥⌘N)")
+      .child(div().id(`folder-new-${folderKey}`).flex_none().p(3).rounded(4).text_color(t.dim).map(this.reveal(`folder-${folderKey}`)).hover((st) => st.bg(t.raised).text_color(t.foreground)).tooltip(path === home() ? "New space here" : "New session in this folder (⌘N)")
         .on_click((_e, cx) => {
           cx.stop_propagation();
           if (path === home()) run("space.new", { folder: path, machine: on ?? "", argv: [CLAUDE] });
@@ -1755,7 +1756,7 @@ export default class Sessions extends View {
     const heading = h_flex().flex_none().px(14).pt(4).pb(8).gap(2).items_center()
       .child(div().flex_1().text_size(12.5).font_medium().text_color(t.foreground).child("Sessions"))
       .child(button("folder-add", "Add a folder", "folder-plus", (_e, cx) => cx.spawn(async (cx) => { await this.addPickedFolder(); cx.notify(); })))
-      .child(button("session-new", "New session (⌥⌘N)", "plus", () => run("sessions.new-session")));
+      .child(button("session-new", "New session (⌘N)", "plus", () => run("sessions.new-session")));
     return v_flex().size_full().min_h(0).bg(t.chrome)
       .on_mouse_up("left", (_e, cx) => { this.pressed = null; this.over = null; cx.notify(); })
       .child(heading)
@@ -1932,7 +1933,7 @@ export default class Sessions extends View {
 
   initComposer(cx) {
     const p = props().composer;
-    this.composer = { folder: p.folder, section: p.section, where: "worktree", whereTouched: false, folderTouched: false, autoFor: null, model: localStorage.getItem("composer.model") || null, mode: localStorage.getItem("composer.mode") || "auto", focus: Boolean(shared("focus.on")) || localStorage.getItem("composer.focus") === "1", starting: null, error: null };
+    this.composer = { folder: p.folder, section: p.section, where: "worktree", whereTouched: false, folderTouched: false, autoFor: null, model: localStorage.getItem("composer.model") || null, effort: localStorage.getItem("composer.effort") || null, mode: localStorage.getItem("composer.mode") || "auto", focus: Boolean(shared("focus.on")) || localStorage.getItem("composer.focus") === "1", starting: null, error: null };
     this.message = TextareaState.new({ placeholder: "What fire are we putting out first?", rows: 7, value: p.text ?? "" });
     this.message.on("change", (_e, cx) => cx.notify());
     if (!composerKeysBound) {
@@ -1987,12 +1988,13 @@ export default class Sessions extends View {
     if (!text || !c.folder || (!background && c.starting)) return;
     const link = text.match(PR_LINK);
     const where = c.where === "pr" && !link ? "worktree" : c.where;
-    const choice = { folder: c.folder, section: c.section, where, worktree: where !== "main", pr: where === "pr" ? link[0] : null, model: c.model, mode: c.mode, focus: c.focus };
+    const choice = { folder: c.folder, section: c.section, where, worktree: where !== "main", pr: where === "pr" ? link[0] : null, model: c.model, effort: c.effort, mode: c.mode, focus: c.focus };
     localStorage.setItem("composer.focus", c.focus ? "1" : "0");
     const [machine, folder] = JSON.parse(choice.folder);
     let name = sessionName(text);
     const previous = spaces().find((space) => space.active)?.id ?? null;
     localStorage.setItem("composer.model", choice.model ?? "");
+    localStorage.setItem("composer.effort", choice.effort ?? "");
     localStorage.setItem("composer.mode", choice.mode);
     c.error = null;
     if (background) {
@@ -2021,7 +2023,7 @@ export default class Sessions extends View {
         }
         const prefix = conf().branchPrefix;
         const branch = choice.pr ? choice.pr : choice.worktree ? `${prefix}${await branchSlug(text, folder)}-${Math.random().toString(16).slice(2, 6)}` : "";
-        const flags = [...(choice.model ? ["--model", choice.model] : []), "--permission-mode", choice.mode, ...(choice.where === "main" ? ["--append-system-prompt", mainCheckoutNote(base(folder))] : [])];
+        const flags = [...(choice.model ? ["--model", choice.model] : []), ...(choice.effort ? ["--effort", choice.effort] : []), "--permission-mode", choice.mode, ...(choice.where === "main" ? ["--append-system-prompt", mainCheckoutNote(base(folder))] : [])];
         setShared("sessions.pending", [...(shared("sessions.pending") ?? []), { name, section: choice.section, focus: choice.focus || Boolean(shared("focus.on")), at: Date.now() }]);
         run("space.new", { name, folder, machine: machine ?? "", argv: ["sh", scriptPath, folder, branch, messagePath, choice.pr ? "2" : choice.worktree ? "1" : "0", ...flags] });
         if (background) {
@@ -2086,7 +2088,10 @@ export default class Sessions extends View {
           .on_click((_e, cx) => { c.focus = !c.focus; cx.notify(); })
           .child(svg(ICON(c.focus ? "bulb-fill" : "bulb")).size(13).text_color(c.focus ? t.working : t.dim))
           .child("Add to focus mode")]))
-      .child(row("Claude", [...MODELS.map(([value, label]) => choice(`model-${value ?? "default"}`, label, c.model === value, () => { c.model = value; })), div().w(10), ...MODES.map(([value, label]) => choice(`mode-${value}`, label, c.mode === value, () => { c.mode = value; }))]))
+      .child(div().flex_none().my(2).h(1).bg(t.border))
+      .child(row("Model", MODELS.map(([value, label]) => choice(`model-${value ?? "default"}`, label, c.model === value, () => { c.model = value; }))))
+      .child(row("Effort", EFFORTS.map(([value, label]) => choice(`effort-${value ?? "default"}`, label, c.effort === value, () => { c.effort = value; }))))
+      .child(row("Mode", MODES.map(([value, label]) => choice(`mode-${value}`, label, c.mode === value, () => { c.mode = value; }))))
       .when(Boolean(c.launched?.length), (el) => el.child(v_flex().gap(2).flex_none()
         .child(div().text_size(11.5).text_color(t.dim).child(`Started ${c.launched.length} in the background`))
         .children(c.launched.slice(-4).map((l, i) => h_flex().gap(6).text_size(11.5).text_color(t.muted)

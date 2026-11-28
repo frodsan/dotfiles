@@ -38,7 +38,7 @@ Type is Herdr's UI font. Sidebar rows are 13px, meta lines 11px to 12px.
 
 | Key | Action |
 |---|---|
-| `⌥⌘N` | New session dialog. It takes a prompt and a folder. |
+| `⌘N` | New session dialog. It takes a prompt and a folder. |
 | `⌘↑`, `⌘↓` | Previous and next session in the order the sidebar shows. |
 | `⇧⌘F` | Focus mode. It shows starred sessions only and turns sounds off. |
 | `⇧⌘G` | Opens the pull request on GitHub. |
@@ -53,7 +53,7 @@ Type is Herdr's UI font. Sidebar rows are 13px, meta lines 11px to 12px.
 | `⌘,` | A Claude session in the folder that holds this config. |
 | `⇧⌘/` | Keyboard shortcuts dialog. |
 
-**New session.** Herdr fetches the default branch and creates a worktree with `wt switch <branch> --create`. Worktrunk runs its hooks, and Herdr starts Claude with the prompt. The branch is the settings prefix plus a slug that `claude -p --model haiku` writes, with a fallback from the prompt words.
+**New session.** Herdr fetches the default branch and creates a worktree with `wt switch <branch> --create`. Worktrunk runs its hooks, and Herdr starts Claude with the prompt and the model, effort and mode you picked. The dialog remembers the last choices. The branch is the settings prefix plus a slug that `claude -p` writes with the Quick AI tasks model and effort, Haiku by default, with a fallback from the prompt words.
 
 **Clicks.** A row click selects the space and focuses its Claude pane. Right-clicking a row opens its menu: open the pull request on GitHub, update the branch, settle, rename, move to a section and remove. A starred session's menu also has Snooze… and Pin. A snoozed row has a clock button to change the time or unsnooze. Dragging moves a session.
 
@@ -67,7 +67,7 @@ Type is Herdr's UI font. Sidebar rows are 13px, meta lines 11px to 12px.
 
 **Snooze.** It hides a session until a time, such as tomorrow at 9:00 or next Monday at 9:00. The settings set the hour. Auto-fix wakes a snoozed session early when it needs you. In focus mode, that plays the blocked sound.
 
-**Chats.** A new chat opens a space in `data/chats/workspace` running `claude --session-id <uuid>`. Opening a closed chat runs `claude --resume <uuid>`. The background copy names each chat once with `claude -p --model haiku` from its first message, and marks it `titled`. When Claude exits, the space closes and the chat moves to Archived. Opening an archived chat restores it. After the keep setting, an archived chat's conversation moves to `~/.Trash`.
+**Chats.** A new chat opens a space in `data/chats/workspace` running `claude --session-id <uuid>`. Opening a closed chat runs `claude --resume <uuid>`. The background copy names each chat once from its first message with `claude -p` and the Quick AI tasks settings, and marks it `titled`. When Claude exits, the space closes and the chat moves to Archived. Opening an archived chat restores it. After the keep setting, an archived chat's conversation moves to `~/.Trash`.
 
 **Custom commands.** The palette's "Edit custom commands…" opens an editor of title and shell command pairs. Each one becomes a palette entry that opens a terminal on the right running the command in the login shell.
 
@@ -138,7 +138,7 @@ Shared keys: `firehouse.settings` holds the settings, `commands.list` the custom
 
 - `herdr-app check` passes for `mods/sessions`, `mods/chats`, `mods/custom-commands` and `mods/shortcuts`, and `herdr-app status` shows no errors.
 - `layout.switch {name: "Firehouse"}` shows the sidebar, the tab bar and the status bar with the sizes above.
-- `⌥⌘N` with a prompt creates a worktree on a new branch with the settings prefix, and the space shows Claude working with a pulsing dot.
+- `⌘N` with a prompt creates a worktree on a new branch with the settings prefix, and the space shows Claude working with a pulsing dot.
 - A session with an open pull request shows its number, review state and CI dot, and `⌥⌘P` opens the panel with its checks.
 - `herdr-app do chats.new` works while the chats list is hidden, and pressing `ctrl+d` twice in that chat closes its space within 2 seconds and moves the chat to Archived.
 - `⇧⌘R` shows the pull requests waiting for your review, and a click shows one in the main panel with only your files under Files.

@@ -26,6 +26,7 @@ function claudePane(s, ps) {
 }
 
 const DAY = 86400000;
+const quickFlags = () => { const c = { quickModel: "haiku", quickEffort: null, ...(shared("firehouse.settings") ?? {}) }; return ["--model", c.quickModel, ...(c.quickEffort ? ["--effort", c.quickEffort] : [])]; };
 const keepDays = () => (shared("firehouse.settings") ?? {}).settledDays ?? 7;
 const claudeRunning = (p) => p.program?.key === "claude" || p.status != null;
 
@@ -120,7 +121,7 @@ export default class Chats extends View {
         try { const c = JSON.parse(first?.stdout ?? "").message?.content; text = typeof c === "string" ? c : (c ?? []).map((x) => x.text ?? "").join(" "); } catch {}
         text = text.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, "").replace(/\s+/g, " ").trim();
         if (!text) continue;
-        const r = await shellRun('claude -p --model haiku "$1" < /dev/null', [`${TITLE_PROMPT}\n\n<message>\n${text.slice(0, 2000)}\n</message>`]).catch(() => null);
+        const r = await shellRun('claude -p "$@" < /dev/null', [...quickFlags(), `${TITLE_PROMPT}\n\n<message>\n${text.slice(0, 2000)}\n</message>`]).catch(() => null);
         const title = (r?.code === 0 ? r.stdout : "").split("\n").map((l) => l.trim()).find(Boolean)?.replace(/^["'“]+|["'”.]+$/g, "").slice(0, 60);
         if (!title) continue;
         await updateChatsMeta((all) => { all[id] = { ...(all[id] ?? {}), name: title, titled: true }; });
