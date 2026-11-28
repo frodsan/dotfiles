@@ -29,8 +29,8 @@ const COMMENTS_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
     timelineItems(last: 60, itemTypes: [PULL_REQUEST_REVIEW, ISSUE_COMMENT]) {
       nodes {
         __typename
-        ... on PullRequestReview { id state body createdAt author { __typename login } comments { totalCount } reactionGroups { content viewerHasReacted reactors { totalCount } } }
-        ... on IssueComment { id body createdAt author { __typename login } reactionGroups { content viewerHasReacted reactors { totalCount } } }
+        ... on PullRequestReview { id url state body createdAt author { __typename login } comments { totalCount } reactionGroups { content viewerHasReacted reactors { totalCount } } }
+        ... on IssueComment { id url body createdAt author { __typename login } reactionGroups { content viewerHasReacted reactors { totalCount } } }
       }
     }
   } }
@@ -168,12 +168,12 @@ function buildActivity(nodes) {
   for (const n of nodes) {
     if (isBot(n.author)) continue;
     const actor = n.author?.login ?? "ghost";
-    if (n.__typename === "IssueComment") { out.push({ id: n.id, type: "comment", actor, at: n.createdAt, body: n.body ?? "", reactions: groups(n) }); continue; }
+    if (n.__typename === "IssueComment") { out.push({ id: n.id, url: n.url, type: "comment", actor, at: n.createdAt, body: n.body ?? "", reactions: groups(n) }); continue; }
     if (n.__typename !== "PullRequestReview" || n.state === "PENDING" || n.state === "DISMISSED") continue;
     const body = (n.body ?? "").trim();
     const inline = n.comments?.totalCount ?? 0;
     if (n.state === "COMMENTED" && !body && !inline) continue;
-    out.push({ id: n.id, type: "review", state: n.state, actor, at: n.createdAt, body, inline, reactions: groups(n) });
+    out.push({ id: n.id, url: n.url, type: "review", state: n.state, actor, at: n.createdAt, body, inline, reactions: groups(n) });
   }
   return out.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
 }
@@ -795,6 +795,21 @@ export default class Reviews extends View {
       .children(group("skipped", "Skipped", true));
   }
 
+  commentMenu(t, e) {
+    const item = (id, label, icon, action) => h_flex().id(`menu-${id}-${e.id}`).px(10).py(5).gap(8).items_center().rounded(6).text_size(12.5).text_color(t.foreground).cursor_pointer().hover((st) => st.bg(t.hover))
+      .on_click((_e, cx) => { this.menuFor = null; action(cx); cx.notify(); })
+      .child(svg(ICON(icon)).size(13).flex_none().text_color(t.muted)).child(label);
+    return v_flex().w(200).p(4).rounded(8).border_1().border_color(t.border).bg(t.popover)
+      .child(item("quote", "Quote reply", "overview", () => {
+        const quoted = plainBody(e.body).split("\n").map((line) => `> ${line}`).join("\n");
+        const current = this.newComment.value().trim();
+        this.newComment.set_value(`${current ? `${current}\n\n` : ""}${quoted}\n\n`);
+        this.previews?.delete("comment");
+        this.newComment.focus?.();
+      }))
+      .when(Boolean(e.url), (el) => el.child(item("link", "Copy link", "external-link", (cx) => cx.write_to_clipboard(e.url))));
+  }
+
   reactionsRow(t, subjectId, list) {
     const shown = (list ?? []).filter((g) => g.count > 0);
     const picking = this.picker === subjectId;
@@ -961,7 +976,10 @@ export default class Reviews extends View {
           .child(h_flex().gap(6).items_center().text_size(12.5)
             .child(div().flex_none().font_semibold().text_color(t.foreground).child(e.actor))
             .child(div().flex_1().min_w(0).truncate().text_color(t.muted).child(what(e)))
-            .child(div().flex_none().text_size(11.5).text_color(t.dim).child(`${ago(e.at)} ago`)))
+            .child(div().flex_none().text_size(11.5).text_color(t.dim).child(`${ago(e.at)} ago`))
+            .when(Boolean(text), (el) => el.child(div().id(`more-${e.id}`).flex_none().px(6).rounded(6).text_size(13).text_color(t.dim).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground))
+              .on_click((_e, cx) => { this.menuFor = this.menuFor === e.id ? null : e.id; cx.notify(); }).child("…"))))
+          .when(this.menuFor === e.id, (el) => el.child(this.commentMenu(t, e)))
           .when(Boolean(text), (el) => el.child(div().px(14).py(10).rounded(8).border_1().border_color(t.border).bg(t.surface).child(text)))
           .when(Boolean(text), (el) => el.child(this.reactionsRow(t, e.id, e.reactions))));
     };
