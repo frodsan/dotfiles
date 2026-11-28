@@ -803,9 +803,9 @@ export default class Reviews extends View {
   }
 
   commentActions(t, e, quote = null) {
-    const pill = (id, label, icon, action) => h_flex().id(`${id}-${e.id}`).gap(4).items_center().px(7).py(1).rounded(10).text_size(11.5).text_color(t.dim).border_1().border_color(t.border).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground))
-      .on_click((_e, cx) => { cx.stop_propagation(); action(cx); cx.notify(); })
-      .child(svg(ICON(icon)).size(11).flex_none()).child(label);
+    const pill = (id, label, icon, action) => h_flex().id(`${id}-${e.id}`).gap(4).items_center().px(6).py(2).rounded(10).text_size(11.5).text_color(t.dim).border_1().border_color(t.border).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground))
+      .tooltip(label).on_click((_e, cx) => { cx.stop_propagation(); action(cx); cx.notify(); })
+      .child(svg(ICON(icon)).size(12).flex_none());
     return h_flex().gap(4)
       .child(pill("quote", "Quote reply", "overview", (cx) => {
         const quoted = plainBody(e.body).split("\n").map((line) => `> ${line}`).join("\n");
