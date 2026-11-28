@@ -803,7 +803,7 @@ export default class Reviews extends View {
   }
 
   commentActions(t, e, quote = null) {
-    const pill = (id, label, icon, action) => h_flex().id(`${id}-${e.id}`).gap(4).items_center().px(6).py(2).rounded(10).text_size(11.5).text_color(t.dim).border_1().border_color(t.border).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground))
+    const pill = (id, label, icon, action) => h_flex().id(`${id}-${e.id}`).h(20).items_center().px(7).rounded(10).text_size(12).text_color(t.dim).border_1().border_color(t.border).cursor_pointer().hover((st) => st.bg(t.hover))
       .tooltip(label).on_click((_e, cx) => { cx.stop_propagation(); action(cx); cx.notify(); })
       .child(svg(ICON(icon)).size(12).flex_none());
     return h_flex().gap(4)
@@ -821,14 +821,14 @@ export default class Reviews extends View {
   reactionsRow(t, subjectId, list, extra = null) {
     const shown = (list ?? []).filter((g) => g.count > 0);
     const picking = this.picker === subjectId;
-    const pill = (g) => div().id(`react-${subjectId}-${g.content}`).px(7).py(1).rounded(10).text_size(11.5).cursor_pointer().border_1()
+    const pill = (g) => h_flex().id(`react-${subjectId}-${g.content}`).h(20).items_center().px(7).rounded(10).text_size(12).cursor_pointer().border_1()
       .border_color(g.mine ? t.accent : t.border).bg(g.mine ? t.raised : t.background).text_color(t.muted).hover((st) => st.bg(t.hover))
       .on_click((_e, cx) => { cx.stop_propagation(); this.react(subjectId, g.content, g.mine, cx); })
       .child(`${EMOJI[g.content] ?? g.content} ${g.count}`);
     return v_flex().gap(4)
       .child(h_flex().gap(4).items_center().flex_wrap()
         .children(shown.map(pill))
-        .child(div().id(`react-${subjectId}-open`).px(6).py(1).rounded(10).text_size(12).cursor_pointer().text_color(t.dim).border_1().border_color(picking ? t.accent : t.border).hover((st) => st.bg(t.hover))
+        .child(h_flex().id(`react-${subjectId}-open`).h(20).items_center().px(7).rounded(10).text_size(12).cursor_pointer().text_color(t.dim).border_1().border_color(picking ? t.accent : t.border).hover((st) => st.bg(t.hover))
           .tooltip("Add a reaction").on_click((_e, cx) => { cx.stop_propagation(); this.picker = picking ? null : subjectId; cx.notify(); }).child("☺"))
         .when(Boolean(extra), (el) => el.child(extra)))
       .when(picking, (el) => el.child(h_flex().gap(2).p(4).rounded(10).border_1().border_color(t.border).bg(t.popover)
