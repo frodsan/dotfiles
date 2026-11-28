@@ -6,7 +6,7 @@ const DEFAULTS = { settledDays: 7, branchPrefix: "", autoSettle: true, focusMute
 const conf = () => ({ ...DEFAULTS, ...(shared("firehouse.settings") ?? {}) });
 const setConf = (change) => setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), ...change });
 const SETTLED_DAYS = [1, 3, 7, 14, 30];
-const REFRESH_MINUTES = [1, 2, 5, 10];
+const REFRESH_MINUTES = [1, 2, 5, 10, 30, 60];
 const KEEP_DAYS = [1, 3, 7];
 
 export default class Settings extends View {
