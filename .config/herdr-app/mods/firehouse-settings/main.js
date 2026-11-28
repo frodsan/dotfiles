@@ -64,7 +64,7 @@ export default class Settings extends View {
           row("Mute sounds", "When on, blocked sessions you can see still make a sound.", onOff("focusMute")),
           row("Working group", "Shows the focus sessions where Claude is working in their own group.", onOff("focusWorking"))))
         .child(group("Snooze",
-          row("Wake-up time for Tomorrow and Next week", "Next week is the coming Monday.", chips("tomorrowHour", [7, 8, 9, 10].map((h) => [h, `${h}:00`])))))
+          row("Wake-up time for Tomorrow and Next week", "Next week is the coming Monday.", chips("tomorrowHour", [6, 7, 8, 9, 10].map((h) => [h, `${h}:00`])))))
         .child(group("Reviews",
           row("Refresh the list every", "How often Herdr asks GitHub for the pull requests that list you as a reviewer. Refresh in the list asks right away.", chips("reviewsRefreshMinutes", REFRESH_MINUTES.map((m) => [m, m === 1 ? "1 minute" : `${m} minutes`]))),
           row("Keep recently reviewed for", "Pull requests you approved, or that merged, closed or stopped asking you, stay under Recently reviewed this long.", chips("reviewsKeepDays", KEEP_DAYS.map((d) => [d, d === 1 ? "1 day" : `${d} days`]))),

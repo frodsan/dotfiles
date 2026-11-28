@@ -25,12 +25,12 @@ const REVIEWS_QUERY = `query {
 const COMMENTS_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) { pullRequest(number: $number) {
     commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { name status conclusion detailsUrl startedAt completedAt checkSuite { workflowRun { workflow { name } } } } ... on StatusContext { context state targetUrl } } } } } } }
-    reviewThreads(first: 100) { nodes { id isResolved isOutdated path line diffSide comments(first: 50) { nodes { id author { __typename login } body createdAt } } } }
+    reviewThreads(first: 100) { nodes { id isResolved isOutdated path line diffSide comments(first: 50) { nodes { id author { __typename login } body createdAt reactionGroups { content viewerHasReacted reactors { totalCount } } } } } }
     timelineItems(last: 60, itemTypes: [PULL_REQUEST_REVIEW, ISSUE_COMMENT]) {
       nodes {
         __typename
-        ... on PullRequestReview { id state body createdAt author { __typename login } comments { totalCount } }
-        ... on IssueComment { id body createdAt author { __typename login } }
+        ... on PullRequestReview { id state body createdAt author { __typename login } comments { totalCount } reactionGroups { content viewerHasReacted reactors { totalCount } } }
+        ... on IssueComment { id body createdAt author { __typename login } reactionGroups { content viewerHasReacted reactors { totalCount } } }
       }
     }
   } }
@@ -160,17 +160,20 @@ function ownersOf(rules, path) {
   return [];
 }
 
+const EMOJI = { THUMBS_UP: "👍", THUMBS_DOWN: "👎", LAUGH: "😄", HOORAY: "🎉", CONFUSED: "😕", HEART: "❤️", ROCKET: "🚀", EYES: "👀" };
+const groups = (node) => (node?.reactionGroups ?? []).map((g) => ({ content: g.content, count: g.reactors?.totalCount ?? 0, mine: Boolean(g.viewerHasReacted) }));
+
 function buildActivity(nodes) {
   const out = [];
   for (const n of nodes) {
     if (isBot(n.author)) continue;
     const actor = n.author?.login ?? "ghost";
-    if (n.__typename === "IssueComment") { out.push({ id: n.id, type: "comment", actor, at: n.createdAt, body: n.body ?? "" }); continue; }
+    if (n.__typename === "IssueComment") { out.push({ id: n.id, type: "comment", actor, at: n.createdAt, body: n.body ?? "", reactions: groups(n) }); continue; }
     if (n.__typename !== "PullRequestReview" || n.state === "PENDING" || n.state === "DISMISSED") continue;
     const body = (n.body ?? "").trim();
     const inline = n.comments?.totalCount ?? 0;
     if (n.state === "COMMENTED" && !body && !inline) continue;
-    out.push({ id: n.id, type: "review", state: n.state, actor, at: n.createdAt, body, inline });
+    out.push({ id: n.id, type: "review", state: n.state, actor, at: n.createdAt, body, inline, reactions: groups(n) });
   }
   return out.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
 }
@@ -475,7 +478,7 @@ export default class Reviews extends View {
           exec("gh", ["api", "graphql", "-f", `query=${COMMENTS_QUERY}`, "-f", `owner=${owner}`, "-f", `name=${name}`, "-F", `number=${pr.number}`]).catch(() => null),
         ]);
         const data = talk?.code === 0 ? JSON.parse(talk.stdout).data?.repository?.pullRequest : null;
-        const person = (c) => ({ id: c.id, author: c.author?.login ?? "ghost", bot: isBot(c.author), body: c.body ?? "", at: c.createdAt });
+        const person = (c) => ({ id: c.id, author: c.author?.login ?? "ghost", bot: isBot(c.author), body: c.body ?? "", at: c.createdAt, reactions: groups(c) });
         const threads = (data?.reviewThreads?.nodes ?? []).map((th) => ({ id: th.id, resolved: th.isResolved, outdated: th.isOutdated, path: th.path, line: th.line, side: th.diffSide, comments: th.comments.nodes.map(person) }));
         const activity = buildActivity(data?.timelineItems?.nodes ?? []);
         const checks = { passed: 0, pending: 0, failing: 0, list: [] };
@@ -507,7 +510,8 @@ export default class Reviews extends View {
         .when(Boolean(c.bot), (el) => el.child(div().child("bot")))
         .when(Boolean(c.state) && c.state !== "COMMENTED", (el) => el.child(div().text_color(c.state === "APPROVED" ? t.done : c.state === "CHANGES_REQUESTED" ? t.blocked : t.dim).child((c.state ?? "").toLowerCase().replace(/_/g, " "))))
         .child(div().child(`${ago(c.at)} ago`)))
-      .child(div().text_size(12.5).child(TextView.markdown(`comment-${c.id}`, linkRefs(plainBody(c.body).slice(0, 8000), this.repo) || "_(empty)_").selectable(true)));
+      .child(div().text_size(12.5).child(TextView.markdown(`comment-${c.id}`, linkRefs(plainBody(c.body).slice(0, 8000), this.repo) || "_(empty)_").selectable(true)))
+      .child(this.reactionsRow(t, c.id, c.reactions));
   }
 
   thread(t, th) {
@@ -523,7 +527,11 @@ export default class Reviews extends View {
       })
       .child(div().flex_none().child(open ? "▾" : "▸"))
       .child(div().flex_none().child(th.resolved ? "✓ Resolved" : th.outdated ? "Outdated" : `${th.comments.length} comment${th.comments.length === 1 ? "" : "s"}`))
-      .when(!open, (el) => el.child(div().min_w(0).truncate().child(`· ${first?.author ?? ""}: ${(first?.body ?? "").split("\n")[0].slice(0, 120)}`)));
+      .when(!open, (el) => el.child(div().min_w(0).truncate().child(`· ${first?.author ?? ""}: ${(first?.body ?? "").split("\n")[0].slice(0, 120)}`)))
+      .child(div().flex_1())
+      .child(div().id(`resolve-${th.id}`).flex_none().px(8).py(2).rounded(6).text_size(11.5).text_color(t.muted).border_1().border_color(t.border).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground))
+        .on_click((_e, cx) => { cx.stop_propagation(); this.resolveThread(th, cx); })
+        .child(this.busyThread === th.id ? "…" : th.resolved ? "Unresolve" : "Resolve"));
     return v_flex().mx(14).my(6).px(12).py(8).gap(8).rounded(8).border_l_2().border_color(th.resolved ? t.border : t.accent).bg(t.raised)
       .when(th.resolved, (el) => el.opacity(0.7))
       .child(head)
@@ -787,6 +795,51 @@ export default class Reviews extends View {
       .children(group("skipped", "Skipped", true));
   }
 
+  reactionsRow(t, subjectId, list) {
+    const shown = (list ?? []).filter((g) => g.count > 0);
+    const picking = this.picker === subjectId;
+    const pill = (g) => div().id(`react-${subjectId}-${g.content}`).px(7).py(1).rounded(10).text_size(11.5).cursor_pointer().border_1()
+      .border_color(g.mine ? t.accent : t.border).bg(g.mine ? t.raised : t.background).text_color(t.muted).hover((st) => st.bg(t.hover))
+      .on_click((_e, cx) => { cx.stop_propagation(); this.react(subjectId, g.content, g.mine, cx); })
+      .child(`${EMOJI[g.content] ?? g.content} ${g.count}`);
+    return v_flex().gap(4)
+      .child(h_flex().gap(4).items_center().flex_wrap()
+        .children(shown.map(pill))
+        .child(div().id(`react-${subjectId}-open`).px(6).py(1).rounded(10).text_size(12).cursor_pointer().text_color(t.dim).border_1().border_color(picking ? t.accent : t.border).hover((st) => st.bg(t.hover))
+          .tooltip("Add a reaction").on_click((_e, cx) => { cx.stop_propagation(); this.picker = picking ? null : subjectId; cx.notify(); }).child("☺")))
+      .when(picking, (el) => el.child(h_flex().gap(2).p(4).rounded(10).border_1().border_color(t.border).bg(t.popover)
+        .children(Object.entries(EMOJI).map(([content, emoji]) => {
+          const mine = (list ?? []).some((g) => g.content === content && g.mine);
+          return div().id(`pick-${subjectId}-${content}`).px(6).py(2).rounded(6).text_size(15).cursor_pointer().when(mine, (el) => el.bg(t.raised)).hover((st) => st.bg(t.hover))
+            .on_click((_e, cx) => { cx.stop_propagation(); this.picker = null; this.react(subjectId, content, mine, cx); }).child(emoji);
+        }))));
+  }
+
+  react(subjectId, content, mine, cx) {
+    const pr = this.pr;
+    if (!pr) return;
+    const field = mine ? "removeReaction" : "addReaction";
+    cx.spawn(async (cx) => {
+      await exec("gh", ["api", "graphql", "-f", `query=mutation($s: ID!, $c: ReactionContent!) { ${field}(input: { subjectId: $s, content: $c }) { reaction { content } } }`, "-f", `s=${subjectId}`, "-f", `c=${content}`]).catch(() => null);
+      this.reload(pr);
+      cx.notify();
+    });
+  }
+
+  resolveThread(th, cx) {
+    const pr = this.pr;
+    if (!pr || this.busyThread) return;
+    this.busyThread = th.id;
+    cx.notify();
+    const field = th.resolved ? "unresolveReviewThread" : "resolveReviewThread";
+    cx.spawn(async (cx) => {
+      await exec("gh", ["api", "graphql", "-f", `query=mutation($t: ID!) { ${field}(input: { threadId: $t }) { thread { isResolved } } }`, "-f", `t=${th.id}`]).catch(() => null);
+      this.busyThread = null;
+      this.reload(pr);
+      cx.notify();
+    });
+  }
+
   reload(pr) {
     delete this.details[`${pr.url}@${pr.headRefOid}`];
     setShared("reviews.refresh", Date.now());
@@ -909,7 +962,8 @@ export default class Reviews extends View {
             .child(div().flex_none().font_semibold().text_color(t.foreground).child(e.actor))
             .child(div().flex_1().min_w(0).truncate().text_color(t.muted).child(what(e)))
             .child(div().flex_none().text_size(11.5).text_color(t.dim).child(`${ago(e.at)} ago`)))
-          .when(Boolean(text), (el) => el.child(div().px(14).py(10).rounded(8).border_1().border_color(t.border).bg(t.surface).child(text))));
+          .when(Boolean(text), (el) => el.child(div().px(14).py(10).rounded(8).border_1().border_color(t.border).bg(t.surface).child(text)))
+          .child(this.reactionsRow(t, e.id, e.reactions)));
     };
     return v_flex().gap(12)
       .child(v_flex().pb(8).child(this.commentBox(t)))
