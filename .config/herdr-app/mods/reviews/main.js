@@ -867,7 +867,7 @@ export default class Reviews extends View {
     const count = details?.pending?.count ?? 0;
     return h_flex().id("review-changes").flex_none().h(30).px(12).gap(6).items_center().rounded(7).text_size(12.5).cursor_pointer()
       .bg(t.solid).text_color(t.solid_foreground).hover((st) => st.opacity(0.88))
-      .on_click((_e, cx) => { this.finishing = !this.finishing; this.postError = null; cx.notify(); })
+      .on_click((_e, cx) => { this.finishing = !this.finishing; this.postError = null; if (this.finishing && this.tab !== "files") { this.tab = "files"; localStorage.setItem("tab", "files"); } cx.notify(); })
       .child("Review changes")
       .when(count > 0, (el) => el.child(div().px(6).rounded(8).bg(t.background).text_size(11).text_color(t.foreground).child(String(count))));
   }
