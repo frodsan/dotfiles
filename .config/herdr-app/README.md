@@ -1,6 +1,6 @@
 # Firehouse
 
-Firehouse is my Herdr setup for running many Claude Code sessions on one repo at the same time.
+Firehouse is my Herdr setup for running many Claude Code agents at once and getting work done.
 
 ## Start a task in one keystroke
 
