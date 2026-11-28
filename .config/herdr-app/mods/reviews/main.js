@@ -1,5 +1,5 @@
 import { View, div, svg } from "gpui-kit";
-import { v_flex, h_flex, TextView } from "gpui-base";
+import { v_flex, h_flex, TextView, TextareaState, Textarea } from "gpui-base";
 import { exec, run, theme, shared, setShared, props, openOverlay, closeOverlay, settings, readTextFile, writeTextFile, appHome } from "herdr";
 
 const ICON = (name) => `mods/reviews/assets/${name}.svg`;
@@ -194,6 +194,8 @@ export default class Reviews extends View {
       this.rules = {};
       this.me = {};
       this.toggled = new Set();
+      this.newComment = TextareaState.new({ placeholder: "Leave a comment", rows: 3 });
+      this.newComment.on("change", (_e, cx) => cx.notify());
       this.showAll = false;
       this.tab = ["files", "checks", "claude"].includes(localStorage.getItem("tab")) ? localStorage.getItem("tab") : "description";
       this.shown = null;
@@ -525,7 +527,10 @@ export default class Reviews extends View {
     return v_flex().mx(14).my(6).px(12).py(8).gap(8).rounded(8).border_l_2().border_color(th.resolved ? t.border : t.accent).bg(t.raised)
       .when(th.resolved, (el) => el.opacity(0.7))
       .child(head)
-      .when(open, (el) => el.children(th.comments.map((c) => this.comment(t, c))));
+      .when(open, (el) => el.children(th.comments.map((c) => this.comment(t, c))))
+      .when(open && !(this.draft?.kind === "reply" && this.draft.thread === th.id), (el) => el.child(h_flex().child(div().id(`reply-${th.id}`).px(10).py(4).rounded(6).text_size(12).text_color(t.muted).border_1().border_color(t.border).cursor_pointer().hover((st) => st.bg(t.hover).text_color(t.foreground))
+        .on_click((_e, cx) => { this.startDraft({ kind: "reply", thread: th.id }, cx); }).child("Reply"))))
+      .when(this.draft?.kind === "reply" && this.draft.thread === th.id, (el) => el.child(this.draftBox(t)));
   }
 
   diff(t, file) {
@@ -547,12 +552,15 @@ export default class Reviews extends View {
       else if (line.startsWith("-")) { at = ["LEFT", oldLine]; oldLine += 1; }
       else if (line.startsWith("+")) { at = ["RIGHT", newLine]; newLine += 1; }
       else { at = ["RIGHT", newLine]; oldLine += 1; newLine += 1; }
-      rows.push(div().px(14).font_family(mono).text_size(11.5).whitespace_nowrap()
+      const spot = at ? { path: file.filename, side: at[0], line: at[1] } : null;
+      rows.push(div().id(`line-${file.filename}-${rows.length}`).px(14).font_family(mono).text_size(11.5).whitespace_nowrap()
+        .when(Boolean(spot), (el) => el.cursor_pointer().hover((st) => st.bg(t.hover)).on_click((_e, cx) => { this.startDraft({ kind: "line", ...spot }, cx); }))
         .when(line.startsWith("+"), (el) => el.text_color(t.done))
         .when(line.startsWith("-"), (el) => el.text_color(t.blocked))
         .when(line.startsWith("@@"), (el) => el.text_color(t.dim).mt(4))
         .when(!/^[+\-@]/.test(line), (el) => el.text_color(t.muted))
         .child(line || " "));
+      if (spot && this.draft?.kind === "line" && this.draft.path === spot.path && this.draft.side === spot.side && this.draft.line === spot.line) rows.push(this.draftBox(t));
       if (at) for (const th of threads) {
         if (placed.has(th.id) || th.line == null || (th.side ?? "RIGHT") !== at[0] || th.line !== at[1]) continue;
         placed.add(th.id);
@@ -713,6 +721,84 @@ export default class Reviews extends View {
       .children(group("skipped", "Skipped", true));
   }
 
+  reload(pr) {
+    delete this.details[`${pr.url}@${pr.headRefOid}`];
+    setShared("reviews.refresh", Date.now());
+  }
+
+  input(t, state, rows) {
+    return div().w_full().min_h(rows * 22).rounded(8).border_1().border_color(t.input).bg(t.background).p(8)
+      .child(Textarea.new(state).size_full().text_size(12.5).text_color(t.foreground));
+  }
+
+  sendButton(t, id, label, busy, onClick) {
+    return div().id(id).px(12).py(5).rounded(7).text_size(12.5).bg(t.solid).text_color(t.solid_foreground)
+      .when(!busy, (el) => el.cursor_pointer().hover((st) => st.opacity(0.88)).on_click(onClick))
+      .when(busy, (el) => el.opacity(0.6))
+      .child(busy ? "Posting…" : label);
+  }
+
+  commentBox(t) {
+    const pr = this.pr;
+    const busy = this.posting === "comment";
+    return v_flex().gap(8)
+      .child(this.input(t, this.newComment, 3))
+      .child(h_flex().gap(10).items_center()
+        .child(div().flex_1().text_size(11.5).text_color(t.blocked).child(this.postError?.where === "comment" ? this.postError.text : ""))
+        .child(this.sendButton(t, "comment-send", "Comment", busy, (_e, cx) => {
+          const body = this.newComment.value().trim();
+          if (!body || !pr) return;
+          this.posting = "comment";
+          this.postError = null;
+          cx.notify();
+          cx.spawn(async (cx) => {
+            const r = await exec("gh", ["api", `repos/${pr.repo}/issues/${pr.number}/comments`, "-f", `body=${body}`]).catch((e) => ({ code: 1, stderr: String(e) }));
+            this.posting = null;
+            if (r.code === 0) { this.newComment.set_value(""); this.reload(pr); }
+            else this.postError = { where: "comment", text: (r.stderr ?? "").trim().split("\n")[0] || "Could not post the comment." };
+            cx.notify();
+          });
+        })));
+  }
+
+  startDraft(target, cx) {
+    const state = TextareaState.new({ placeholder: target.kind === "reply" ? "Reply" : "Comment on this line", rows: 3 });
+    state.on("change", (_e, cx) => cx.notify());
+    this.draft = { ...target, state };
+    this.postError = null;
+    cx.timer.after(40, () => state.focus?.());
+    cx.notify();
+  }
+
+  draftBox(t) {
+    const pr = this.pr;
+    const draft = this.draft;
+    const busy = this.posting === "draft";
+    return v_flex().mx(14).my(6).gap(8).p(10).rounded(8).border_1().border_color(t.border).bg(t.raised)
+      .child(this.input(t, draft.state, 3))
+      .child(h_flex().gap(8).items_center()
+        .child(div().flex_1().text_size(11.5).text_color(t.blocked).child(this.postError?.where === "draft" ? this.postError.text : ""))
+        .child(div().id("draft-cancel").px(12).py(5).rounded(7).text_size(12.5).text_color(t.muted).border_1().border_color(t.border).cursor_pointer().hover((st) => st.bg(t.hover))
+          .on_click((_e, cx) => { this.draft = null; cx.notify(); }).child("Cancel"))
+        .child(this.sendButton(t, "draft-send", draft.kind === "reply" ? "Reply" : "Comment", busy, (_e, cx) => {
+          const body = draft.state.value().trim();
+          if (!body || !pr) return;
+          this.posting = "draft";
+          this.postError = null;
+          cx.notify();
+          cx.spawn(async (cx) => {
+            const args = draft.kind === "reply"
+              ? ["api", "graphql", "-f", "query=mutation($t: ID!, $b: String!) { addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: $t, body: $b }) { comment { id } } }", "-f", `t=${draft.thread}`, "-f", `b=${body}`]
+              : ["api", `repos/${pr.repo}/pulls/${pr.number}/comments`, "-f", `body=${body}`, "-f", `commit_id=${pr.headRefOid}`, "-f", `path=${draft.path}`, "-F", `line=${draft.line}`, "-f", `side=${draft.side}`];
+            const r = await exec("gh", args).catch((e) => ({ code: 1, stderr: String(e) }));
+            this.posting = null;
+            if (r.code === 0) { this.draft = null; this.reload(pr); }
+            else this.postError = { where: "draft", text: (r.stderr ?? "").trim().split("\n")[0] || "Could not post the comment." };
+            cx.notify();
+          });
+        })));
+  }
+
   activity(t, details) {
     const heading = (text) => div().text_size(11).font_semibold().text_color(t.muted).child(text.toUpperCase());
     if (!details || details.loading) return div();
@@ -752,6 +838,7 @@ export default class Reviews extends View {
         .on_click((_e, cx) => { localStorage.setItem("activity.open", open ? "0" : "1"); cx.notify(); })
         .child(div().text_size(11).text_color(t.dim).child(open ? "▾" : "▸"))
         .child(heading(list.length ? `Activity (${list.length})` : "Activity")))
+      .when(open, (el) => el.child(this.commentBox(t)))
       .when(open && list.length === 0, (el) => el.child(div().text_size(12.5).text_color(t.dim).child("Nothing yet.")))
       .when(open && list.length > 0, (el) => el.child(v_flex().children(list.map(row))));
   }
@@ -859,6 +946,7 @@ export default class Reviews extends View {
       .child(svg(ICON("pr-open")).size(22)).child("Pick a pull request on the left.");
     const body = dropEmptySections(plainBody(pr.body));
     this.repo = pr.repo;
+    this.pr = pr;
     const details = this.load(pr, cx);
     return v_flex().id("review-detail").flex_1().min_w(0).h_full().overflow_y_scroll().px(28).py(22).gap(18)
       .child(v_flex().gap(8)
