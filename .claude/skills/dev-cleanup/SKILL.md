@@ -25,7 +25,7 @@ Run `ruby scripts/audit_git.rb`. It scans every main checkout under `~/Code/*/*`
 
 - `kept_worktrees`: the main checkout, and every worktree a session runs in. Their branches and the default branch are kept.
 - `worktrees_to_remove`: each with `missing` (the folder is gone), `changed_files` and `untracked_files`.
-- `stale_folders`: `<repo>.*` folders git no longer knows about.
+- `stale_folders`: `<repo>.*` folders that are not worktrees, for example the rest of a removal that did not finish.
 - `branches.pushed`: every commit is on a remote. Safe to delete.
 - `branches.merged`: the pull request is merged, so the local commits were squash-merged. Safe to delete.
 - `branches.needs_decision`: a closed pull request, no pull request (`NONE`) or a remote that is not on GitHub (`UNKNOWN`), with commits on no remote.

@@ -75,9 +75,7 @@ class AuditGit
   def stale_folders
     pattern = File.join(File.dirname(@repo_root), "#{File.basename(@repo_root)}.*")
     registered = worktrees.map { _1["dir"] }
-    Dir.glob(pattern).select { File.file?(File.join(_1, ".git")) }.reject do |dir|
-      registered.include?(dir) || File.directory?(File.read(File.join(dir, ".git"))[/gitdir: (.+)/, 1].to_s)
-    end
+    Dir.glob(pattern).select { File.directory?(_1) } - registered
   end
 
   def default_branch
