@@ -36,7 +36,7 @@ Some questions belong to no repo. `⇧⌘C` swaps the session list for your chat
 
 ## Reviews without leaving Herdr
 
-`⇧⌘R` swaps the session list for the pull requests that list you as a reviewer, not through a team, grouped by repo and refreshed every 2 minutes by default. A dot on its icon says some are waiting. Click one, and the main panel shows it: its description and an activity feed of commits, reviews, comments and review requests, newest first, your files from CODEOWNERS with their diffs and review threads. Approve it there, or press Check with Claude for a report of what could break after merge. `⇧⌘G` opens it on GitHub. Right-click a pull request to snooze it until new commits arrive or a set time, or to spin off a session that checks it out so you can change the code. Approved, merged and closed ones stay under Recently reviewed for a day by default.
+`⇧⌘R` swaps the session list for the pull requests that list you as a reviewer, not through a team, grouped by repo and refreshed every 2 minutes by default. A dot on its icon says some are waiting. Click one, and the main panel shows it: its description and an activity feed of commits, reviews, comments and review requests, newest first, your files from CODEOWNERS with their diffs and review threads. Comment on lines and start a review, then press Review changes to comment, approve or request changes in one go. Check out opens its branch in a new focus session. `⇧⌘G` opens it on GitHub. Right-click a pull request to snooze it until new commits arrive or a set time, or to spin off a session that checks it out so you can change the code. Approved, merged and closed ones stay under Recently reviewed for a day by default.
 
 ## Your own commands
 

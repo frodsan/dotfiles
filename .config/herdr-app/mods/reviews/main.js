@@ -25,7 +25,8 @@ const REVIEWS_QUERY = `query {
 const COMMENTS_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) { pullRequest(number: $number) {
     commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename ... on CheckRun { name status conclusion detailsUrl startedAt completedAt checkSuite { workflowRun { workflow { name } } } } ... on StatusContext { context state targetUrl } } } } } } }
-    reviewThreads(first: 100) { nodes { id isResolved isOutdated path line diffSide comments(first: 50) { nodes { id url author { __typename login } body createdAt reactionGroups { content viewerHasReacted reactors { totalCount } } } } } }
+    reviews(states: PENDING, first: 1) { nodes { id comments { totalCount } } }
+    reviewThreads(first: 100) { nodes { id isResolved isOutdated path line diffSide comments(first: 50) { nodes { id url state author { __typename login } body createdAt reactionGroups { content viewerHasReacted reactors { totalCount } } } } } }
     timelineItems(last: 60, itemTypes: [PULL_REQUEST_REVIEW, ISSUE_COMMENT]) {
       nodes {
         __typename
@@ -36,39 +37,6 @@ const COMMENTS_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
   } }
 }`;
 
-const CLAUDE_REVIEWS = 3;
-const CLAUDE_REVIEW_MS = 30 * 60000;
-const CLAUDE_REVIEW_DIR = () => `${appHome()}/data/reviews`;
-const CLAUDE_REVIEW_ALLOWED = ["Read", "Grep", "Glob", "Task", "Bash(gh pr view:*)", "Bash(gh pr diff:*)", "Bash(gh pr checks:*)", "Bash(gh api:*)", "Bash(git log:*)", "Bash(git show:*)", "Bash(git grep:*)", "Bash(git diff:*)", "Bash(git blame:*)", "Bash(rg:*)", "Bash(grep:*)", "Bash(ls:*)", "Bash(cat:*)"];
-const CLAUDE_REVIEW_BLOCKED = ["Bash(gh pr comment:*)", "Bash(gh pr review:*)", "Bash(gh pr merge:*)", "Bash(gh pr edit:*)", "Bash(gh pr close:*)", "Bash(gh issue:*)", "Bash(git push:*)", "Bash(git commit:*)", "Bash(git checkout:*)", "Bash(git switch:*)", "Bash(git reset:*)", "Edit", "Write", "NotebookEdit"];
-const claudeReviewPrompt = (pr) => [
-  `Check pull request ${pr.url} (${pr.repo}#${pr.number}, "${pr.title}") for the developer who must approve it.`,
-  "",
-  "Goal: find what could go wrong after merge. Report only important problems:",
-  "- bugs: wrong logic, unhandled nil or empty cases, off-by-one, race conditions, wrong error handling",
-  "- things the author did not take into account: other callers of changed code, data that already exists, migrations and deploy order, background jobs, permissions, performance on large tables",
-  "- missing tests only when a real bug could hide there",
-  "Do not report nitpicks, naming, style, formatting, comments, or anything a linter catches.",
-  "",
-  "How to work:",
-  `1. Read the pull request: gh pr view ${pr.number} -R ${pr.repo} --json title,body,files and gh pr diff ${pr.number} -R ${pr.repo}.`,
-  `2. Read the existing review comments and threads: gh api repos/${pr.repo}/pulls/${pr.number}/comments, gh api repos/${pr.repo}/pulls/${pr.number}/reviews, and gh api repos/${pr.repo}/issues/${pr.number}/comments. They include comments from review bots.`,
-  "3. Read the code around the changes in this checkout (it is on the default branch) to check callers and assumptions.",
-  "4. Drop every finding that an existing comment already raises, even in other words. The developer has already seen those.",
-  "",
-  "Rules:",
-  "- Never post or change anything: no gh pr comment, no gh pr review, no gh api calls that write (-f, -F, --input, -X POST/PATCH/PUT/DELETE), no git push, no edits.",
-  "- Never ask questions. If something needs the author, say what to ask.",
-  "- Be sure before you report. Fewer, real findings are better than many maybes.",
-  "",
-  "Your final answer is the report, in Markdown, in this exact shape:",
-  "VERDICT: good | look | blocking",
-  "FINDINGS: <number>",
-  "",
-  "Then one section per finding, most severe first: a ### heading with a short title, the file and line, and two or three sentences on what goes wrong and how to fix it.",
-  "Use good with FINDINGS: 0 when you found nothing new that matters. Use look when something is worth asking the author. Use blocking when it would break something after merge.",
-].join("\n");
-const mainCheckoutNote = (repo) => `You are working in the main checkout of ${repo}, which must stay on its default branch (main or master). Do not create, switch or check out branches here: no git checkout, git switch, git worktree or gh pr checkout in this folder.`;
 
 const SNOOZED = "reviews.snoozed";
 const settledMs = () => (conf().reviewsKeepDays ?? 1) * DAY_MS;
@@ -81,11 +49,6 @@ const snoozedUntil = (pr) => {
 const isSnoozed = (pr) => snoozedUntil(pr) > 0;
 const isBot = (author) => author?.__typename === "Bot";
 const findPr = (url) => items().find((p) => p.url === url) ?? settledReviews()[url]?.pr ?? null;
-
-async function shellRun(script, args) {
-  const shell = await exec("sh", ["-c", 'dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk \'{print $2}\'']).catch(() => null);
-  return exec(shell?.stdout.trim() || "/bin/zsh", ["-ilc", script, "sh", ...args]);
-}
 
 function ago(iso) {
   const minutes = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
@@ -199,8 +162,10 @@ export default class Reviews extends View {
       this.toggled = new Set();
       this.newComment = TextareaState.new({ placeholder: "Leave a comment", rows: 3 });
       this.newComment.on("change", (_e, cx) => cx.notify());
+      this.reviewBody = TextareaState.new({ placeholder: "Leave a comment", rows: 4 });
+      this.reviewBody.on("change", (_e, cx) => cx.notify());
       this.fileFilter = null;
-      this.tab = ["files", "checks", "claude"].includes(localStorage.getItem("tab")) ? localStorage.getItem("tab") : "description";
+      this.tab = ["files", "checks"].includes(localStorage.getItem("tab")) ? localStorage.getItem("tab") : "description";
       this.shown = null;
       cx.timer.every(2000, (cx) => cx.notify());
       return;
@@ -209,10 +174,7 @@ export default class Reviews extends View {
   }
 
   initWatch(cx) {
-    cx.timer.every(2000, (cx) => {
-      this.runReviews(cx);
-      this.runClaudeReviews(cx);
-    });
+    cx.timer.every(2000, (cx) => this.runReviews(cx));
   }
 
   runReviews(cx) {
@@ -266,79 +228,13 @@ export default class Reviews extends View {
     });
   }
 
-  async checkoutFor(repo) {
-    this.checkouts ??= {};
-    if (repo in this.checkouts) return this.checkouts[repo];
-    const paths = [...new Set((shared("sessions.folders") ?? []).map((key) => JSON.parse(key)[1]).filter(Boolean))];
-    for (const path of paths) {
-      const r = await exec("git", ["remote", "get-url", "origin"], { cwd: path }).catch(() => null);
-      const m = r?.code === 0 ? r.stdout.trim().match(/github\.com[:/](.+?)(\.git)?$/) : null;
-      if (m && m[1].toLowerCase() === repo.toLowerCase()) return (this.checkouts[repo] = path);
-    }
-    return (this.checkouts[repo] = null);
-  }
-
-  runClaudeReviews(cx) {
-    if (this.claudeTick) return;
-    this.claudeTick = true;
-    cx.spawn(async (cx) => {
-      try {
-        if (!shared("reviews.list")) return;
-        const list = [...items(), ...Object.values(settledReviews()).map((e) => e.pr)];
-        const all = { ...(shared("reviews.claude") ?? {}) };
-        let changed = false;
-        const open = new Set(list.map((pr) => pr.url));
-        for (const url of Object.keys(all)) {
-          if (open.has(url)) continue;
-          if (all[url].dir) await exec("rm", ["-rf", all[url].dir]).catch(() => null);
-          delete all[url];
-          changed = true;
-        }
-        for (const [url, entry] of Object.entries(all)) {
-          if (entry.state !== "running") continue;
-          const done = await readTextFile(`${entry.dir}/exit`).catch(() => null);
-          if (done == null && Date.now() - entry.startedAt < CLAUDE_REVIEW_MS) continue;
-          const report = (await readTextFile(`${entry.dir}/report.md`).catch(() => null)) ?? "";
-          const verdict = report.match(/VERDICT:\s*(good|look|blocking)/i)?.[1]?.toLowerCase() ?? null;
-          const count = Number(report.match(/FINDINGS:\s*(\d+)/i)?.[1] ?? 0);
-          const errorText = done == null ? "The review took more than 30 minutes and was stopped." : done.trim() !== "0" || !verdict ? ((await readTextFile(`${entry.dir}/error.log`).catch(() => null)) ?? "").trim().split("\n").slice(-3).join(" ") || "Claude did not return a report." : null;
-          if (done == null && entry.pid) await exec("kill", [String(entry.pid)]).catch(() => null);
-          all[url] = { ...entry, state: errorText ? "error" : "done", verdict, count, error: errorText, finishedAt: Date.now() };
-          changed = true;
-        }
-        let running = Object.values(all).filter((e) => e.state === "running").length;
-        for (const pr of list) {
-          if (running >= CLAUDE_REVIEWS) break;
-          const entry = all[pr.url];
-          if (entry?.state !== "queued") continue;
-          const cwd = await this.checkoutFor(pr.repo);
-          if (!cwd) { all[pr.url] = { ...entry, state: "error", error: `No local checkout of ${pr.repo}. Add its folder in Sessions.`, finishedAt: Date.now() }; changed = true; continue; }
-          const dir = `${CLAUDE_REVIEW_DIR()}/${pr.number}-${pr.headRefOid.slice(0, 7)}-${Date.now()}`;
-          await exec("mkdir", ["-p", dir]);
-          await writeTextFile(`${dir}/prompt.txt`, claudeReviewPrompt(pr), null);
-          await writeTextFile(`${dir}/note.txt`, mainCheckoutNote(base(cwd)), null);
-          const blocked = CLAUDE_REVIEW_BLOCKED.map((rule) => `'${rule}'`).join(" ");
-          const allowed = CLAUDE_REVIEW_ALLOWED.map((rule) => `'${rule}'`).join(" ");
-          const script = `cd "$1" || exit 1; ( claude -p --append-system-prompt "$(cat "$2/note.txt")" --allowedTools ${allowed} --disallowedTools ${blocked} < "$2/prompt.txt" > "$2/report.md" 2> "$2/error.log"; echo $? > "$2/exit" ) > /dev/null 2>&1 & echo $!`;
-          const r = await shellRun(script, [cwd, dir]).catch(() => null);
-          all[pr.url] = { ...entry, state: "running", head: pr.headRefOid, dir, startedAt: Date.now(), pid: Number(r?.stdout.trim().split("\n").pop()) || null };
-          running += 1;
-          changed = true;
-        }
-        if (changed) { setShared("reviews.claude", all); cx.notify(); }
-      } finally {
-        this.claudeTick = false;
-      }
-    });
-  }
-
   snooze(pr) {
     openOverlay({ mod: "sessions", kind: "popup", width: 280, height: 300, props: { menu: { id: pr.url, snoozeOnly: true, store: SNOOZED, extra: { head: pr.headRefOid } } } });
   }
 
-  spinOff(pr) {
-    setShared("sessions.composerText", `${pr.url}\n\n`);
-    run("sessions.new-session");
+  checkout(pr) {
+    setShared("sessions.checkout", { url: pr.url, at: Date.now() });
+    run("sessions.checkout-pr");
   }
 
   renderMenu() {
@@ -352,7 +248,7 @@ export default class Reviews extends View {
       .child(div().flex_1().truncate().child(label));
     return v_flex().id("reviews-menu").w_full().p(5).bg(t.popover)
       .on_key_down((e, cx) => { if (e.key === "escape") { close(); cx.stop_propagation(); } })
-      .child(item("spin-off", "Spin off a session", "mods/workspace-chrome/square-pen.svg", () => this.spinOff(pr)))
+      .child(item("checkout", "Check out", ICON("branch"), () => this.checkout(pr)))
       .child(div().my(4).h(1).bg(t.border))
       .child(item("snooze", isSnoozed(pr) ? `Snoozed until ${when(snoozedUntil(pr))}…` : "Snooze…", ICON("clock"), () => this.snooze(pr)))
       .child(div().my(4).h(1).bg(t.border))
@@ -405,7 +301,6 @@ export default class Reviews extends View {
     const row = (pr, grouped = false) => {
       const key = `review-${pr.url}`;
       const on = pr.url === selected;
-      const claude = (shared("reviews.claude") ?? {})[pr.url];
       return h_flex().id(key).px(8).py(6).gap(8).items_center().rounded(8).cursor_pointer()
         .when(on, (el) => el.bg(t.selected)).when(!on, (el) => el.hover((st) => st.bg(t.hover)))
         .on_click(() => selectReview(pr.url))
@@ -413,8 +308,7 @@ export default class Reviews extends View {
         .child(svg(ICON(pr.isDraft ? "pr-draft" : "pr-open")).size(13).flex_none().text_color(pr.isDraft ? t.dim : t.done))
         .child(v_flex().flex_1().min_w(0)
           .child(div().truncate().text_size(13).text_color(t.foreground).child(pr.title))
-          .child(div().truncate().text_size(11).text_color(t.dim).child(isSnoozed(pr) ? `${base(pr.repo)}#${pr.number} · until ${when(snoozedUntil(pr))}` : `${grouped ? "" : base(pr.repo)}#${pr.number} · @${pr.author} · ${ago(pr.updatedAt)}`)))
-        .when(claude?.verdict === "blocking", (el) => el.child(div().flex_none().text_size(11).font_semibold().text_color(t.blocked).tooltip("Claude found blocking issues").child("!")));
+          .child(div().truncate().text_size(11).text_color(t.dim).child(isSnoozed(pr) ? `${base(pr.repo)}#${pr.number} · until ${when(snoozedUntil(pr))}` : `${grouped ? "" : base(pr.repo)}#${pr.number} · @${pr.author} · ${ago(pr.updatedAt)}`)));
     };
     const settledRow = (e) => h_flex().id(`review-settled-${e.pr.url}`).px(8).py(5).gap(8).items_center().rounded(6).cursor_pointer()
       .when(e.pr.url === selected, (el) => el.bg(t.selected)).when(e.pr.url !== selected, (el) => el.hover((st) => st.bg(t.hover)))
@@ -479,7 +373,7 @@ export default class Reviews extends View {
           this.viewedStates(pr),
         ]);
         const data = talk?.code === 0 ? JSON.parse(talk.stdout).data?.repository?.pullRequest : null;
-        const person = (c) => ({ id: c.id, url: c.url, author: c.author?.login ?? "ghost", bot: isBot(c.author), body: c.body ?? "", at: c.createdAt, reactions: groups(c) });
+        const person = (c) => ({ id: c.id, url: c.url, pending: c.state === "PENDING", author: c.author?.login ?? "ghost", bot: isBot(c.author), body: c.body ?? "", at: c.createdAt, reactions: groups(c) });
         const threads = (data?.reviewThreads?.nodes ?? []).map((th) => ({ id: th.id, resolved: th.isResolved, outdated: th.isOutdated, path: th.path, line: th.line, side: th.diffSide, comments: th.comments.nodes.map(person) }));
         const activity = buildActivity(data?.timelineItems?.nodes ?? []);
         const checks = { passed: 0, pending: 0, failing: 0, list: [] };
@@ -495,7 +389,7 @@ export default class Reviews extends View {
           const owners = ownersOf(rules, file.filename);
           return { ...file, owners, mine: owners.some((o) => me.mine.has(o)), viewed: viewed.states[file.filename] === "VIEWED", threads: threads.filter((th) => th.path === file.filename) };
         });
-        this.details[key] = { files: list, hasRules: rules.length > 0, activity, checks, threads, prId: viewed.id, loadedComments: Boolean(data) };
+        this.details[key] = { files: list, hasRules: rules.length > 0, activity, checks, threads, prId: viewed.id, pending: data?.reviews?.nodes?.[0] ? { id: data.reviews.nodes[0].id, count: data.reviews.nodes[0].comments?.totalCount ?? 0 } : null, loadedComments: Boolean(data) };
       } catch (error) {
         this.details[key] = { error: String(error.message ?? error) };
       }
@@ -509,6 +403,7 @@ export default class Reviews extends View {
       .child(h_flex().gap(6).text_size(11.5).text_color(t.dim)
         .child(div().font_semibold().text_color(t.muted).child(c.author))
         .when(Boolean(c.bot), (el) => el.child(div().child("bot")))
+        .when(Boolean(c.pending), (el) => el.child(div().px(6).rounded(8).bg(t.raised).text_color(t.working).child("Pending")))
         .when(Boolean(c.state) && c.state !== "COMMENTED", (el) => el.child(div().text_color(c.state === "APPROVED" ? t.done : c.state === "CHANGES_REQUESTED" ? t.blocked : t.dim).child((c.state ?? "").toLowerCase().replace(/_/g, " "))))
         .child(div().child(`${ago(c.at)} ago`)))
       .child(div().text_size(12.5).child(TextView.markdown(`comment-${c.id}`, linkRefs(plainBody(c.body).slice(0, 8000), this.repo) || "_(empty)_").selectable(true)))
@@ -652,49 +547,6 @@ export default class Reviews extends View {
       .when(loose.length > 0, (el) => el.child(v_flex().pb(4).children(loose.map((th) => this.thread(t, th)))))
       .child(v_flex().children(rows))
       .when(lines.length > shown.length, (el) => el.child(div().px(14).py(4).text_size(12).text_color(t.dim).child(`${lines.length - shown.length} more lines on GitHub`)));
-  }
-
-  claudeEntry(pr) {
-    return (shared("reviews.claude") ?? {})[pr.url] ?? null;
-  }
-
-  claudeLabel(pr) {
-    const e = this.claudeEntry(pr);
-    if (!e || e.state === "queued" || e.state === "running") return "Findings";
-    if (e.state === "error") return "Findings !";
-    return e.verdict === "good" ? "Findings ✓" : `Findings ${e.count || "!"}`;
-  }
-
-  rerun(pr) {
-    setShared("reviews.claude", { ...(shared("reviews.claude") ?? {}), [pr.url]: { state: "queued", head: pr.headRefOid, at: Date.now() } });
-  }
-
-  claudeTab(t, pr, cx) {
-    const e = this.claudeEntry(pr);
-    const button = (label) => this.button(t, "claude-rerun", "refresh", label, () => this.rerun(pr));
-    const note = (text, color) => div().text_size(12.5).text_color(color ?? t.dim).child(text);
-    if (!e) return note("Press Check with Claude to get Claude's view before you approve.");
-    if (e.state === "queued") return note("Waiting for a free slot. Claude checks 3 pull requests at a time.");
-    if (e.state === "running") return h_flex().gap(10).items_center()
-      .child(div().size(8).rounded(4).bg(t.working).loop("opacity", { from: 0.35, to: 1, period: 1200 }))
-      .child(note(`Claude is reviewing this pull request. It started ${ago(new Date(e.startedAt).toISOString())} ago.`));
-    if (e.state === "error") return v_flex().gap(10).child(note(e.error ?? "The review failed.", t.blocked)).child(h_flex().child(button("Run again")));
-    this.reports ??= {};
-    const path = `${e.dir}/report.md`;
-    if (!(path in this.reports)) {
-      this.reports[path] = null;
-      cx.spawn(async (cx) => { this.reports[path] = (await readTextFile(path).catch(() => null)) ?? ""; cx.notify(); });
-    }
-    const report = (this.reports[path] ?? "").replace(/^[\s\S]*?VERDICT:[^\n]*\n(FINDINGS:[^\n]*\n)?/i, "").trim();
-    const [text, color] = e.verdict === "good" ? ["Looks good. Nothing needs your attention.", t.done] : e.verdict === "blocking" ? ["Blocking: this should not merge as it is.", t.blocked] : ["Worth a look before you approve.", t.working];
-    const stale = e.head !== pr.headRefOid;
-    return v_flex().gap(14)
-      .child(h_flex().gap(12).items_center()
-        .child(div().flex_1().min_w(0)
-          .child(div().text_size(13.5).font_semibold().text_color(color).child(text))
-          .child(div().text_size(11.5).text_color(t.dim).child(`Reviewed ${ago(new Date(e.finishedAt).toISOString())} ago on ${e.head.slice(0, 7)}${stale ? " · new commits since this review" : ""}`)))
-        .child(button(stale ? "Review the new commits" : "Re-run")))
-      .when(Boolean(report), (el) => el.child(div().text_size(12.5).child(TextView.markdown(`claude-${pr.number}-${e.finishedAt}`, report).selectable(true))));
   }
 
   ruleFor(pr, cx) {
@@ -951,7 +803,121 @@ export default class Reviews extends View {
             else this.postError = { where: "draft", text: (r.stderr ?? "").trim().split("\n")[0] || "Could not post the comment." };
             cx.notify();
           });
-        })));
+        }))
+        .child(this.sendButton(t, "draft-review", this.currentPending() ? (draft.kind === "reply" ? "Add to review" : "Add review comment") : "Start a review", this.posting === "review-draft", (_e, cx) => this.addToReview(draft, cx))));
+  }
+
+  currentPending() {
+    const pr = this.pr;
+    return pr ? this.details?.[`${pr.url}@${pr.headRefOid}`]?.pending ?? null : null;
+  }
+
+  async gql(query, vars) {
+    const args = ["api", "graphql", "-f", `query=${query}`];
+    for (const [k, v] of Object.entries(vars)) args.push(typeof v === "number" ? "-F" : "-f", `${k}=${v}`);
+    const r = await exec("gh", args).catch((e) => ({ code: 1, stderr: String(e) }));
+    if (r.code !== 0) throw new Error((r.stderr ?? "").trim().split("\n")[0] || "GitHub refused the request.");
+    const out = JSON.parse(r.stdout);
+    if (out.errors?.length) throw new Error(out.errors[0].message);
+    return out.data;
+  }
+
+  async pendingReviewId(pr) {
+    const key = `${pr.url}@${pr.headRefOid}`;
+    const existing = this.details?.[key]?.pending?.id;
+    if (existing) return existing;
+    const prId = this.details?.[key]?.prId;
+    if (!prId) throw new Error("The pull request is still loading.");
+    const data = await this.gql("mutation($p: ID!, $c: GitObjectID!) { addPullRequestReview(input: { pullRequestId: $p, commitOID: $c }) { pullRequestReview { id } } }", { p: prId, c: pr.headRefOid });
+    return data.addPullRequestReview.pullRequestReview.id;
+  }
+
+  addToReview(draft, cx) {
+    const pr = this.pr;
+    const body = draft.state.value().trim();
+    if (!body || !pr) return;
+    this.posting = "review-draft";
+    this.postError = null;
+    cx.notify();
+    cx.spawn(async (cx) => {
+      try {
+        const review = await this.pendingReviewId(pr);
+        if (draft.kind === "reply") await this.gql("mutation($r: ID!, $t: ID!, $b: String!) { addPullRequestReviewThreadReply(input: { pullRequestReviewId: $r, pullRequestReviewThreadId: $t, body: $b }) { comment { id } } }", { r: review, t: draft.thread, b: body });
+        else await this.gql("mutation($r: ID!, $path: String!, $l: Int!, $s: DiffSide!, $b: String!) { addPullRequestReviewThread(input: { pullRequestReviewId: $r, path: $path, line: $l, side: $s, body: $b }) { thread { id } } }", { r: review, path: draft.path, l: draft.line, s: draft.side, b: body });
+        this.draft = null;
+        this.reload(pr);
+      } catch (error) {
+        this.postError = { where: "draft", text: error.message };
+      }
+      this.posting = null;
+      cx.notify();
+    });
+  }
+
+  checkoutButton(t, pr) {
+    return h_flex().id("review-checkout").flex_none().h(30).px(12).gap(6).items_center().rounded(7).text_size(12.5).cursor_pointer()
+      .bg(t.raised).border_1().border_color(t.border).hover((st) => st.bg(t.hover))
+      .tooltip("Open the pull request's branch in a new session with focus mode")
+      .on_click(() => this.checkout(pr))
+      .child(svg(ICON("branch")).size(13).flex_none())
+      .child("Check out");
+  }
+
+  reviewButton(t, pr, details) {
+    const count = details?.pending?.count ?? 0;
+    return h_flex().id("review-changes").flex_none().h(30).px(12).gap(6).items_center().rounded(7).text_size(12.5).cursor_pointer()
+      .bg(t.solid).text_color(t.solid_foreground).hover((st) => st.opacity(0.88))
+      .on_click((_e, cx) => { this.finishing = !this.finishing; this.postError = null; cx.notify(); })
+      .child("Review changes")
+      .when(count > 0, (el) => el.child(div().px(6).rounded(8).bg(t.background).text_size(11).text_color(t.foreground).child(String(count))));
+  }
+
+  finishPanel(t, pr, details) {
+    const kinds = [["COMMENT", "Comment", "Submit general feedback without explicit approval."], ["APPROVE", "Approve", "Submit feedback and approve merging these changes."], ["REQUEST_CHANGES", "Request changes", "Submit feedback that must be addressed before merging."]];
+    const pick = this.reviewEvent ?? "COMMENT";
+    const busy = this.posting === "review";
+    const option = ([id, title, hint]) => h_flex().id(`event-${id}`).gap(10).items_start().py(4).cursor_pointer()
+      .on_click((_e, cx) => { this.reviewEvent = id; cx.notify(); })
+      .child(div().mt(2).size(14).flex_none().rounded(7).border_2().border_color(pick === id ? t.accent : t.dim).when(pick === id, (el) => el.bg(t.accent)))
+      .child(v_flex().child(div().text_size(13).font_semibold().child(title)).child(div().text_size(12).text_color(t.dim).child(hint)));
+    const pending = details?.pending?.count ?? 0;
+    return v_flex().gap(14).p(16).rounded(10).border_1().border_color(t.border).bg(t.surface)
+      .child(h_flex().items_center().child(div().flex_1().text_size(14).font_semibold().child("Finish your review"))
+        .when(pending > 0, (el) => el.child(div().text_size(12).text_color(t.dim).child(`${pending} pending comment${pending === 1 ? "" : "s"}`))))
+      .child(this.input(t, this.reviewBody, 4, "review"))
+      .child(v_flex().gap(4).children(kinds.map(option)))
+      .child(h_flex().gap(8).items_center()
+        .child(div().flex_1().text_size(11.5).text_color(t.blocked).child(this.postError?.where === "review" ? this.postError.text : ""))
+        .child(div().id("review-cancel").px(12).py(5).rounded(7).text_size(12.5).text_color(t.muted).border_1().border_color(t.border).cursor_pointer().hover((st) => st.bg(t.hover))
+          .on_click((_e, cx) => { this.finishing = false; cx.notify(); }).child("Cancel"))
+        .child(this.sendButton(t, "review-submit", "Submit review", busy, (_e, cx) => this.submitReview(pr, details, pick, cx))));
+  }
+
+  submitReview(pr, details, event, cx) {
+    const body = this.reviewBody.value().trim();
+    this.posting = "review";
+    this.postError = null;
+    cx.notify();
+    cx.spawn(async (cx) => {
+      try {
+        if (details?.pending?.id) await this.gql("mutation($r: ID!, $e: PullRequestReviewEvent!, $b: String) { submitPullRequestReview(input: { pullRequestReviewId: $r, event: $e, body: $b }) { pullRequestReview { id } } }", { r: details.pending.id, e: event, b: body });
+        else {
+          if (!details?.prId) throw new Error("The pull request is still loading.");
+          await this.gql("mutation($p: ID!, $c: GitObjectID!, $e: PullRequestReviewEvent!, $b: String) { addPullRequestReview(input: { pullRequestId: $p, commitOID: $c, event: $e, body: $b }) { pullRequestReview { id } } }", { p: details.prId, c: pr.headRefOid, e: event, b: body });
+        }
+        const reason = { APPROVE: "approved", REQUEST_CHANGES: "changes requested", COMMENT: "commented" }[event];
+        if (event === "APPROVE") setShared("reviews.settled", { ...settledReviews(), [pr.url]: { pr, reason, at: Date.now() } });
+        this.reviewBody.set_value("");
+        this.previews?.delete("review");
+        this.finishing = false;
+        this.reviewEvent = null;
+        this.reload(pr);
+      } catch (error) {
+        this.postError = { where: "review", text: error.message };
+      }
+      this.posting = null;
+      cx.notify();
+    });
   }
 
   activity(t, details) {
@@ -1008,7 +974,7 @@ export default class Reviews extends View {
         .on_click((_e, cx) => { this.tab = id; localStorage.setItem("tab", id); cx.notify(); })
         .child(h_flex().gap(6).items_center().when(Boolean(icon), (el) => el.child(svg(ICON(icon ?? "")).size(13).flex_none())).child(text).when(count != null, (el) => el.child(div().px(7).rounded(9).bg(t.raised).text_size(11.5).font_medium().text_color(t.muted).child(String(count)))));
     };
-    return h_flex().gap(20).border_b_1().border_color(t.border).child(tab("description", "Overview", null, "overview")).child(tab("files", "Files changed", pr.changedFiles || null, "files")).child(tab("checks", "Checks", this.checkCount(pr), "checks")).when(Boolean(this.claudeEntry(pr)), (el) => el.child(tab("claude", this.claudeLabel(pr))));
+    return h_flex().gap(20).border_b_1().border_color(t.border).child(tab("description", "Overview", null, "overview")).child(tab("files", "Files changed", pr.changedFiles || null, "files")).child(tab("checks", "Checks", this.checkCount(pr), "checks"));
   }
 
   async viewedStates(pr) {
@@ -1102,53 +1068,6 @@ export default class Reviews extends View {
       .when(files.length > 0, (el) => el.child(v_flex().rounded(10).border_1().border_color(t.border).overflow_hidden().children(files.map(fileRow))));
   }
 
-  checkButton(t, pr) {
-    const e = this.claudeEntry(pr);
-    const busy = Boolean(e) && (e.state === "queued" || e.state === "running");
-    return h_flex().id("review-check").flex_none().h(30).px(12).gap(6).items_center().rounded(7).text_size(12.5)
-      .bg(t.raised).border_1().border_color(t.border)
-      .when(!busy, (el) => el.cursor_pointer().hover((st) => st.bg(t.hover)))
-      .when(busy, (el) => el.text_color(t.dim))
-      .tooltip(busy ? "Claude is checking this pull request" : "Ask Claude to check this pull request before you approve")
-      .on_click((_e, cx) => { if (busy) return; this.rerun(pr); this.tab = "claude"; localStorage.setItem("tab", "claude"); cx.notify(); })
-      .child(busy ? "Checking…" : e ? "Check again" : "Check with Claude");
-  }
-
-  approveButton(t, pr) {
-    this.approvals ??= {};
-    const state = this.approvals[pr.url];
-    const mine = (pr.reviews ?? []).some((r) => r.state === "APPROVED" && r.author === this.login);
-    if (state === "done" || mine) return h_flex().flex_none().h(30).px(12).gap(6).items_center().rounded(7).text_size(12.5).text_color(t.done).child(svg(ICON("check")).size(13)).child("Approved");
-    const confirm = state === "confirm";
-    return h_flex().id("review-approve").flex_none().h(30).px(12).gap(6).items_center().rounded(7).text_size(12.5).cursor_pointer()
-      .when(confirm, (el) => el.bg(t.done).text_color(t.solid_foreground).hover((st) => st.opacity(0.88)))
-      .when(!confirm, (el) => el.bg(t.raised).border_1().border_color(t.border).hover((st) => st.bg(t.hover)))
-      .tooltip(confirm ? "Click again to approve on GitHub" : "Approve this pull request")
-      .on_click((_e, cx) => {
-        if (state === "working") return;
-        if (!confirm) {
-          this.approvals[pr.url] = "confirm";
-          cx.timer.after(4000, (cx) => { if (this.approvals[pr.url] === "confirm") { delete this.approvals[pr.url]; cx.notify(); } });
-          return cx.notify();
-        }
-        this.approvals[pr.url] = "working";
-        cx.notify();
-        cx.spawn(async (cx) => {
-          const r = await exec("gh", ["pr", "review", String(pr.number), "--approve", "-R", pr.repo]).catch(() => null);
-          if (r?.code === 0) {
-            this.approvals[pr.url] = "done";
-            setShared("reviews.settled", { ...settledReviews(), [pr.url]: { pr, reason: "approved", at: Date.now() } });
-            setShared("reviews.refresh", Date.now());
-          } else {
-            this.approvals[pr.url] = "error";
-          }
-          cx.notify();
-        });
-      })
-      .child(svg(ICON("check")).size(13))
-      .child(state === "working" ? "Approving…" : state === "error" ? "Retry approve" : confirm ? "Confirm approve" : "Approve");
-  }
-
   button(t, id, icon, label, onClick) {
     return h_flex().id(id).flex_none().h(28).px(10).gap(6).items_center().rounded(7).text_size(12.5).cursor_pointer()
       .bg(t.raised).border_1().border_color(t.border).hover((st) => st.bg(t.hover))
@@ -1170,15 +1089,16 @@ export default class Reviews extends View {
           .when(pr.ci === "FAILURE" || pr.ci === "ERROR", (el) => el.child(svg(ICON("x")).size(16).flex_none().text_color(t.blocked).tooltip("CI failing")))
           .when(pr.ci === "PENDING" || pr.ci === "EXPECTED", (el) => el.child(div().size(9).mx(3).flex_none().rounded(5).bg(t.working).loop("opacity", { from: 0.35, to: 1, period: 1200 }).tooltip("CI running")))
           .child(div().flex_1().min_w(0).text_size(17).font_semibold().child(pr.title))
-          .child(this.checkButton(t, pr))
-          .child(this.approveButton(t, pr)))
+          .child(this.checkoutButton(t, pr))
+          .child(this.reviewButton(t, pr, this.load(pr, cx))))
         .child(h_flex().gap(8).items_center().text_size(12.5).text_color(t.dim)
           .child(div().child(`${pr.authorName ?? pr.author} opened ${ago(pr.createdAt)} ago`))
           .child(div().child("·"))
           .child(div().text_color(t.done).child(`+${pr.additions ?? 0}`))
           .child(div().text_color(t.blocked).child(`−${pr.deletions ?? 0}`))))
+      .when(Boolean(this.finishing), (el) => el.child(this.finishPanel(t, pr, this.load(pr, cx))))
       .child(this.tabs(t, pr, cx))
-      .child(this.tab === "claude" ? this.claudeTab(t, pr, cx) : this.tab === "checks" ? this.checksTab(t, this.load(pr, cx)) : this.tab !== "files"
+      .child(this.tab === "checks" ? this.checksTab(t, this.load(pr, cx)) : this.tab !== "files"
         ? v_flex().gap(28)
           .child(this.statusBar(t, pr, details, cx))
           .child(v_flex()

@@ -1008,6 +1008,7 @@ export default class Sessions extends View {
     if (command === "new-chat") return run("chats.new");
     if (command === "chats") return this.toggleChats();
     if (command === "reviews") return this.toggleReviews();
+    if (command === "checkout-pr") return this.checkoutPr(cx);
     if (command === "new-session") return this.openComposer();
     if (command === "dev") return this.openDev(cx);
     if (command === "settings") return openSettings();
@@ -1944,6 +1945,40 @@ export default class Sessions extends View {
     this.message.focus?.();
     this.handle = cx.focus_handle();
     cx.timer.after(80, () => this.message.focus?.());
+  }
+
+  checkoutPr(cx) {
+    const url = shared("sessions.checkout")?.url;
+    if (!url) return;
+    setShared("sessions.checkout", null);
+    const [, , repo] = url.match(PR_LINK) ?? [];
+    const ps = panes();
+    const rows = spaces().filter((sp) => !isSideSpace(sp)).map((sp) => this.info(sp, ps));
+    const open = rows.find((r) => r.pr?.url === url);
+    if (open) { this.showView("work"); run("space.select", { id: open.s.id }); return this.openClaude(open.s, cx); }
+    const folders = [...new Set([...rows.map((r) => r.folderKey), ...(shared("sessions.folders") ?? [])])].filter((key) => JSON.parse(key)[1] !== home());
+    const folderKey = folders.find((key) => base(JSON.parse(key)[1]).toLowerCase() === (repo ?? "").toLowerCase());
+    if (!folderKey) return notify({ title: `No ${repo} folder in Sessions`, body: "Add the repo's folder in Sessions, then press Check out again.", level: "warning" });
+    const [machine, folder] = JSON.parse(folderKey);
+    this.showView("work");
+    cx.spawn(async () => {
+      try {
+        const dir = `${appHome()}/data/new-session`;
+        await exec("mkdir", ["-p", dir]);
+        const scriptPath = `${dir}/start.sh`;
+        const current = await readTextFile(scriptPath).catch(() => null);
+        if (current !== START_SCRIPT) await writeTextFile(scriptPath, START_SCRIPT, current);
+        const messagePath = `${dir}/${newId()}.txt`;
+        await writeTextFile(messagePath, "", null);
+        const title = await exec("gh", ["pr", "view", url, "--json", "title", "--jq", ".title"], { cwd: folder }).catch(() => null);
+        const name = sessionName(title?.code === 0 && title.stdout.trim() ? title.stdout.trim() : `#${url.split("/").pop()}`);
+        const mode = localStorage.getItem("composer.mode") || "auto";
+        setShared("sessions.pending", [...(shared("sessions.pending") ?? []), { name, section: null, focus: true, at: Date.now() }]);
+        run("space.new", { name, folder, machine: machine ?? "", argv: ["sh", scriptPath, folder, url, messagePath, "2", "--permission-mode", mode] });
+      } catch (e) {
+        notify({ title: "Could not check out the pull request", body: e.message, level: "error" });
+      }
+    });
   }
 
   startSession(cx, background = false) {
