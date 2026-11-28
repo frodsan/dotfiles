@@ -807,7 +807,7 @@ export default class Reviews extends View {
         this.previews?.delete("comment");
         this.newComment.focus?.();
       }))
-      .when(Boolean(e.url), (el) => el.child(item("link", "Copy link", "external-link", (cx) => cx.write_to_clipboard(e.url))));
+      .when(Boolean(e.url), (el) => el.child(item("link", "Copy link", "link", (cx) => cx.write_to_clipboard(e.url))));
   }
 
   reactionsRow(t, subjectId, list) {
