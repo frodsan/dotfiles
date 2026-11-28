@@ -533,12 +533,77 @@ export default class Reviews extends View {
       .when(this.draft?.kind === "reply" && this.draft.thread === th.id, (el) => el.child(this.draftBox(t)));
   }
 
+  splitDiff(t, file) {
+    const threads = file.threads ?? [];
+    const placed = new Set();
+    const lines = file.patch.split("\n");
+    const shown = lines.slice(0, 600);
+    const mono = settings().font_family;
+    const rows = [];
+    const after = (spots) => {
+      for (const spot of spots) {
+        if (!spot) continue;
+        if (this.draft?.kind === "line" && this.draft.path === spot.path && this.draft.side === spot.side && this.draft.line === spot.line) rows.push(this.draftBox(t));
+        for (const th of threads) {
+          if (placed.has(th.id) || th.line == null || (th.side ?? "RIGHT") !== spot.side || th.line !== spot.line) continue;
+          placed.add(th.id);
+          rows.push(this.thread(t, th));
+        }
+      }
+    };
+    const half = (entry, side, kind) => {
+      const spot = entry ? { path: file.filename, side, line: entry.n } : null;
+      return h_flex().id(`half-${file.filename}-${rows.length}-${side}`).w("50%").min_w(0).overflow_hidden().font_family(mono).text_size(11.5)
+        .when(side === "RIGHT", (el) => el.border_l_1().border_color(t.border))
+        .when(Boolean(spot), (el) => el.cursor_pointer().hover((st) => st.bg(t.hover)).on_click((_e, cx) => { this.startDraft({ kind: "line", ...spot }, cx); }))
+        .child(div().w(46).flex_none().pr(10).text_right().text_color(t.dim).child(entry ? String(entry.n) : ""))
+        .child(div().flex_1().min_w(0).whitespace_nowrap().overflow_hidden()
+          .text_color(kind === "del" ? t.blocked : kind === "add" ? t.done : t.muted)
+          .child(entry ? (entry.text || " ") : " "));
+    };
+    const row = (left, right, leftKind, rightKind) => {
+      rows.push(h_flex().id(`split-${file.filename}-${rows.length}`).w_full().child(half(left, "LEFT", leftKind)).child(half(right, "RIGHT", rightKind)));
+      after([left ? { path: file.filename, side: "LEFT", line: left.n } : null, right ? { path: file.filename, side: "RIGHT", line: right.n } : null]);
+    };
+    let oldLine = 0;
+    let newLine = 0;
+    let dels = [];
+    let adds = [];
+    const flush = () => {
+      for (let i = 0; i < Math.max(dels.length, adds.length); i++) row(dels[i] ?? null, adds[i] ?? null, dels[i] ? "del" : null, adds[i] ? "add" : null);
+      dels = [];
+      adds = [];
+    };
+    for (const line of shown) {
+      const hunk = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)/);
+      if (hunk) {
+        flush();
+        oldLine = Number(hunk[1]);
+        newLine = Number(hunk[2]);
+        rows.push(div().px(14).mt(4).font_family(mono).text_size(11.5).whitespace_nowrap().text_color(t.dim).child(line));
+      } else if (line.startsWith("\\")) continue;
+      else if (line.startsWith("-")) dels.push({ n: oldLine++, text: line.slice(1) });
+      else if (line.startsWith("+")) adds.push({ n: newLine++, text: line.slice(1) });
+      else {
+        flush();
+        row({ n: oldLine++, text: line.slice(1) }, { n: newLine++, text: line.slice(1) }, null, null);
+      }
+    }
+    flush();
+    const loose = threads.filter((th) => !placed.has(th.id));
+    return v_flex().id(`diff-${file.filename}`).border_t_1().border_color(t.border).py(4)
+      .when(loose.length > 0, (el) => el.child(v_flex().pb(4).children(loose.map((th) => this.thread(t, th)))))
+      .child(v_flex().children(rows))
+      .when(lines.length > shown.length, (el) => el.child(div().px(14).py(4).text_size(12).text_color(t.dim).child(`${lines.length - shown.length} more lines on GitHub`)));
+  }
+
   diff(t, file) {
     const threads = file.threads ?? [];
     const placed = new Set();
     if (!file.patch) return v_flex()
       .child(div().px(14).py(8).text_size(12).text_color(t.dim).child(file.status === "renamed" ? "Renamed, no changes." : "No diff to show (binary or too large). Open it on GitHub."))
       .children(threads.map((th) => this.thread(t, th)));
+    if ((conf().reviewsDiffLayout ?? "split") === "split") return this.splitDiff(t, file);
     const lines = file.patch.split("\n");
     const shown = lines.slice(0, 600);
     const mono = settings().font_family;
@@ -639,7 +704,8 @@ export default class Reviews extends View {
       return h_flex().w_full().h(6).gap(2).rounded(3).overflow_hidden()
         .children(parts.filter(([n]) => n > 0).map(([n, color]) => div().h_full().bg(color).w(`${(n / total) * 100}%`)));
     };
-    const card = (id, title, note, noteColor, bar, onClick) => v_flex().id(`status-${id}`).flex_1().min_w(0).gap(10).px(14).py(12).cursor_pointer().hover((st) => st.bg(t.hover))
+    const card = (id, title, note, noteColor, bar, onClick, tip = null) => v_flex().id(`status-${id}`).flex_1().min_w(0).gap(10).px(14).py(12).cursor_pointer().hover((st) => st.bg(t.hover))
+      .when(Boolean(tip), (el) => el.tooltip(tip ?? ""))
       .on_click((_e, cx) => { onClick(); cx.notify(); })
       .child(h_flex().gap(6).items_center()
         .child(div().flex_none().text_size(13).font_semibold().text_color(t.foreground).child(title))
@@ -662,7 +728,7 @@ export default class Reviews extends View {
     const bar = h_flex()
       .child(card("checks", "Checks", checkNote, c.failing ? t.ansi1 : null, segments([[c.passed, t.done], [c.pending, t.working], [c.failing, t.ansi1]]), () => { this.tab = "checks"; localStorage.setItem("tab", "checks"); }))
       .child(div().w(1).h_full().flex_none().bg(t.border))
-      .child(card("comments", "Comments", threadNote, open ? t.working : null, segments([[threads.length - open, t.done], [open, t.working]]), () => { this.tab = "files"; localStorage.setItem("tab", "files"); }))
+      .child(card("comments", "Comments", threadNote, open ? t.working : null, segments([[threads.length - open, t.done], [open, t.working]]), () => { this.tab = "files"; localStorage.setItem("tab", "files"); this.fileFilter = open ? "unresolved" : this.fileFilter; this.toggled = new Set(); }, threads.length ? `${threads.length - open} resolved, ${open} unresolved` : null))
       .child(div().w(1).h_full().flex_none().bg(t.border))
       .child(card("approvals", "Approvals", approvalNote, changes ? t.blocked : null, segments([[approved, t.done], [changes, t.blocked], [missing, t.dim]]), () => { this.approvalsOpen = !this.approvalsOpen; }));
     const label = { APPROVED: ["approved", t.done, "check"], CHANGES_REQUESTED: ["requested changes", t.blocked, "x"], COMMENTED: ["left a comment", t.dim, "overview"], DISMISSED: ["had a review dismissed", t.dim, null] };
@@ -867,47 +933,58 @@ export default class Reviews extends View {
     return h_flex().gap(20).border_b_1().border_color(t.border).child(tab("description", "Overview", null, "overview")).child(tab("files", "Files changed", pr.changedFiles || null, "files")).child(tab("checks", "Checks", this.checkCount(pr), "checks")).when(Boolean(this.claudeEntry(pr)), (el) => el.child(tab("claude", this.claudeLabel(pr))));
   }
 
+  layoutSwitch(t) {
+    const layout = conf().reviewsDiffLayout ?? "split";
+    const option = (id, label) => div().id(`layout-${id}`).px(10).py(4).rounded(6).text_size(12).cursor_pointer()
+      .when(layout === id, (el) => el.bg(t.raised).text_color(t.foreground)).when(layout !== id, (el) => el.text_color(t.dim).hover((st) => st.text_color(t.foreground)))
+      .on_click((_e, cx) => { setShared("firehouse.settings", { ...(shared("firehouse.settings") ?? {}), reviewsDiffLayout: id }); cx.notify(); })
+      .child(label);
+    return h_flex().p(2).gap(2).rounded(8).border_1().border_color(t.border).child(option("unified", "Unified")).child(option("split", "Split"));
+  }
+
   filesSection(t, pr, details) {
     const heading = (text) => div().text_size(11).font_semibold().text_color(t.muted).child(text.toUpperCase());
     if (!details || details.loading) return v_flex().gap(8).child(heading(`Files (${pr.changedFiles})`)).child(div().text_size(12.5).text_color(t.dim).child("Loading files…"));
     if (details.error) return v_flex().gap(8).child(heading(`Files (${pr.changedFiles})`)).child(div().text_size(12.5).text_color(t.blocked).child(details.error));
-  const mine = details.files.filter((file) => file.mine);
-  const unresolved = details.files.filter((file) => (file.threads ?? []).some((th) => !th.resolved));
-  const filter = this.fileFilter ?? (details.hasRules ? "mine" : "all");
-  const files = filter === "mine" ? mine : filter === "unresolved" ? unresolved : details.files;
-  const hint = !details.hasRules && filter === "all" ? "This repo has no CODEOWNERS, so all files show." : files.length ? null
-    : filter === "mine" ? "None of these files belong to you or your teams." : filter === "unresolved" ? "No unresolved comments." : null;
-  const fileRow = (file) => {
-    const byDefault = filter === "unresolved" || file.mine || (!details.hasRules && details.files.length <= 20);
-    const open = byDefault !== this.toggled.has(file.filename);
-    return v_flex()
-      .child(h_flex().id(`file-${file.filename}`).px(12).py(6).gap(8).items_center().text_size(12).cursor_pointer().hover((st) => st.bg(t.hover))
-        .on_click((_e, cx) => { if (this.toggled.has(file.filename)) this.toggled.delete(file.filename); else this.toggled.add(file.filename); cx.notify(); })
-        .child(div().flex_none().text_color(t.dim).child(open ? "▾" : "▸"))
-        .child(div().flex_1().min_w(0).truncate().text_color(file.mine ? t.foreground : t.muted).child(file.filename))
-        .when((file.threads ?? []).some((th) => !th.resolved), (el) => el.child(div().flex_none().px(6).rounded(8).bg(t.raised).text_size(11).text_color(t.accent).tooltip("Open comment threads").child(`💬 ${file.threads.filter((th) => !th.resolved).length}`)))
-        .when((file.threads ?? []).length > 0 && (file.threads ?? []).every((th) => th.resolved), (el) => el.child(div().flex_none().text_size(11).text_color(t.dim).tooltip("All threads resolved").child(`💬 ${file.threads.length} ✓`)))
-        .when(filter !== "mine" && details.hasRules && file.mine, (el) => el.child(div().flex_none().px(5).rounded(4).bg(t.raised).text_size(10.5).text_color(t.accent).child("yours")))
-        .child(div().flex_none().text_color(t.done).child(`+${file.additions}`))
-        .child(div().flex_none().text_color(t.blocked).child(`−${file.deletions}`)))
-      .when(open, (el) => el.child(this.diff(t, file)));
-  };
-  const chip = (id, label, count) => {
-    const on = filter === id;
-    return h_flex().id(`filter-${id}`).px(10).py(4).gap(6).items_center().rounded(7).text_size(12.5).cursor_pointer()
-      .when(on, (el) => el.bg(t.selected).text_color(t.foreground)).when(!on, (el) => el.text_color(t.muted).hover((st) => st.bg(t.hover).text_color(t.foreground)))
-      .on_click((_e, cx) => { this.fileFilter = id; this.toggled = new Set(); cx.notify(); })
-      .child(label)
-      .child(div().px(6).rounded(8).bg(t.raised).text_size(11).text_color(t.muted).child(String(count)));
-  };
-  return v_flex().gap(10)
-    .child(h_flex().gap(4).items_center()
-      .when(details.hasRules, (el) => el.child(chip("mine", "Yours", mine.length)))
-      .child(chip("all", "All", details.files.length))
-      .child(chip("unresolved", "Unresolved comments", unresolved.length)))
-    .when(Boolean(hint), (el) => el.child(div().text_size(12).text_color(t.dim).child(hint ?? "")))
-    .when(files.length > 0, (el) => el.child(v_flex().rounded(10).border_1().border_color(t.border).overflow_hidden().children(files.map(fileRow))));
-}
+    const mine = details.files.filter((file) => file.mine);
+    const unresolved = details.files.filter((file) => (file.threads ?? []).some((th) => !th.resolved));
+    const filter = this.fileFilter ?? (details.hasRules ? "mine" : "all");
+    const files = filter === "mine" ? mine : filter === "unresolved" ? unresolved : details.files;
+    const hint = !details.hasRules && filter === "all" ? "This repo has no CODEOWNERS, so all files show." : files.length ? null
+      : filter === "mine" ? "None of these files belong to you or your teams." : filter === "unresolved" ? "No unresolved comments." : null;
+    const fileRow = (file) => {
+      const byDefault = filter === "unresolved" || file.mine || (!details.hasRules && details.files.length <= 20);
+      const open = byDefault !== this.toggled.has(file.filename);
+      return v_flex()
+        .child(h_flex().id(`file-${file.filename}`).px(12).py(6).gap(8).items_center().text_size(12).cursor_pointer().hover((st) => st.bg(t.hover))
+          .on_click((_e, cx) => { if (this.toggled.has(file.filename)) this.toggled.delete(file.filename); else this.toggled.add(file.filename); cx.notify(); })
+          .child(div().flex_none().text_color(t.dim).child(open ? "▾" : "▸"))
+          .child(div().flex_1().min_w(0).truncate().text_color(file.mine ? t.foreground : t.muted).child(file.filename))
+          .when((file.threads ?? []).some((th) => !th.resolved), (el) => el.child(div().flex_none().px(6).rounded(8).bg(t.raised).text_size(11).text_color(t.accent).tooltip("Open comment threads").child(`💬 ${file.threads.filter((th) => !th.resolved).length}`)))
+          .when((file.threads ?? []).length > 0 && (file.threads ?? []).every((th) => th.resolved), (el) => el.child(div().flex_none().text_size(11).text_color(t.dim).tooltip("All threads resolved").child(`💬 ${file.threads.length} ✓`)))
+          .when(filter !== "mine" && details.hasRules && file.mine, (el) => el.child(div().flex_none().px(5).rounded(4).bg(t.raised).text_size(10.5).text_color(t.accent).child("yours")))
+          .child(div().flex_none().text_color(t.done).child(`+${file.additions}`))
+          .child(div().flex_none().text_color(t.blocked).child(`−${file.deletions}`)))
+        .when(open, (el) => el.child(this.diff(t, file)));
+    };
+    const chip = (id, label, count) => {
+      const on = filter === id;
+      return h_flex().id(`filter-${id}`).px(10).py(4).gap(6).items_center().rounded(7).text_size(12.5).cursor_pointer()
+        .when(on, (el) => el.bg(t.selected).text_color(t.foreground)).when(!on, (el) => el.text_color(t.muted).hover((st) => st.bg(t.hover).text_color(t.foreground)))
+        .on_click((_e, cx) => { this.fileFilter = id; this.toggled = new Set(); cx.notify(); })
+        .child(label)
+        .child(div().px(6).rounded(8).bg(t.raised).text_size(11).text_color(t.muted).child(String(count)));
+    };
+    return v_flex().gap(10)
+      .child(h_flex().gap(4).items_center()
+        .when(details.hasRules, (el) => el.child(chip("mine", "Yours", mine.length)))
+        .child(chip("all", "All", details.files.length))
+        .child(chip("unresolved", "Unresolved comments", unresolved.length))
+        .child(div().flex_1())
+        .child(this.layoutSwitch(t)))
+      .when(Boolean(hint), (el) => el.child(div().text_size(12).text_color(t.dim).child(hint ?? "")))
+      .when(files.length > 0, (el) => el.child(v_flex().rounded(10).border_1().border_color(t.border).overflow_hidden().children(files.map(fileRow))));
+  }
 
   checkButton(t, pr) {
     const e = this.claudeEntry(pr);
