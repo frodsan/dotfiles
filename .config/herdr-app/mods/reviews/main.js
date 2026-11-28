@@ -834,11 +834,11 @@ export default class Reviews extends View {
           .when(Boolean(text), (el) => el.child(div().px(14).py(10).rounded(8).border_1().border_color(t.border).bg(t.surface).child(text))));
     };
     return v_flex().gap(12)
+      .child(v_flex().pb(8).child(this.commentBox(t)))
       .child(h_flex().id("activity-toggle").gap(6).items_center().cursor_pointer()
         .on_click((_e, cx) => { localStorage.setItem("activity.open", open ? "0" : "1"); cx.notify(); })
         .child(div().text_size(11).text_color(t.dim).child(open ? "▾" : "▸"))
         .child(heading(list.length ? `Activity (${list.length})` : "Activity")))
-      .when(open, (el) => el.child(this.commentBox(t)))
       .when(open && list.length === 0, (el) => el.child(div().text_size(12.5).text_color(t.dim).child("Nothing yet.")))
       .when(open && list.length > 0, (el) => el.child(v_flex().children(list.map(row))));
   }
